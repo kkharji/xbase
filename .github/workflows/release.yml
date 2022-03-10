@@ -1,0 +1,31 @@
+name: release
+on:
+  push:
+    tags: "v*"
+
+jobs:
+  release:
+    name: Publish release note
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2.4.0
+      with:
+        fetch-depth: 0
+    - name: Show Tag
+      id: tag
+      run: echo ::set-output name=TAG::${GITHUB_REF##*/}
+    - name: Generate Changelog
+      uses: orhun/git-cliff-action@v1
+      id: git-cliff
+      with:
+        config: .github/workflows/cliff.toml
+        args: -v --strip all --current
+      env:
+        OUTPUT: CHANGELOG.md
+    - name: Create GitHub release
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: ${{ steps.git-cliff.outputs.changelog }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

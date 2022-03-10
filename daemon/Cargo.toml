@@ -1,0 +1,29 @@
+[package]
+name = "xcodebase-daemon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+xcodebase = { path = "../shared/" }
+
+# Error Handling
+anyhow = "^1.0.42"
+
+# Serialization:
+serde = { version = "1.0", features = ["derive"]}
+serde_yaml = "0.8.23"
+
+# Get processes, processors, disks, components and networks
+# sysinfo = "0.23.5"
+libproc = "0.10.0"
+
+# Mainly for running async code and managing UnixListener
+tokio = { version = "1.17.0", features = ["full"]  }
+# Shorthand async traits
+async-trait = "0.1.52"
+
+
+# Async tracing
+tracing = "0.1.32"
+tracing-subscriber = { version = "0.3.9", features = ["env-filter"]}
+tracing-appender = "0.2.1"
