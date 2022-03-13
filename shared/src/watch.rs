@@ -4,6 +4,7 @@ use notify::{RecursiveMode, Watcher};
 use std::path::Path;
 use tokio::sync::mpsc;
 use tracing::{debug, info, trace};
+use wax::{Glob, Pattern};
 
 // TODO: Stop handle
 
@@ -32,6 +33,9 @@ pub async fn update(state: SharedState, _msg: Command) {
 }
 
 fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Result<()>> {
+    // NOTE: should watch for registerd directories?
+    let ignore = wax::any::<Glob, _>(["**/.git/**", "**/*.xcodeproj/**", "**/.*"]).unwrap();
+
     tokio::spawn(async move {
         let (tx, mut rx) = mpsc::channel(100);
         // FIXME: Sometimes (more then one/duplicated) event is processed at the same time
@@ -55,8 +59,7 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 None => continue,
             };
 
-            // NOTE: should watch for registerd directories?
-            if path.to_str().unwrap().contains(".git") {
+            if ignore.is_match(path.to_str().unwrap()) {
                 continue;
             }
 
