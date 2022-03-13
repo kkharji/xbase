@@ -1,10 +1,10 @@
-use tokio::io::AsyncReadExt;
-use tokio::net::UnixListener;
-
 use xcodebase::constants::DAEMON_SOCKET_PATH;
 use xcodebase::state::{SharedState, State};
 use xcodebase::tracing::{self, error, info};
-use xcodebase::Command;
+use xcodebase::{watch, Command};
+
+use tokio::io::AsyncReadExt;
+use tokio::net::UnixListener;
 
 use anyhow::Result;
 use std::fs;
@@ -47,12 +47,14 @@ async fn main() -> Result<()> {
                 error!("[Parse Error]: {:?}", e);
                 return;
             };
-            let msg = msg.unwrap();
 
-            if let Err(e) = msg.handle(state).await {
+            let msg = msg.unwrap();
+            if let Err(e) = msg.handle(state.clone()).await {
                 error!("[Handling Error]: {:?}", e);
                 return;
             };
+
+            watch::update(state, msg).await;
         });
     }
 }

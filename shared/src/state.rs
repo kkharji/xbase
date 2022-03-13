@@ -5,6 +5,7 @@ use libproc::libproc::proc_pid;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use tracing::trace;
 
 /// Main state
@@ -15,6 +16,7 @@ pub struct State {
     /// Connect clients
     pub clients: Vec<i32>,
     // Current System. This is required mainly to check for
+    pub watchers: HashMap<String, JoinHandle<Result<()>>>,
 }
 
 pub type SharedState = Arc<Mutex<State>>;
@@ -23,6 +25,7 @@ impl State {
     pub fn new() -> Result<SharedState> {
         let state = State {
             workspaces: HashMap::new(),
+            watchers: HashMap::new(),
             clients: vec![],
         };
         Ok(Arc::new(Mutex::new(state)))
@@ -45,12 +48,8 @@ impl State {
 
     pub async fn add_workspace(&mut self, root: &str, pid: i32) -> Result<()> {
         match self.workspaces.get_mut(root) {
-            Some(workspace) => {
-                info!("Updated '{root}' Workspace ..");
-                workspace.add_client(pid)
-            }
+            Some(workspace) => workspace.add_client(pid),
             None => {
-                info!("Added '{root}' Workspace ..");
                 self.workspaces.insert(
                     root.to_string(),
                     Workspace::new_with_client(&root, pid).await?,
@@ -58,6 +57,7 @@ impl State {
             }
         };
 
+        // Print New state
         trace!("{:#?}", self);
         Ok(())
     }
