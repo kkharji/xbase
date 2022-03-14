@@ -13,6 +13,10 @@ pub struct Target {
     platform: String,
     sources: Vec<PathBuf>,
 }
+#[derive(Deserialize, Debug)]
+pub struct LocalConfig {
+    pub ignore: Vec<String>,
+}
 
 pub type TargetMap = HashMap<String, Target>;
 
@@ -23,12 +27,19 @@ pub struct Project {
     name: String,
     /// The list of targets in the project mapped by name
     targets: TargetMap,
+    /// XcodeBase local configuration
+    #[serde(rename(deserialize = "XcodeBase"))]
+    xcode_base: LocalConfig,
 }
 
 impl Project {
     pub async fn new_from_project_yml(path: PathBuf) -> anyhow::Result<Self> {
         let content = fs::read_to_string(path).await?;
         serde_yaml::from_str(&content).context("Unable to parse project.yaml")
+    }
+
+    pub fn config(&self) -> &LocalConfig {
+        &self.xcode_base
     }
 }
 

@@ -124,4 +124,11 @@ impl Workspace {
 
         Ok(())
     }
+
+    pub fn get_ignore_patterns(&self) -> Option<Vec<String>> {
+        if self.is_xcodegen_project() {
+            return Some(self.project.config().ignore.clone());
+        }
+        return None;
+    }
 }

@@ -43,14 +43,44 @@ pub async fn update(state: SharedState, _msg: Command) {
 /// This will compare last_seen with path, updates `last_seen` if not match,
 /// else returns true.
 fn should_ignore(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
+    // HACK: Always return false for project.yml
     let path = path.to_string();
-    let mut last_seen = last_seen.lock().unwrap();
+    if path.contains("project.yml") {
+        return false;
+    }
+    let mut last_seen = match last_seen.lock() {
+        Ok(x) => x,
+        Err(_) => return true,
+    };
     if last_seen.to_string() == path {
         return true;
     } else {
         *last_seen = path;
         return false;
     }
+}
+
+// TODO: Cleanup get_ignore_patterns and decrease duplications
+async fn get_ignore_patterns(state: SharedState, root: &String) -> Vec<String> {
+    let mut patterns: Vec<String> = vec!["**/.git/**", "**/*.xcodeproj/**", "**/.*", "**/build/**"]
+        .iter()
+        .map(|e| e.to_string())
+        .collect();
+
+    // FIXME: Addding extra ignore patterns to `ignore` local config requires restarting deamon.
+    let extra_patterns = state
+        .lock()
+        .await
+        .workspaces
+        .get(root)
+        .unwrap()
+        .get_ignore_patterns();
+
+    if let Some(extra_patterns) = extra_patterns {
+        patterns.extend(extra_patterns);
+    }
+
+    patterns
 }
 
 fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Result<()>> {
@@ -61,7 +91,6 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
     // In my case this `Info.plist`.
     //
     // For example,  define key inside project.yml under xcodebase key, ignoreGlob of type array.
-    let ignore = wax::any::<Glob, _>(["**/.git/**", "**/*.xcodeproj/**", "**/.*"]).unwrap();
 
     tokio::spawn(async move {
         let (tx, mut rx) = mpsc::channel(100);
@@ -73,11 +102,15 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
         })?;
 
         watcher.watch(Path::new(&root), RecursiveMode::Recursive)?;
+        watcher.configure(notify::Config::NoticeEvents(true))?;
 
         // HACK: ignore seen paths.
         let last_seen = Arc::new(Mutex::new(String::default()));
 
-        // let gitignore = gitignore::File::new(path::Path::new(&gitignore_path)).unwrap();
+        // HACK: convert back to Vec<&str> for Glob to work.
+        let patterns = get_ignore_patterns(state.clone(), &root).await;
+        let patterns = patterns.iter().map(AsRef::as_ref).collect::<Vec<&str>>();
+        let ignore = wax::any::<Glob, _>(patterns).unwrap();
 
         while let Some(event) = rx.recv().await {
             let state = state.clone();
@@ -91,7 +124,7 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 None => continue,
             };
 
-            if should_ignore(last_seen.clone(), &path_string) || ignore.is_match(&*path_string) {
+            if ignore.is_match(&*path_string) {
                 continue;
             }
 
@@ -103,16 +136,30 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 notify::EventKind::Remove(_) => {
                     debug!("[FileRemoved]: {:?}", path);
                 }
-                notify::EventKind::Modify(m) => match m {
-                    notify::event::ModifyKind::Name(_) => {
-                        // HACK: only account for new path
-                        if !Path::new(&path).exists() {
-                            continue;
+                notify::EventKind::Modify(m) => {
+                    match m {
+                        notify::event::ModifyKind::Metadata(e) => match e {
+                            // Seems to be the only event that works!
+                            notify::event::MetadataKind::Any => {
+                                if !path_string.contains("project.yml") {
+                                    continue;
+                                }
+                                debug!("[XcodeGenConfigUpdate]");
+                            }
+                            _ => continue,
+                        },
+                        notify::event::ModifyKind::Name(_) => {
+                            // HACK: only account for new path and skip duplications
+                            if !Path::new(&path).exists()
+                                || should_ignore(last_seen.clone(), &path_string)
+                            {
+                                continue;
+                            }
+                            debug!("[FileRenamed]: {:?}", path);
                         }
-                        debug!("[FileRenamed]: NewName: {:?}", path);
+                        _ => continue,
                     }
-                    _ => continue,
-                },
+                }
                 _ => continue,
             }
 
