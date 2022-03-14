@@ -4,6 +4,7 @@ use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use std::result::Result;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{debug, trace};
 use wax::{Glob, Pattern};
@@ -134,6 +135,7 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 continue;
             }
 
+            debug!("[FSEVENT] {:?}", &event);
             // NOTE: maybe better handle in tokio::spawn?
             match &event.kind {
                 notify::EventKind::Create(_) => {
@@ -144,13 +146,14 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 }
                 notify::EventKind::Modify(m) => {
                     match m {
-                        notify::event::ModifyKind::Metadata(e) => match e {
-                            // Seems to be the only event that works!
-                            notify::event::MetadataKind::Any => {
+                        notify::event::ModifyKind::Data(e) => match e {
+                            notify::event::DataChange::Content => {
                                 if !path_string.contains("project.yml") {
                                     continue;
                                 }
                                 debug!("[XcodeGenConfigUpdate]");
+                                // HACK: Not sure why, but this is needed because xcodegen break.
+                                tokio::time::sleep(Duration::new(1, 0)).await;
                             }
                             _ => continue,
                         },
