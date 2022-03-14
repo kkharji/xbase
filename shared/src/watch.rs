@@ -3,9 +3,9 @@ use crate::Command;
 use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use std::result::Result;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 use tracing::{debug, trace};
 use wax::{Glob, Pattern};
 
@@ -43,16 +43,13 @@ pub async fn update(state: SharedState, _msg: Command) {
 ///
 /// This will compare last_seen with path, updates `last_seen` if not match,
 /// else returns true.
-fn should_ignore(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
+async fn should_ignore(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
     // HACK: Always return false for project.yml
     let path = path.to_string();
     if path.contains("project.yml") {
         return false;
     }
-    let mut last_seen = match last_seen.lock() {
-        Ok(x) => x,
-        Err(_) => return true,
-    };
+    let mut last_seen = last_seen.lock().await;
     if last_seen.to_string() == path {
         return true;
     } else {
@@ -135,13 +132,15 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 continue;
             }
 
-            debug!("[FSEVENT] {:?}", &event);
+            // debug!("[FSEVENT] {:?}", &event);
             // NOTE: maybe better handle in tokio::spawn?
             match &event.kind {
                 notify::EventKind::Create(_) => {
+                    tokio::time::sleep(Duration::new(1, 0)).await;
                     debug!("[FileCreated]: {:?}", path);
                 }
                 notify::EventKind::Remove(_) => {
+                    tokio::time::sleep(Duration::new(1, 0)).await;
                     debug!("[FileRemoved]: {:?}", path);
                 }
                 notify::EventKind::Modify(m) => {
@@ -151,19 +150,20 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                                 if !path_string.contains("project.yml") {
                                     continue;
                                 }
+                                tokio::time::sleep(Duration::new(1, 0)).await;
                                 debug!("[XcodeGenConfigUpdate]");
                                 // HACK: Not sure why, but this is needed because xcodegen break.
-                                tokio::time::sleep(Duration::new(1, 0)).await;
                             }
                             _ => continue,
                         },
                         notify::event::ModifyKind::Name(_) => {
                             // HACK: only account for new path and skip duplications
                             if !Path::new(&path).exists()
-                                || should_ignore(last_seen.clone(), &path_string)
+                                || should_ignore(last_seen.clone(), &path_string).await
                             {
                                 continue;
                             }
+                            tokio::time::sleep(Duration::new(1, 0)).await;
                             debug!("[FileRenamed]: {:?}", path);
                         }
                         _ => continue,
