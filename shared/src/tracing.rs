@@ -13,7 +13,7 @@ pub fn install(root: &str, filename: &str) -> Result<()> {
                 fmt::Layer::new()
                     .with_writer(io::stdout)
                     .with_target(true)
-                    .without_time()
+                    // .without_time()
                     .with_file(false),
             )
             .with(

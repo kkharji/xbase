@@ -26,4 +26,5 @@ tracing-subscriber = { version = "0.3.9", features = ["env-filter"]}
 tracing-appender = "0.2.1"
 
 notify = "5.0.0-pre.13"
+dirs = "4.0"
 wax = "0.4.0"
