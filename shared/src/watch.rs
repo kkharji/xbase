@@ -1,11 +1,12 @@
 use crate::state::SharedState;
 use crate::Command;
-use notify::{recommended_watcher, Error, Event, RecursiveMode, Watcher};
+use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use std::result::Result;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tracing::{debug, trace};
+use wax::{Glob, Pattern};
 
 // TODO: Stop handle
 
@@ -41,7 +42,7 @@ pub async fn update(state: SharedState, _msg: Command) {
 ///
 /// This will compare last_seen with path, updates `last_seen` if not match,
 /// else returns true.
-fn is_seen(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
+fn should_ignore(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
     let path = path.to_string();
     let mut last_seen = last_seen.lock().unwrap();
     if last_seen.to_string() == path {
@@ -53,29 +54,30 @@ fn is_seen(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
 }
 
 fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Result<()>> {
-    type NotifyResult = Result<Event, Error>;
-    use gitignore::File;
-    use wax::{any, Glob, Pattern};
+    // NOTE: should watch for registerd directories?
+    // TODO: Support provideing additional ignore wildcard
+    //
+    // Some files can be generated as direct result of running build command.
+    // In my case this `Info.plist`.
+    //
+    // For example,  define key inside project.yml under xcodebase key, ignoreGlob of type array.
+    let ignore = wax::any::<Glob, _>(["**/.git/**", "**/*.xcodeproj/**", "**/.*"]).unwrap();
 
     tokio::spawn(async move {
         let (tx, mut rx) = mpsc::channel(100);
 
-        let custom_ignore = any::<Glob, _>(["**/.git/**", "**/*.xcodeproj/**", "**/.*"]).unwrap();
-        let root_path = Path::new(&root);
-        let gitignore_path = root_path.join(".gitignore");
-
-        // HACK: To ignore seen paths.
-        let last_seen = Arc::new(Mutex::new(String::default()));
-
-        // NOTE: outdate API
-        let gitignore = Arc::new(Mutex::new(File::new(&gitignore_path).unwrap()));
-
-        recommended_watcher(move |res: NotifyResult| {
+        let mut watcher = RecommendedWatcher::new(move |res: Result<Event, Error>| {
             if res.is_ok() {
                 tx.blocking_send(res.unwrap()).unwrap()
             };
-        })?
-        .watch(root_path, RecursiveMode::Recursive)?;
+        })?;
+
+        watcher.watch(Path::new(&root), RecursiveMode::Recursive)?;
+
+        // HACK: ignore seen paths.
+        let last_seen = Arc::new(Mutex::new(String::default()));
+
+        // let gitignore = gitignore::File::new(path::Path::new(&gitignore_path)).unwrap();
 
         while let Some(event) = rx.recv().await {
             let state = state.clone();
@@ -89,15 +91,7 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 None => continue,
             };
 
-            if is_seen(last_seen.clone(), &path_string)
-                || custom_ignore.is_match(&*path_string)
-                || !gitignore
-                    .lock()
-                    .unwrap()
-                    .included_files()
-                    .unwrap()
-                    .contains(&path)
-            {
+            if should_ignore(last_seen.clone(), &path_string) || ignore.is_match(&*path_string) {
                 continue;
             }
 

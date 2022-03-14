@@ -31,5 +31,6 @@ wax = "0.4.0"
 
 # WARN: api totally changed on later versions.
 # It would make sense to create custom function
-gitignore = "1.0.7"
+# Breaks
+# gitignore = "1.0.7"
 
