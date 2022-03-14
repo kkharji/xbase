@@ -62,10 +62,16 @@ fn should_ignore(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
 
 // TODO: Cleanup get_ignore_patterns and decrease duplications
 async fn get_ignore_patterns(state: SharedState, root: &String) -> Vec<String> {
-    let mut patterns: Vec<String> = vec!["**/.git/**", "**/*.xcodeproj/**", "**/.*", "**/build/**"]
-        .iter()
-        .map(|e| e.to_string())
-        .collect();
+    let mut patterns: Vec<String> = vec![
+        "**/.git/**",
+        "**/*.xcodeproj/**",
+        "**/.*",
+        "**/build/**",
+        "**/buildServer.json",
+    ]
+    .iter()
+    .map(|e| e.to_string())
+    .collect();
 
     // FIXME: Addding extra ignore patterns to `ignore` local config requires restarting deamon.
     let extra_patterns = state
