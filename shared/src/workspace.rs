@@ -1,8 +1,7 @@
 use crate::project::{Project, Target, TargetMap};
 use anyhow::{bail, Ok, Result};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use ::tracing::{debug, info, trace};
 use libproc::libproc::proc_pid;
 use notify::EventKind;
 use std::process::Stdio;
@@ -34,7 +33,7 @@ impl Workspace {
             Project::new_from_project_yml(path).await?
         };
 
-        info!("[New::{}]: {:?}", project.name(), root);
+        tracing::info!("[New::{}]: {:?}", project.name(), root);
 
         Ok(Self {
             root,
@@ -53,7 +52,7 @@ impl Workspace {
         let name = self.project.name();
         self.clients.retain(|&pid| {
             if proc_pid::name(pid).is_err() {
-                debug!("[Update::{}]: Remove Client: {pid}", name);
+                tracing::debug!("[Update::{}]: Remove Client: {pid}", name);
                 false
             } else {
                 true
@@ -66,7 +65,7 @@ impl Workspace {
         // Remove no longer active clients
         self.update_clients();
         // NOTE: Implicitly assuming that pid is indeed a valid pid
-        debug!("[Update::{}] Add Client: {pid}", self.name());
+        tracing::debug!("[Update::{}] Add Client: {pid}", self.name());
         self.clients.push(pid)
     }
 
@@ -98,7 +97,7 @@ impl Workspace {
     }
 
     /// Regenerate compiled commands and xcodeGen if project.yml exists
-    pub async fn on_dirctory_change(&self, _path: String, _event: EventKind) -> Result<()> {
+    pub async fn on_dirctory_change(&self, _path: PathBuf, _event: EventKind) -> Result<()> {
         if self.is_xcodegen_project() {
             /*
                 FIXME: make xCodeGen binary path configurable.
@@ -119,7 +118,7 @@ impl Workspace {
                 .expect("Failed to run xcodeGen.");
 
             if xcodegen.success() {
-                info!("Generated {}.xcodeproj", self.name());
+                tracing::info!("Generated {}.xcodeproj", self.name());
             }
         }
 

@@ -1,4 +1,3 @@
-use crate::tracing::info;
 use crate::workspace::Workspace;
 use anyhow::{Ok, Result};
 use libproc::libproc::proc_pid;
