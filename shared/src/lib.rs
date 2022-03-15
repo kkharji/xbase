@@ -4,6 +4,7 @@ pub mod state;
 
 mod command;
 mod project;
+mod xcode;
 pub use command::*;
 pub mod tracing;
 pub mod watch;

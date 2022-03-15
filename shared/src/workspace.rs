@@ -2,9 +2,13 @@ use crate::project::{Project, Target, TargetMap};
 use anyhow::{bail, Ok, Result};
 use std::path::PathBuf;
 
+use crate::xcode;
 use libproc::libproc::proc_pid;
 use notify::EventKind;
+use serde_json::json;
 use std::process::Stdio;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 /// Managed Workspace
@@ -20,7 +24,7 @@ pub struct Workspace {
 
 impl Workspace {
     /// Create new workspace from a path representing project root.
-    /// TODO: Support setting up projects with .xproj as well as xcworkspace
+    /// TODO: Support projects with .xproj as well as xcworkspace
     pub async fn new(root: &str) -> Result<Self> {
         let root = PathBuf::from(root);
 
@@ -30,10 +34,10 @@ impl Workspace {
                 bail!("project.yaml doesn't exist in '{:?}'", root)
             }
 
-            Project::new_from_project_yml(path).await?
+            Project::new_from_project_yml(root.clone(), path).await?
         };
 
-        tracing::info!("[New::{}]: {:?}", project.name(), root);
+        tracing::info!("Managing [{}] {:?}", project.name(), root);
 
         Ok(Self {
             root,
@@ -52,7 +56,7 @@ impl Workspace {
         let name = self.project.name();
         self.clients.retain(|&pid| {
             if proc_pid::name(pid).is_err() {
-                tracing::debug!("[Update::{}]: Remove Client: {pid}", name);
+                tracing::debug!("[{}]: Remove Client: {pid}", name);
                 false
             } else {
                 true
@@ -65,7 +69,7 @@ impl Workspace {
         // Remove no longer active clients
         self.update_clients();
         // NOTE: Implicitly assuming that pid is indeed a valid pid
-        tracing::debug!("[Update::{}] Add Client: {pid}", self.name());
+        tracing::debug!("[{}] Add Client: {pid}", self.name());
         self.clients.push(pid)
     }
 
@@ -86,45 +90,65 @@ impl Workspace {
         self.project.targets().get(target_name)
     }
 
-    /// Checks whether current workspace is xcodegen project.
-    pub fn is_xcodegen_project(&self) -> bool {
-        /*
-            TODO: support otherways to identify xcodegen project
-            Some would have xcodegen config as json file or
-            have different location to where they store xcodegen project config.
-        */
-        self.root.join("project.yml").exists()
+    /// Regenerate compiled commands and xcodeGen if project.yml exists
+    pub async fn on_dirctory_change(&mut self, path: PathBuf, _event: EventKind) -> Result<()> {
+        if self.is_xcodegen_project() {
+            let is_config_file = path.file_name().unwrap().eq("project");
+            self.update_xcodeproj(is_config_file).await?;
+        }
+
+        xcode::ensure_server_config_file(&self.root).await?;
+        xcode::update_compiled_commands(&self.root, self.project.fresh_build().await?).await?;
+
+        Ok(())
     }
 
-    /// Regenerate compiled commands and xcodeGen if project.yml exists
-    pub async fn on_dirctory_change(&self, _path: PathBuf, _event: EventKind) -> Result<()> {
-        if self.is_xcodegen_project() {
-            /*
-                FIXME: make xCodeGen binary path configurable.
+    /// Update .compile commands
+    pub async fn update_xcodeproj(&mut self, update_config: bool) -> Result<()> {
+        /*
+           FIXME: make xCodeGen binary path configurable.
 
-                Current implementation will not work unless the user has xcodeGen located in
-                `~/.mint/bin/xcodegen`. Should either make it configurable as well as support a
-                number of paths by default.
-            */
-            let xcodegen_path = dirs::home_dir().unwrap().join(".mint/bin/xcodegen");
-            let xcodegen = Command::new(xcodegen_path)
-                .current_dir(self.root.clone())
-                .stdout(Stdio::null())
-                .arg("generate")
-                .spawn()
-                .expect("Failed to start xcodeGen.")
-                .wait()
-                .await
-                .expect("Failed to run xcodeGen.");
+           Current implementation will not work unless the user has xcodeGen located in
+           `~/.mint/bin/xcodegen`. Should either make it configurable as well as support a
+           number of paths by default.
+        */
+        let xcodegen_path = dirs::home_dir().unwrap().join(".mint/bin/xcodegen");
+        let xcodegen = Command::new(xcodegen_path)
+            .current_dir(self.root.clone())
+            .stdout(Stdio::null())
+            .arg("generate")
+            .spawn()
+            .expect("Failed to start xcodeGen.")
+            .wait()
+            .await
+            .expect("Failed to run xcodeGen.");
 
-            if xcodegen.success() {
-                tracing::info!("Generated {}.xcodeproj", self.name());
+        if xcodegen.success() {
+            tracing::info!("Updated {}.xcodeproj", self.name());
+            if update_config {
+                tracing::debug!("Updated internal state.{}.project", self.name());
+                let path = self.xcodegen_config_path();
+                self.project = Project::new_from_project_yml(self.root.clone(), path).await?;
             }
         }
 
         Ok(())
     }
 
+    /// Checks whether current workspace is xcodegen project.
+    pub fn is_xcodegen_project(&self) -> bool {
+        self.xcodegen_config_path().exists()
+    }
+
+    pub fn xcodegen_config_path(&self) -> PathBuf {
+        /*
+           TODO: support otherways to identify xcodegen project
+
+           Some would have xcodegen config as json file or
+           have different location to where they store xcodegen project config.
+        */
+        self.root.join("project.yml")
+    }
     pub fn get_ignore_patterns(&self) -> Option<Vec<String>> {
         if self.is_xcodegen_project() {
             return Some(self.project.config().ignore.clone());

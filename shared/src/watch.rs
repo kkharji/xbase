@@ -174,13 +174,15 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
 
             trace!("[NewEvent] {:#?}", &event);
 
-            let state = state.lock().await;
-            let workspace = match state.workspaces.get(&root) {
-                Some(w) => w,
+            // let mut state = state.lock().await;
+
+            match state.lock().await.workspaces.get_mut(&root) {
+                Some(w) => {
+                    w.on_dirctory_change(path, event.kind).await?;
+                }
+                // NOTE: should stop watch here
                 None => continue,
             };
-
-            workspace.on_dirctory_change(path, event.kind).await?;
         }
         Ok(())
     })
