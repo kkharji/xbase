@@ -9,6 +9,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-xcodebase = { path = "../shared/" }
+xcodebase = { path = "../" }
 mlua = { version = "0.7.4", features = ["lua51", "module", "vendored", "send", "serialize", "async", "macros"]  }
 anyhow = "^1.0.42"

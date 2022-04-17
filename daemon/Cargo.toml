@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-xcodebase = { path = "../shared/" }
+xcodebase = { path = "../" }
 
 # Error Handling
 anyhow = "^1.0.42"
