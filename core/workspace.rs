@@ -5,10 +5,7 @@ use std::path::PathBuf;
 use crate::xcode;
 use libproc::libproc::proc_pid;
 use notify::EventKind;
-use serde_json::json;
 use std::process::Stdio;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 /// Managed Workspace
