@@ -1,21 +1,21 @@
 use crate::extensions::LuaExt;
 
 use mlua::prelude::*;
-use xcodebase::{server, Register};
+use xcodebase::{daemon, Register};
 
-pub struct Server();
+pub struct Daemon();
 
-impl Server {
+impl Daemon {
     pub fn is_running(_: &Lua, _: ()) -> LuaResult<bool> {
-        Ok(server::is_running())
+        Ok(daemon::is_running())
     }
 
     pub fn ensure(lua: &Lua, _: ()) -> LuaResult<bool> {
-        if server::is_running() {
+        if daemon::is_running() {
             return Ok(false);
         }
 
-        if server::spawn().is_ok() {
+        if daemon::spawn().is_ok() {
             lua.info("Spawned Background Server")?;
             return Ok(true);
         }

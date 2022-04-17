@@ -1,5 +1,5 @@
 pub mod constants;
-pub mod server;
+pub mod daemon;
 pub mod state;
 
 mod command;

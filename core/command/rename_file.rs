@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::{server, DaemonCommand};
+use crate::{daemon, DaemonCommand};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 
@@ -33,7 +33,7 @@ impl RenameFile {
     }
 
     pub fn request(path: &str, name: &str, new_name: &str) -> Result<()> {
-        server::execute(&["rename_file", path, name, new_name])
+        daemon::execute(&["rename_file", path, name, new_name])
     }
 }
 

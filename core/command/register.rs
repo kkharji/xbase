@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::{server, DaemonCommand};
+use crate::{daemon, DaemonCommand};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use tracing::trace;
@@ -27,7 +27,7 @@ impl Register {
     }
 
     pub fn request(pid: i32, root: String) -> Result<()> {
-        server::execute(&["register", pid.to_string().as_str(), root.as_str()])
+        daemon::execute(&["register", pid.to_string().as_str(), root.as_str()])
     }
 }
 
