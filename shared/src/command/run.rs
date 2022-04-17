@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::{server, tracing, DaemonCommand};
+use crate::{server, DaemonCommand};
 use anyhow::Result;
 use async_trait::async_trait;
 

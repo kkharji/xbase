@@ -1,6 +1,6 @@
+use tracing::{error, info};
 use xcodebase::constants::DAEMON_SOCKET_PATH;
 use xcodebase::state::{SharedState, State};
-use xcodebase::tracing::{self, error, info};
 use xcodebase::{watch, Command};
 
 use tokio::io::AsyncReadExt;
@@ -19,7 +19,8 @@ fn create_listener() -> std::io::Result<UnixListener> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing::install("/tmp", "xcodebase-daemon.log")?;
+    xcodebase::util::install_tracing("/tmp", "xcodebase-daemon.log")?;
+
     let state: SharedState = State::new()?;
     let listener = create_listener()?;
     loop {
