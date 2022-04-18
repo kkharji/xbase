@@ -35,7 +35,13 @@ pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<Vec<String>> {
         .expect("Failed to run xcodeGen.");
 
     if output.status.code().unwrap().ne(&0) {
-        anyhow::bail!("{:#?}", output.stderr)
+        anyhow::bail!(
+            "{:#?}",
+            String::from_utf8(output.stderr)?
+                .split("\n")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>()
+        )
     } else {
         Ok(String::from_utf8(output.stdout)?
             .split("\n")

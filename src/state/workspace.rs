@@ -51,12 +51,6 @@ impl Workspace {
         })
     }
 
-    pub async fn new_with_client(root: &str, pid: i32) -> Result<Self> {
-        let mut ws = Workspace::new(&root).await?;
-        ws.add_client(pid);
-        Ok(ws)
-    }
-
     pub fn update_clients(&mut self) {
         let name = self.project.name();
         self.clients
@@ -104,11 +98,8 @@ impl Workspace {
         _event: notify::EventKind,
     ) -> Result<()> {
         if crate::xcodegen::is_workspace(self) {
-            let is_config_file = path.file_name().unwrap().eq("project");
-            // FIXME: should've been true
-            tracing::debug!("is_config_file: {is_config_file}");
-
-            self.update_xcodeproj(is_config_file).await?;
+            self.update_xcodeproj(path.file_name().unwrap().eq("project.yml"))
+                .await?;
         }
 
         xcode::ensure_server_config_file(&self.root).await?;

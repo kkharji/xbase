@@ -39,7 +39,12 @@ impl State {
         match self.workspaces.get_mut(root) {
             Some(workspace) => workspace.add_client(pid),
             None => {
-                let workspace = Workspace::new_with_client(&root, pid).await?;
+                let workspace = {
+                    let root: &str = &root;
+                    let mut ws = Workspace::new(&root).await?;
+                    ws.add_client(pid);
+                    ws
+                };
 
                 tracing::info!("Managing [{}] {:?}", workspace.project.name(), root);
 
