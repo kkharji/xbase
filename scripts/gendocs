@@ -1,3 +1,4 @@
+#!/bin/lua
 -- Setup xcodebase with defaults
 require("xcodebase").setup()
 

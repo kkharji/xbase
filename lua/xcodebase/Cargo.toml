@@ -3,12 +3,10 @@ name = "libxcodebase"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 crate-type = ["cdylib"]
+path = "lib.rs"
 
 [dependencies]
-xcodebase = { path = "../", features = [ "lua" ] }
+xcodebase = { path = "../../", features = [ "lua" ] }
 mlua = { version = "0.7.4", features = ["lua51", "module", "vendored", "send", "serialize", "async", "macros"]  }
-anyhow = "^1.0.42"

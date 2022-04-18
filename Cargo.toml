@@ -33,6 +33,7 @@ regex = "1.5"
 lazy_static = "1.4.0"
 shell-words = "1.1.0"
 mlua = { version = "0.7.4", optional = true }
+
 # TODO: make libxcodebase lightweight
 # Use features to exclude stuff likce tracing and async-trait as well tokio
 # WARN: api totally changed on later versions.
@@ -45,11 +46,10 @@ lua = [ "mlua" ]
 
 [lib]
 name = "xcodebase"
-path = "core/lib.rs"
+path = "src/lib.rs"
 
 [workspace]
 members = [
-  "daemon",
-  "lsp",
-  "nvim",
+  "pkgs/daemon",
+  "./lua/xcodebase",
 ]

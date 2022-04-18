@@ -376,7 +376,6 @@ dependencies = [
 name = "libxcodebase"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "mlua",
  "xcodebase",
 ]
@@ -1167,13 +1166,6 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
- "xcodebase",
-]
-
-[[package]]
-name = "xcodebase-lsp"
-version = "0.1.0"
-dependencies = [
  "xcodebase",
 ]
 
