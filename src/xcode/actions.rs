@@ -4,9 +4,8 @@ use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::process::{ExitStatus, Stdio};
 use tokio::process::Command;
-mod compilation;
 
-use compilation::Compiliation;
+use super::compilation::Compiliation;
 use serde_json::json;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;

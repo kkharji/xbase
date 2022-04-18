@@ -1,4 +1,9 @@
-use crate::workspace::Workspace;
+mod project;
+mod workspace;
+
+pub use project::*;
+pub use workspace::*;
+
 use anyhow::{bail, Ok, Result};
 use libproc::libproc::proc_pid;
 use std::collections::HashMap;

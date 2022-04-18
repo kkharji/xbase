@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::DaemonCommand;
+use crate::DaemonCommandExt;
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -21,7 +21,7 @@ impl Build {
 }
 
 #[async_trait]
-impl DaemonCommand for Build {
+impl DaemonCommandExt for Build {
     async fn handle(&self, _state: SharedState) -> Result<()> {
         tracing::info!("Reanmed command");
         Ok(())

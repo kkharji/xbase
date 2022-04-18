@@ -43,6 +43,7 @@ mlua = { version = "0.7.4", optional = true }
 [features]
 default = [ ]
 lua = [ "mlua" ]
+# logging = [ "tracing", "tracing-subscriber", "tracing-appender" ]
 
 [lib]
 name = "xcodebase"

@@ -1,21 +1,12 @@
-pub mod constants;
 pub mod daemon;
 pub mod state;
-
-#[cfg(feature = "lua")]
-mod mlua;
-
-#[cfg(feature = "lua")]
-pub use crate::mlua::LuaExtension;
-
-mod command;
-mod project;
-mod xcode;
-pub use command::*;
-pub use daemon::*;
 pub mod util;
-pub mod watch;
+pub mod xcode;
 
-mod workspace;
+pub use daemon::*;
+pub use state::*;
 
-pub use workspace::Workspace;
+#[cfg(feature = "lua")]
+pub use util::mlua::LuaExtension;
+
+pub use util::{tracing::install_tracing, watch};

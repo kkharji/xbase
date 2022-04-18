@@ -15,12 +15,12 @@ pub use rename_file::RenameFile;
 pub use run::Run;
 
 #[async_trait]
-pub trait DaemonCommand {
+pub trait DaemonCommandExt {
     async fn handle(&self, state: SharedState) -> anyhow::Result<()>;
 }
 
 #[derive(Debug)]
-pub enum Command {
+pub enum DaemonCommand {
     Build(Build),
     Run(Run),
     RenameFile(RenameFile),
@@ -28,27 +28,28 @@ pub enum Command {
     Drop(Drop),
 }
 
-impl Command {
+impl DaemonCommand {
     pub async fn handle(&self, state: SharedState) -> Result<()> {
+        use DaemonCommand::*;
         match self {
-            Command::Build(c) => c.handle(state).await,
-            Command::Run(c) => c.handle(state).await,
-            Command::RenameFile(c) => c.handle(state).await,
-            Command::Register(c) => c.handle(state).await,
-            Command::Drop(c) => c.handle(state).await,
+            Build(c) => c.handle(state).await,
+            Run(c) => c.handle(state).await,
+            RenameFile(c) => c.handle(state).await,
+            Register(c) => c.handle(state).await,
+            Drop(c) => c.handle(state).await,
         }
     }
 
     pub fn parse(str: &str) -> Result<Self> {
         let mut args = str.split(" ").collect::<Vec<&str>>();
         let cmd = args.remove(0);
-        match cmd {
-            "build" => Ok(Self::Build(Build::new(args)?)),
-            "run" => Ok(Self::Run(Run::new(args)?)),
-            "rename_file" => Ok(Self::RenameFile(RenameFile::new(args)?)),
-            "register" => Ok(Self::Register(Register::new(args)?)),
-            "drop" => Ok(Self::Drop(Drop::new(args)?)),
+        Ok(match cmd {
+            "build" => Self::Build(Build::new(args)?),
+            "run" => Self::Run(Run::new(args)?),
+            "rename_file" => Self::RenameFile(RenameFile::new(args)?),
+            "register" => Self::Register(Register::new(args)?),
+            "drop" => Self::Drop(Drop::new(args)?),
             _ => bail!("Unknown command messsage: {cmd}"),
-        }
+        })
     }
 }

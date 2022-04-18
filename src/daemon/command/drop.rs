@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::{Daemon, DaemonCommand};
+use crate::{Daemon, DaemonCommandExt};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use tracing::trace;
@@ -32,14 +32,14 @@ impl Drop {
 
     #[cfg(feature = "lua")]
     pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
-        use crate::mlua::LuaExtension;
+        use crate::LuaExtension;
         lua.trace(&format!("Added (pid: {pid} cwd: {root})"))?;
         Self::request(pid, root).map_err(mlua::Error::external)
     }
 }
 
 #[async_trait]
-impl DaemonCommand for Drop {
+impl DaemonCommandExt for Drop {
     async fn handle(&self, state: SharedState) -> Result<()> {
         trace!("{:?}", self);
         state

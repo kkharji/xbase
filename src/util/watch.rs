@@ -1,5 +1,5 @@
+use crate::daemon::DaemonCommand;
 use crate::state::SharedState;
-use crate::Command;
 use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use std::result::Result;
@@ -11,7 +11,7 @@ use wax::{Glob, Pattern};
 
 // TODO: Stop handle
 
-pub async fn update(state: SharedState, _msg: Command) {
+pub async fn update(state: SharedState, _msg: DaemonCommand) {
     let copy = state.clone();
     let mut current_state = copy.lock().await;
     let mut watched_roots: Vec<String> = vec![];

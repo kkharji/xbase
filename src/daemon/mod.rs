@@ -1,5 +1,10 @@
-use crate::constants::{DAEMON_BINARY, DAEMON_SOCKET_PATH};
 use anyhow::{bail, Context, Result};
+mod command;
+pub use command::*;
+
+pub const DAEMON_SOCKET_PATH: &str = "/tmp/xcodebase-daemon.socket";
+pub const DAEMON_BINARY: &str =
+    "/Users/tami5/repos/neovim/xcodebase.nvim/target/debug/xcodebase-daemon";
 
 pub struct Daemon {
     state: std::sync::Arc<tokio::sync::Mutex<crate::state::State>>,
@@ -43,7 +48,7 @@ impl Daemon {
                     return;
                 }
 
-                let msg = crate::Command::parse(string.as_str().trim());
+                let msg = DaemonCommand::parse(string.as_str().trim());
 
                 if let Err(e) = msg {
                     tracing::error!("[Parse Error]: {:?}", e);
@@ -85,7 +90,7 @@ impl Daemon {
 }
 
 #[cfg(feature = "lua")]
-use crate::mlua::LuaExtension;
+use crate::util::mlua::LuaExtension;
 
 #[cfg(feature = "lua")]
 impl Daemon {
@@ -94,8 +99,8 @@ impl Daemon {
         let table = lua.create_table()?;
         table.set("is_running", lua.create_function(Self::is_running)?)?;
         table.set("ensure", lua.create_function(Self::ensure)?)?;
-        table.set("register", lua.create_function(crate::Register::lua)?)?;
-        table.set("drop", lua.create_function(crate::Drop::lua)?)?;
+        table.set("register", lua.create_function(Register::lua)?)?;
+        table.set("drop", lua.create_function(Drop::lua)?)?;
         Ok(table)
     }
 

@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::{Daemon, DaemonCommand};
+use crate::{Daemon, DaemonCommandExt};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 
@@ -38,7 +38,7 @@ impl RenameFile {
 }
 
 #[async_trait]
-impl DaemonCommand for RenameFile {
+impl DaemonCommandExt for RenameFile {
     async fn handle(&self, _state: SharedState) -> Result<()> {
         tracing::info!("Reanmed command");
         Ok(())

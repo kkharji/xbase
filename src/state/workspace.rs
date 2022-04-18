@@ -1,4 +1,4 @@
-use crate::project::{Project, Target, TargetMap};
+use crate::{Project, Target, TargetMap};
 use anyhow::{bail, Ok, Result};
 use std::path::PathBuf;
 
