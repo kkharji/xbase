@@ -13,3 +13,8 @@ lint:
 docgen:
 	nvim --headless --noplugin -u scripts/minimal_init.vim -c "luafile ./scripts/gendocs" -c 'qa'
 
+watchlua:
+	cargo watch -x 'build -p libxcodebase' -w 'Cargo.toml' -w 'src' -w 'lua/xcodebase/Cargo.toml' -w 'lua/xcodebase/lib.rs'
+
+watchdaemon:
+	RUST_LOG="xcodebase=debug" cargo watch -x 'run --bin xcodebase-daemon --features=daemon' -w 'src' -w 'Cargo.toml'
