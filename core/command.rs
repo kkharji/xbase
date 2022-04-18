@@ -3,30 +3,29 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 
 mod build;
+mod drop;
 mod register;
 mod rename_file;
 mod run;
-mod unregister;
 
 pub use build::Build;
+pub use drop::Drop;
 pub use register::Register;
 pub use rename_file::RenameFile;
 pub use run::Run;
-pub use unregister::UnRegister;
 
 #[async_trait]
 pub trait DaemonCommand {
     async fn handle(&self, state: SharedState) -> anyhow::Result<()>;
 }
 
-/// Rename file + class
 #[derive(Debug)]
 pub enum Command {
     Build(Build),
     Run(Run),
     RenameFile(RenameFile),
     Register(Register),
-    UnRegister(UnRegister),
+    Drop(Drop),
 }
 
 impl Command {
@@ -36,7 +35,7 @@ impl Command {
             Command::Run(c) => c.handle(state).await,
             Command::RenameFile(c) => c.handle(state).await,
             Command::Register(c) => c.handle(state).await,
-            Command::UnRegister(c) => c.handle(state).await,
+            Command::Drop(c) => c.handle(state).await,
         }
     }
 
@@ -48,7 +47,7 @@ impl Command {
             "run" => Ok(Self::Run(Run::new(args)?)),
             "rename_file" => Ok(Self::RenameFile(RenameFile::new(args)?)),
             "register" => Ok(Self::Register(Register::new(args)?)),
-            "unregister" => Ok(Self::UnRegister(UnRegister::new(args)?)),
+            "drop" => Ok(Self::Drop(Drop::new(args)?)),
             _ => bail!("Unknown command messsage: {cmd}"),
         }
     }

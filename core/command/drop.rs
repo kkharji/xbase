@@ -1,17 +1,17 @@
 use crate::state::SharedState;
-use crate::{daemon, DaemonCommand};
+use crate::{Daemon, DaemonCommand};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use tracing::trace;
 
 /// Register new client with workspace
 #[derive(Debug)]
-pub struct UnRegister {
+pub struct Drop {
     pub pid: i32,
     pub root: String,
 }
 
-impl UnRegister {
+impl Drop {
     pub fn new(args: Vec<&str>) -> Result<Self> {
         let pid = args.get(0);
         let root = args.get(1);
@@ -27,12 +27,19 @@ impl UnRegister {
     }
 
     pub fn request(pid: i32, root: String) -> Result<()> {
-        daemon::execute(&["unregister", pid.to_string().as_str(), root.as_str()])
+        Daemon::execute(&["drop", pid.to_string().as_str(), root.as_str()])
+    }
+
+    #[cfg(feature = "lua")]
+    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
+        use crate::mlua::LuaExtension;
+        lua.trace(&format!("Added (pid: {pid} cwd: {root})"))?;
+        Self::request(pid, root).map_err(mlua::Error::external)
     }
 }
 
 #[async_trait]
-impl DaemonCommand for UnRegister {
+impl DaemonCommand for Drop {
     async fn handle(&self, state: SharedState) -> Result<()> {
         trace!("{:?}", self);
         state

@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::{daemon, DaemonCommand};
+use crate::{Daemon, DaemonCommand};
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -16,7 +16,7 @@ impl Run {
     }
 
     pub fn request(path: &str, name: &str, new_name: &str) -> Result<()> {
-        daemon::execute(&["run", path, name, new_name])
+        Daemon::execute(&["run", path, name, new_name])
     }
 }
 

@@ -8,7 +8,7 @@ use tokio::task::JoinHandle;
 use tracing::trace;
 
 /// Main state
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct State {
     /// Manged workspaces
     pub workspaces: HashMap<String, Workspace>,
@@ -21,15 +21,6 @@ pub struct State {
 pub type SharedState = Arc<Mutex<State>>;
 
 impl State {
-    pub fn new() -> Result<SharedState> {
-        let state = State {
-            workspaces: HashMap::new(),
-            watchers: HashMap::new(),
-            clients: vec![],
-        };
-        Ok(Arc::new(Mutex::new(state)))
-    }
-
     pub fn update_clients(&mut self) {
         self.clients.retain(|&pid| {
             if proc_pid::name(pid).is_err() {

@@ -1,6 +1,6 @@
 use mlua::prelude::*;
 
-pub trait LuaExt {
+pub trait LuaExtension {
     fn print(&self, msg: &str);
     fn trace(&self, msg: &str) -> LuaResult<()>;
     fn error(&self, msg: &str) -> LuaResult<()>;
@@ -18,7 +18,7 @@ fn log(lua: &Lua, level: &str, msg: &str) -> LuaResult<()> {
         .call::<_, ()>(msg.to_lua(lua))
 }
 
-impl LuaExt for Lua {
+impl LuaExtension for Lua {
     fn print(&self, msg: &str) {
         self.globals()
             .get::<_, LuaFunction>("print")

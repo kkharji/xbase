@@ -1139,6 +1139,7 @@ dependencies = [
  "dirs",
  "lazy_static",
  "libproc",
+ "mlua",
  "notify",
  "regex",
  "serde",

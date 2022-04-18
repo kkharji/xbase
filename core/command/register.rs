@@ -1,5 +1,5 @@
 use crate::state::SharedState;
-use crate::{daemon, DaemonCommand};
+use crate::{Daemon, DaemonCommand};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use tracing::trace;
@@ -27,7 +27,14 @@ impl Register {
     }
 
     pub fn request(pid: i32, root: String) -> Result<()> {
-        daemon::execute(&["register", pid.to_string().as_str(), root.as_str()])
+        Daemon::execute(&["register", pid.to_string().as_str(), root.as_str()])
+    }
+
+    #[cfg(feature = "lua")]
+    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
+        use crate::mlua::LuaExtension;
+        lua.trace(&format!("Removed (pid: {pid} cwd: {root})"))?;
+        Self::request(pid, root).map_err(mlua::Error::external)
     }
 }
 
