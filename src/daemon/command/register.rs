@@ -8,6 +8,7 @@ pub struct Register {
 }
 
 impl Register {
+    pub const KEY: &'static str = "register";
     pub fn new(args: Vec<&str>) -> Result<Self> {
         let pid = args.get(0);
         let root = args.get(1);

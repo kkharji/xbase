@@ -45,11 +45,11 @@ impl DaemonCommand {
         let mut args = str.split(" ").collect::<Vec<&str>>();
         let cmd = args.remove(0);
         Ok(match cmd {
-            "build" => Self::Build(Build::new(args)?),
-            "run" => Self::Run(Run::new(args)?),
-            "rename_file" => Self::RenameFile(RenameFile::new(args)?),
-            "register" => Self::Register(Register::new(args)?),
-            "drop" => Self::Drop(Drop::new(args)?),
+            Build::KEY => Self::Build(Build::new(args)?),
+            Run::KEY => Self::Run(Run::new(args)?),
+            RenameFile::KEY => Self::RenameFile(RenameFile::new(args)?),
+            Register::KEY => Self::Register(Register::new(args)?),
+            Drop::KEY => Self::Drop(Drop::new(args)?),
             _ => anyhow::bail!("Unknown command messsage: {cmd}"),
         })
     }

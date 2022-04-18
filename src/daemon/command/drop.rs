@@ -8,6 +8,7 @@ pub struct Drop {
 }
 
 impl Drop {
+    pub const KEY: &'static str = "drop";
     pub fn new(args: Vec<&str>) -> Result<Self> {
         let pid = args.get(0);
         let root = args.get(1);
@@ -23,7 +24,7 @@ impl Drop {
     }
 
     pub fn request(pid: i32, root: String) -> Result<()> {
-        crate::Daemon::execute(&["drop", pid.to_string().as_str(), root.as_str()])
+        crate::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
     }
 
     #[cfg(feature = "lua")]

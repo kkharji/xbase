@@ -10,6 +10,7 @@ pub struct Build {
 }
 
 impl Build {
+    pub const KEY: &'static str = "build";
     pub fn new(_args: Vec<&str>) -> Result<Build> {
         Ok(Self {
             target: None,

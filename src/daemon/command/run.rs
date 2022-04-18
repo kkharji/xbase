@@ -7,6 +7,7 @@ pub struct Run {
 }
 
 impl Run {
+    pub const KEY: &'static str = "run";
     pub fn new(args: Vec<&str>) -> Result<Self> {
         let _simulator = args.get(0).unwrap_or(&"").parse::<bool>().unwrap_or(false);
         Ok(Self { _simulator })

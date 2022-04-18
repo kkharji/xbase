@@ -9,6 +9,7 @@ pub struct RenameFile {
 }
 
 impl RenameFile {
+    pub const KEY: &'static str = "rename_file";
     pub fn new(args: Vec<&str>) -> Result<Self> {
         let path = args.get(0);
         let new_name = args.get(2);
@@ -30,7 +31,7 @@ impl RenameFile {
     }
 
     pub fn request(path: &str, name: &str, new_name: &str) -> Result<()> {
-        crate::Daemon::execute(&["rename_file", path, name, new_name])
+        crate::Daemon::execute(&[Self::KEY, path, name, new_name])
     }
 
     #[cfg(feature = "lua")]
