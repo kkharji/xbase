@@ -42,9 +42,7 @@ impl Drop {
     }
 
     #[cfg(feature = "lua")]
-    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
-        use crate::LuaExtension;
-        lua.trace(&format!("Dropped (pid: {pid} cwd: {root})"))?;
+    pub fn lua(_: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
         Self::request(pid, root).map_err(mlua::Error::external)
     }
 }
