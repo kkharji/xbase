@@ -43,14 +43,13 @@ impl DaemonCommand {
 
     pub fn parse(str: &str) -> Result<Self> {
         let mut args = str.split(" ").collect::<Vec<&str>>();
-        let cmd = args.remove(0);
-        Ok(match cmd {
-            Build::KEY => Self::Build(Build::new(args)?),
-            Run::KEY => Self::Run(Run::new(args)?),
-            RenameFile::KEY => Self::RenameFile(RenameFile::new(args)?),
-            Register::KEY => Self::Register(Register::new(args)?),
-            Drop::KEY => Self::Drop(Drop::new(args)?),
-            _ => anyhow::bail!("Unknown command messsage: {cmd}"),
+        Ok(match args.remove(0) {
+            Build::KEY => Self::Build(args.try_into()?),
+            Run::KEY => Self::Run(args.try_into()?),
+            RenameFile::KEY => Self::RenameFile(args.try_into()?),
+            Register::KEY => Self::Register(args.try_into()?),
+            Drop::KEY => Self::Drop(args.try_into()?),
+            cmd => anyhow::bail!("Unknown command messsage: {cmd}"),
         })
     }
 }

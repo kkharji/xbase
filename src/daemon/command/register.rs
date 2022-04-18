@@ -7,39 +7,42 @@ pub struct Register {
     pub root: String,
 }
 
-impl Register {
-    pub const KEY: &'static str = "register";
-    pub fn new(args: Vec<&str>) -> Result<Self> {
-        let pid = args.get(0);
-        let root = args.get(1);
-
-        if pid.is_none() || root.is_none() {
-            anyhow::bail!("Missing arugments: [ pid: {:?}, root: {:?} ]", pid, root)
-        }
-
-        Ok(Self {
-            pid: pid.unwrap().parse::<i32>()?,
-            root: root.unwrap().to_string(),
-        })
-    }
-
-    pub fn request(pid: i32, root: String) -> Result<()> {
-        crate::Daemon::execute(&["register", pid.to_string().as_str(), root.as_str()])
-    }
-
-    #[cfg(feature = "lua")]
-    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
-        use crate::LuaExtension;
-        lua.trace(&format!("Removed (pid: {pid} cwd: {root})"))?;
-        Self::request(pid, root).map_err(mlua::Error::external)
-    }
-}
-
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 impl crate::DaemonCommandExt for Register {
     async fn handle(&self, state: crate::SharedState) -> Result<()> {
         tracing::trace!("{:?}", self);
         state.lock().await.add_workspace(&self.root, self.pid).await
+    }
+}
+
+impl TryFrom<Vec<&str>> for Register {
+    type Error = anyhow::Error;
+
+    fn try_from(args: Vec<&str>) -> Result<Self, Self::Error> {
+        if let (Some(pid), Some(root)) = (args.get(0), args.get(1)) {
+            Ok(Self {
+                pid: pid.parse::<i32>()?,
+                root: root.to_string(),
+            })
+        } else {
+            anyhow::bail!("Missing arugments: got {:?}", args)
+        }
+    }
+}
+
+impl Register {
+    pub const KEY: &'static str = "register";
+    pub fn request(pid: i32, root: String) -> Result<()> {
+        crate::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
+    }
+}
+
+#[cfg(feature = "lua")]
+impl Register {
+    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
+        use crate::LuaExtension;
+        lua.trace(&format!("Add (pid: {pid} cwd: {root})"))?;
+        Self::request(pid, root).map_err(mlua::Error::external)
     }
 }
