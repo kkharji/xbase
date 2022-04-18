@@ -5,7 +5,8 @@ edition = "2021"
 
 [features]
 default    = [ ]
-daemon     = [ "serial", "completion", "logging", "xcode", "async", "watcher", "proc" ]
+xcodegen   = [ "async", "dirs" ]
+daemon     = [ "serial", "completion", "logging", "xcode", "async", "watcher", "proc", "xcodegen" ]
 lua        = [ "mlua" ]
 serial     = [ "serde", "serde_json", "serde_yaml" ]
 completion = [ "serial", "lazy_static", "regex" ]

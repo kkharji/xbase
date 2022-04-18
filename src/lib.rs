@@ -9,6 +9,9 @@ pub use state::*;
 #[cfg(feature = "xcode")]
 pub mod xcode;
 
+#[cfg(feature = "xcodegen")]
+pub mod xcodegen;
+
 // Utilities
 
 pub mod util;

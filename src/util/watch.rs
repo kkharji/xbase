@@ -182,7 +182,7 @@ fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyho
 
             match state.lock().await.workspaces.get_mut(&root) {
                 Some(w) => {
-                    w.on_dirctory_change(path, event.kind).await?;
+                    w.on_directory_change(path, event.kind).await?;
                 }
                 // NOTE: should stop watch here
                 None => continue,

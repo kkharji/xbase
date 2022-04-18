@@ -11,6 +11,9 @@ use std::path::PathBuf;
 
 use crate::Project;
 
+#[cfg(feature = "xcodegen")]
+use crate::xcodegen;
+
 /// Managed Workspace
 #[derive(Debug)]
 pub struct Workspace {
@@ -94,14 +97,17 @@ impl Workspace {
     }
 
     /// Regenerate compiled commands and xcodeGen if project.yml exists
-    #[cfg(feature = "xcode")]
-    pub async fn on_dirctory_change(
+    #[cfg(all(feature = "xcode", feature = "watcher"))]
+    pub async fn on_directory_change(
         &mut self,
         path: PathBuf,
         _event: notify::EventKind,
     ) -> Result<()> {
-        if self.is_xcodegen_project() {
+        if crate::xcodegen::is_workspace(self) {
             let is_config_file = path.file_name().unwrap().eq("project");
+            // FIXME: should've been true
+            tracing::debug!("is_config_file: {is_config_file}");
+
             self.update_xcodeproj(is_config_file).await?;
         }
 
@@ -112,55 +118,31 @@ impl Workspace {
     }
 
     /// Update .compile commands
+    #[cfg(feature = "xcodegen")]
     pub async fn update_xcodeproj(&mut self, update_config: bool) -> Result<()> {
-        /*
-           FIXME: make xCodeGen binary path configurable.
-
-           Current implementation will not work unless the user has xcodeGen located in
-           `~/.mint/bin/xcodegen`. Should either make it configurable as well as support a
-           number of paths by default.
-        */
-        let xcodegen_path = dirs::home_dir().unwrap().join(".mint/bin/xcodegen");
-        // TODO: move xcodegen generate command to it's own module
-        let xcodegen = tokio::process::Command::new(xcodegen_path)
-            .current_dir(self.root.clone())
-            .stdout(std::process::Stdio::null())
-            .arg("generate")
-            .spawn()
-            .expect("Failed to start xcodeGen.")
-            .wait()
-            .await
-            .expect("Failed to run xcodeGen.");
-
-        if xcodegen.success() {
-            tracing::info!("Updated {}.xcodeproj", self.name());
-            if update_config {
-                tracing::debug!("Updated internal state.{}.project", self.name());
-                let path = self.xcodegen_config_path();
-                self.project = Project::new_from_project_yml(self.root.clone(), path).await?;
+        match xcodegen::generate(&self.root).await {
+            Ok(msg) => {
+                tracing::info!("Updated {}.xcodeproj", self.name());
+                tracing::trace!("{:?}", msg);
+                if update_config {
+                    tracing::info!("Updated internal state.{}.project", self.name());
+                    self.project = Project::new_from_project_yml(
+                        self.root.clone(),
+                        xcodegen::config_path(self),
+                    )
+                    .await?;
+                }
+                Ok(())
+            }
+            Err(e) => {
+                tracing::error!("{:?}", e);
+                Err(e)
             }
         }
-
-        Ok(())
     }
 
-    /// TODO: move xcodegen related code to it's own module
-    /// Checks whether current workspace is xcodegen project.
-    pub fn is_xcodegen_project(&self) -> bool {
-        self.xcodegen_config_path().exists()
-    }
-
-    pub fn xcodegen_config_path(&self) -> PathBuf {
-        /*
-           TODO: support otherways to identify xcodegen project
-
-           Some would have xcodegen config as json file or
-           have different location to where they store xcodegen project config.
-        */
-        self.root.join("project.yml")
-    }
     pub fn get_ignore_patterns(&self) -> Option<Vec<String>> {
-        if self.is_xcodegen_project() {
+        if crate::xcodegen::is_workspace(self) {
             return Some(self.project.config().ignore.clone());
         }
         return None;
