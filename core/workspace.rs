@@ -34,8 +34,6 @@ impl Workspace {
             Project::new_from_project_yml(root.clone(), path).await?
         };
 
-        tracing::info!("Managing [{}] {:?}", project.name(), root);
-
         Ok(Self {
             root,
             project,
@@ -53,7 +51,7 @@ impl Workspace {
         let name = self.project.name();
         self.clients.retain(|&pid| {
             if proc_pid::name(pid).is_err() {
-                tracing::debug!("[{}]: Remove Client: {pid}", name);
+                tracing::info!("[{}]: Remove Client: {pid}", name);
                 false
             } else {
                 true
@@ -66,8 +64,15 @@ impl Workspace {
         // Remove no longer active clients
         self.update_clients();
         // NOTE: Implicitly assuming that pid is indeed a valid pid
-        tracing::debug!("[{}] Add Client: {pid}", self.name());
+        tracing::info!("[{}] Add Client: {pid}", self.name());
         self.clients.push(pid)
+    }
+
+    /// Remove client from workspace
+    pub fn remove_client(&mut self, pid: i32) -> usize {
+        tracing::info!("[{}] Remove Client: {pid}", self.name());
+        self.clients.retain(|&p| p != pid);
+        self.clients.iter().count()
     }
 
     /// Wrapper around Project.name:

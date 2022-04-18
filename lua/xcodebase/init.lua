@@ -2,11 +2,11 @@ local xcodebase = {}
 local config = require "xcodebase.config"
 local lib = require "libxcodebase"
 
----@class XcodeBaseServer
+---@class XcodeBaseDaemon
 ---@field ensure fun():boolean: When the a new server started it should return true
 ---@field is_running fun():boolean
 ---@field register fun(pid: number, root: string):boolean
-local server = lib.server
+xcodebase.daemon = lib.daemon
 
 ---@class XcodeBaseCommand
 local command = lib.command
@@ -35,8 +35,10 @@ xcodebase.try_register = function(opts)
   local root = vim.loop.cwd()
 
   if xcodebase.should_register(root, opts) then
-    local _ = server.ensure()
-    server.register(vim.fn.getpid(), root)
+    local _ = xcodebase.daemon.ensure()
+    xcodebase.daemon.register(vim.fn.getpid(), root)
+    vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.daemon.unregister(vim.fn.getpid(), vim.loop.cwd())]]
+
   else
     return
   end

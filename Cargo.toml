@@ -32,7 +32,8 @@ wax = "0.4.0"
 regex = "1.5"
 lazy_static = "1.4.0"
 shell-words = "1.1.0"
-
+# TODO: make libxcodebase lightweight
+# Use features to exclude stuff likce tracing and async-trait as well tokio
 # WARN: api totally changed on later versions.
 # It would make sense to create custom function
 # Breaks
@@ -47,5 +48,4 @@ members = [
   "daemon",
   "lsp",
   "nvim",
-  "server"
 ]

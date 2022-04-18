@@ -1,5 +1,5 @@
 use crate::workspace::Workspace;
-use anyhow::{Ok, Result};
+use anyhow::{bail, Ok, Result};
 use libproc::libproc::proc_pid;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -49,15 +49,34 @@ impl State {
         match self.workspaces.get_mut(root) {
             Some(workspace) => workspace.add_client(pid),
             None => {
-                self.workspaces.insert(
-                    root.to_string(),
-                    Workspace::new_with_client(&root, pid).await?,
-                );
+                let workspace = Workspace::new_with_client(&root, pid).await?;
+
+                tracing::info!("Managing [{}] {:?}", workspace.project.name(), root);
+
+                self.workspaces.insert(root.to_string(), workspace);
             }
         };
 
         // Print New state
         trace!("{:#?}", self);
+        Ok(())
+    }
+
+    // Remove remove client from workspace and the workspace if it's this client was the last one.
+    pub async fn remove_workspace(&mut self, root: &str, pid: i32) -> Result<()> {
+        let mut name = None;
+        if let Some(workspace) = self.workspaces.get_mut(root) {
+            let clients_len = workspace.remove_client(pid);
+            clients_len
+                .eq(&0)
+                .then(|| name = workspace.project.name().to_string().into());
+        } else {
+            bail!("workspace with '{root}' with given pid {pid} doesn't exist")
+        }
+        if let Some(name) = name {
+            tracing::info!("Dropping [{}] {:?}", name, root);
+            self.workspaces.remove(root);
+        }
         Ok(())
     }
 }
