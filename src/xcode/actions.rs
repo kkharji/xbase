@@ -61,6 +61,7 @@ where
         .await
 }
 
+#[cfg(feature = "serial")]
 pub async fn update_compiled_commands(root: &PathBuf, build_log: Vec<String>) -> Result<()> {
     fs::write(
         root.join(".compile"),

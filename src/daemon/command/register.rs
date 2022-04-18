@@ -1,8 +1,4 @@
-use crate::state::SharedState;
-use crate::{Daemon, DaemonCommandExt};
-use anyhow::{bail, Result};
-use async_trait::async_trait;
-use tracing::trace;
+use anyhow::Result;
 
 /// Register new client with workspace
 #[derive(Debug)]
@@ -17,7 +13,7 @@ impl Register {
         let root = args.get(1);
 
         if pid.is_none() || root.is_none() {
-            bail!("Missing arugments: [ pid: {:?}, root: {:?} ]", pid, root)
+            anyhow::bail!("Missing arugments: [ pid: {:?}, root: {:?} ]", pid, root)
         }
 
         Ok(Self {
@@ -27,7 +23,7 @@ impl Register {
     }
 
     pub fn request(pid: i32, root: String) -> Result<()> {
-        Daemon::execute(&["register", pid.to_string().as_str(), root.as_str()])
+        crate::Daemon::execute(&["register", pid.to_string().as_str(), root.as_str()])
     }
 
     #[cfg(feature = "lua")]
@@ -38,10 +34,11 @@ impl Register {
     }
 }
 
-#[async_trait]
-impl DaemonCommandExt for Register {
-    async fn handle(&self, state: SharedState) -> Result<()> {
-        trace!("{:?}", self);
+#[cfg(feature = "daemon")]
+#[async_trait::async_trait]
+impl crate::DaemonCommandExt for Register {
+    async fn handle(&self, state: crate::SharedState) -> Result<()> {
+        tracing::trace!("{:?}", self);
         state.lock().await.add_workspace(&self.root, self.pid).await
     }
 }

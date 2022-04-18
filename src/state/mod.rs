@@ -4,37 +4,31 @@ mod workspace;
 pub use project::*;
 pub use workspace::*;
 
-use anyhow::{bail, Ok, Result};
-use libproc::libproc::proc_pid;
+#[cfg(feature = "daemon")]
+use anyhow::Result;
+
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
-use tracing::trace;
 
 /// Main state
-#[derive(Debug, Default)]
+#[derive(Default, Debug)]
 pub struct State {
     /// Manged workspaces
     pub workspaces: HashMap<String, Workspace>,
-    /// Connect clients
+    /// Connected clients
     pub clients: Vec<i32>,
     // Current System. This is required mainly to check for
-    pub watchers: HashMap<String, JoinHandle<Result<()>>>,
+    #[cfg(feature = "async")]
+    pub watchers: HashMap<String, tokio::task::JoinHandle<Result<()>>>,
 }
 
-pub type SharedState = Arc<Mutex<State>>;
+#[cfg(feature = "async")]
+pub type SharedState = std::sync::Arc<tokio::sync::Mutex<State>>;
 
+#[cfg(feature = "daemon")]
 impl State {
     pub fn update_clients(&mut self) {
-        self.clients.retain(|&pid| {
-            if proc_pid::name(pid).is_err() {
-                tracing::trace!("Removeing {pid}");
-                false
-            } else {
-                true
-            }
-        });
+        self.clients
+            .retain(|pid| crate::util::proc::exists(pid, || tracing::info!("Removeing {pid}")));
 
         self.workspaces
             .iter_mut()
@@ -54,7 +48,7 @@ impl State {
         };
 
         // Print New state
-        trace!("{:#?}", self);
+        tracing::trace!("{:#?}", self);
         Ok(())
     }
 
@@ -67,7 +61,7 @@ impl State {
                 .eq(&0)
                 .then(|| name = workspace.project.name().to_string().into());
         } else {
-            bail!("workspace with '{root}' with given pid {pid} doesn't exist")
+            anyhow::bail!("workspace with '{root}' with given pid {pid} doesn't exist")
         }
         if let Some(name) = name {
             tracing::info!("Dropping [{}] {:?}", name, root);

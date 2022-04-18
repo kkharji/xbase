@@ -7,10 +7,13 @@ pub const DAEMON_BINARY: &str =
     "/Users/tami5/repos/neovim/xcodebase.nvim/target/debug/xcodebase-daemon";
 
 pub struct Daemon {
+    #[cfg(feature = "daemon")]
     state: std::sync::Arc<tokio::sync::Mutex<crate::state::State>>,
+    #[cfg(feature = "daemon")]
     listener: tokio::net::UnixListener,
 }
 
+#[cfg(feature = "daemon")]
 impl Daemon {
     pub fn default() -> Self {
         if std::fs::metadata(DAEMON_SOCKET_PATH).is_ok() {

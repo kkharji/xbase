@@ -1,6 +1,4 @@
-use crate::state::SharedState;
-use anyhow::{bail, Result};
-use async_trait::async_trait;
+use anyhow::Result;
 
 mod build;
 mod drop;
@@ -14,9 +12,10 @@ pub use register::Register;
 pub use rename_file::RenameFile;
 pub use run::Run;
 
-#[async_trait]
+#[async_trait::async_trait]
+#[cfg(feature = "daemon")]
 pub trait DaemonCommandExt {
-    async fn handle(&self, state: SharedState) -> anyhow::Result<()>;
+    async fn handle(&self, state: crate::SharedState) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -29,8 +28,10 @@ pub enum DaemonCommand {
 }
 
 impl DaemonCommand {
-    pub async fn handle(&self, state: SharedState) -> Result<()> {
+    #[cfg(feature = "daemon")]
+    pub async fn handle(&self, state: crate::SharedState) -> Result<()> {
         use DaemonCommand::*;
+
         match self {
             Build(c) => c.handle(state).await,
             Run(c) => c.handle(state).await,
@@ -49,7 +50,7 @@ impl DaemonCommand {
             "rename_file" => Self::RenameFile(RenameFile::new(args)?),
             "register" => Self::Register(Register::new(args)?),
             "drop" => Self::Drop(Drop::new(args)?),
-            _ => bail!("Unknown command messsage: {cmd}"),
+            _ => anyhow::bail!("Unknown command messsage: {cmd}"),
         })
     }
 }

@@ -3,47 +3,17 @@ name = "xcodebase"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-# Error Handling
-anyhow = "^1.0.42"
-
-# Serialization
-serde = { version = "1.0", features = ["derive"]}
-serde_json = "1.0.79"
-serde_yaml = "0.8.23"
-
-# Get processes, processors, disks, components and networks
-# sysinfo = "0.23.5"
-libproc = "0.10.0"
-
-# Mainly for running async code and managing UnixListener
-tokio = { version = "1.17.0", features = ["full"]  }
-# Shorthand async
-async-trait = "0.1.52"
-
-# Async tracing
-tracing = "0.1.32"
-tracing-subscriber = { version = "0.3.9", features = ["env-filter"]}
-tracing-appender = "0.2.1"
-
-notify = "5.0.0-pre.13"
-dirs = "4.0"
-wax = "0.4.0"
-regex = "1.5"
-lazy_static = "1.4.0"
-shell-words = "1.1.0"
-mlua = { version = "0.7.4", optional = true }
-
-# TODO: make libxcodebase lightweight
-# Use features to exclude stuff likce tracing and async-trait as well tokio
-# WARN: api totally changed on later versions.
-# It would make sense to create custom function
-# Breaks
-# gitignore = "1.0.7"
 [features]
-default = [ ]
-lua = [ "mlua" ]
-# logging = [ "tracing", "tracing-subscriber", "tracing-appender" ]
+default    = [ ]
+daemon     = [ "serial", "completion", "logging", "xcode", "async", "watcher", "proc" ]
+lua        = [ "mlua" ]
+serial     = [ "serde", "serde_json", "serde_yaml" ]
+completion = [ "serial", "lazy_static", "regex" ]
+logging    = [ "tracing", "tracing-appender", "tracing-subscriber" ]
+xcode      = [ "serial" ]
+async      = [ "tokio", "async-trait" ]
+proc       = [ "libproc" ]
+watcher    = [ "dirs", "notify", "wax" ]
 
 [lib]
 name = "xcodebase"
@@ -51,6 +21,44 @@ path = "src/lib.rs"
 
 [workspace]
 members = [
-  "pkgs/daemon",
-  "./lua/xcodebase",
+  "lua/xcodebase",
 ]
+
+[[bin]]
+name = "xcodebase-daemon"
+path = "src/daemon/bin.rs"
+required-features = ["daemon"]
+
+[dependencies]
+
+# Error Handling
+anyhow             = "^1.0.42"
+
+# Serialization Feature
+serde              = { version = "1.0",    features = ["derive"], optional = true }
+serde_json         = { version = "1.0.79", optional = true }
+serde_yaml         = { version = "0.8.23", optional = true }
+
+# Async Runtime Feature
+tokio              = { version = "1.17.0", features = ["full"], optional = true }
+async-trait        = { version = "0.1.52", optional = true }
+
+# Logging Feature
+tracing            = { version = "0.1.32", optional = true }
+tracing-subscriber = { version = "0.3.9",  features = ["env-filter"], optional = true}
+tracing-appender   = { version = "0.2.1",  optional = true }
+
+# Filesystem watcher
+notify             = { version = "5.0.0-pre.13", optional = true }
+dirs               = { version = "4.0",   optional = true }
+wax                = { version = "0.4.0", optional = true }
+
+# Build logs Completion feature
+regex              = { version = "1.5",   optional = true }
+lazy_static        = { version = "1.4.0", optional = true }
+shell-words        = { version  = "1.1.0" }
+mlua               = { version = "0.7.4", optional = true } 
+
+# Proc feature: processes, processors, disks, components and networks
+# sysinfo = "0.23.5"
+libproc            = { version = "0.10.0", optional = true }

@@ -1,8 +1,4 @@
-use crate::state::SharedState;
-use crate::{Daemon, DaemonCommandExt};
-use anyhow::{bail, Result};
-use async_trait::async_trait;
-use tracing::trace;
+use anyhow::Result;
 
 /// Register new client with workspace
 #[derive(Debug)]
@@ -17,7 +13,7 @@ impl Drop {
         let root = args.get(1);
 
         if pid.is_none() || root.is_none() {
-            bail!("Missing arugments: [ pid: {:?}, root: {:?} ]", pid, root)
+            anyhow::bail!("Missing arugments: [ pid: {:?}, root: {:?} ]", pid, root)
         }
 
         Ok(Self {
@@ -27,21 +23,22 @@ impl Drop {
     }
 
     pub fn request(pid: i32, root: String) -> Result<()> {
-        Daemon::execute(&["drop", pid.to_string().as_str(), root.as_str()])
+        crate::Daemon::execute(&["drop", pid.to_string().as_str(), root.as_str()])
     }
 
     #[cfg(feature = "lua")]
     pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
         use crate::LuaExtension;
-        lua.trace(&format!("Added (pid: {pid} cwd: {root})"))?;
+        lua.trace(&format!("Dropped (pid: {pid} cwd: {root})"))?;
         Self::request(pid, root).map_err(mlua::Error::external)
     }
 }
 
-#[async_trait]
-impl DaemonCommandExt for Drop {
-    async fn handle(&self, state: SharedState) -> Result<()> {
-        trace!("{:?}", self);
+#[async_trait::async_trait]
+#[cfg(feature = "daemon")]
+impl crate::DaemonCommandExt for Drop {
+    async fn handle(&self, state: crate::state::SharedState) -> Result<()> {
+        tracing::trace!("{:?}", self);
         state
             .lock()
             .await

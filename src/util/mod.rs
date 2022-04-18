@@ -1,11 +1,8 @@
 #[cfg(feature = "lua")]
 pub mod mlua;
-
-// #[cfg(feature = "lua")]
-// pub use mlua::*;
-
-// #[cfg(feature = "logging")]
+#[cfg(feature = "proc")]
+pub mod proc;
+#[cfg(feature = "logging")]
 pub mod tracing;
+#[cfg(feature = "watcher")]
 pub mod watch;
-
-// pub use tracing::*;

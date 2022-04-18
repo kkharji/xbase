@@ -10,7 +10,6 @@ use tracing::{debug, trace};
 use wax::{Glob, Pattern};
 
 // TODO: Stop handle
-
 pub async fn update(state: SharedState, _msg: DaemonCommand) {
     let copy = state.clone();
     let mut current_state = copy.lock().await;

@@ -1,7 +1,4 @@
-use crate::state::SharedState;
-use crate::{Daemon, DaemonCommandExt};
-use anyhow::{bail, Result};
-use async_trait::async_trait;
+use anyhow::Result;
 
 /// Rename file + class
 #[derive(Debug)]
@@ -17,7 +14,7 @@ impl RenameFile {
         let new_name = args.get(2);
         let name = args.get(1);
         if path.is_none() || name.is_none() || new_name.is_none() {
-            bail!(
+            anyhow::bail!(
                 "Missing arugments: [path: {:?}, old_name: {:?}, name_name: {:?} ]",
                 path,
                 name,
@@ -33,13 +30,24 @@ impl RenameFile {
     }
 
     pub fn request(path: &str, name: &str, new_name: &str) -> Result<()> {
-        Daemon::execute(&["rename_file", path, name, new_name])
+        crate::Daemon::execute(&["rename_file", path, name, new_name])
+    }
+
+    #[cfg(feature = "lua")]
+    pub fn lua(
+        lua: &mlua::Lua,
+        (path, name, new_name): (String, String, String),
+    ) -> mlua::Result<()> {
+        use crate::LuaExtension;
+        lua.trace(&format!("Rename command called"))?;
+        Self::request(&path, &name, &new_name).map_err(mlua::Error::external)
     }
 }
 
-#[async_trait]
-impl DaemonCommandExt for RenameFile {
-    async fn handle(&self, _state: SharedState) -> Result<()> {
+#[async_trait::async_trait]
+#[cfg(feature = "daemon")]
+impl crate::DaemonCommandExt for RenameFile {
+    async fn handle(&self, _state: crate::SharedState) -> Result<()> {
         tracing::info!("Reanmed command");
         Ok(())
     }

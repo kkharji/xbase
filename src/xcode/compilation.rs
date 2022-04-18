@@ -1,9 +1,9 @@
 // CREDIT: @SolaWing https://github.com/SolaWing/xcode-build-server/blob/master/xcode-build-server
 // CREDIT: Richard Howell https://github.com/doc22940/sourcekit-lsp/blob/master/Tests/INPUTS/BuildServerBuildSystemTests.testBuildTargetOutputs/server.py
 
+#[cfg(feature = "serial")]
 mod command;
 use anyhow::Result;
-use command::CompilationCommand;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ use std::collections::HashMap;
 // TODO: support index store
 
 pub struct Compiliation {
-    pub commands: Vec<CompilationCommand>,
+    pub commands: Vec<command::CompilationCommand>,
     lines: Vec<String>,
     clnum: usize,
     index_store_path: Vec<String>,
@@ -49,6 +49,7 @@ impl Compiliation {
     }
 
     /// Serialize to JSON string
+    #[cfg(feature = "serial")]
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(&self.commands)
     }
@@ -70,7 +71,7 @@ lazy_static! {
 impl Compiliation {
     /// Parse starting from current line as swift module
     /// Matching r"^CompileSwiftSources\s*"
-    fn swift_module_command(&self) -> Option<CompilationCommand> {
+    fn swift_module_command(&self) -> Option<command::CompilationCommand> {
         let directory = match self.lines.get(self.clnum) {
             Some(s) => s.trim().replace("cd ", ""),
             None => {
@@ -87,7 +88,7 @@ impl Compiliation {
             }
         };
 
-        match CompilationCommand::new(directory, command) {
+        match command::CompilationCommand::new(directory, command) {
             Ok(command) => {
                 tracing::debug!("Extracted {} Module Command", command.name);
                 Some(command)

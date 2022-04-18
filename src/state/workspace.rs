@@ -1,12 +1,15 @@
-use crate::{Project, Target, TargetMap};
-use anyhow::{bail, Ok, Result};
+#[cfg(feature = "proc")]
+use crate::util::proc;
+
+#[cfg(feature = "xcode")]
+use crate::xcode;
+
+#[cfg(feature = "daemon")]
+use anyhow::Result;
+
 use std::path::PathBuf;
 
-use crate::xcode;
-use libproc::libproc::proc_pid;
-use notify::EventKind;
-use std::process::Stdio;
-use tokio::process::Command;
+use crate::Project;
 
 /// Managed Workspace
 #[derive(Debug)]
@@ -19,19 +22,23 @@ pub struct Workspace {
     pub clients: Vec<i32>,
 }
 
+#[cfg(feature = "daemon")]
 impl Workspace {
     /// Create new workspace from a path representing project root.
     /// TODO: Support projects with .xproj as well as xcworkspace
     pub async fn new(root: &str) -> Result<Self> {
+        use anyhow::Context;
         let root = PathBuf::from(root);
 
         let project = {
             let path = root.join("project.yml");
             if !path.exists() {
-                bail!("project.yaml doesn't exist in '{:?}'", root)
+                anyhow::bail!("project.yaml doesn't exist in '{:?}'", root)
             }
 
-            Project::new_from_project_yml(root.clone(), path).await?
+            Project::new_from_project_yml(root.clone(), path)
+                .await
+                .context("Fail to create xcodegen project.")?
         };
 
         Ok(Self {
@@ -49,14 +56,8 @@ impl Workspace {
 
     pub fn update_clients(&mut self) {
         let name = self.project.name();
-        self.clients.retain(|&pid| {
-            if proc_pid::name(pid).is_err() {
-                tracing::info!("[{}]: Remove Client: {pid}", name);
-                false
-            } else {
-                true
-            }
-        });
+        self.clients
+            .retain(|pid| proc::exists(pid, || tracing::info!("[{}]: Remove Client: {pid}", name)))
     }
 
     /// Add new client to workspace (implicitly check if all other clients are stil valid).
@@ -83,17 +84,22 @@ impl Workspace {
 
     /// Wrapper around project.targets
     /// Returns all avaliable targets
-    pub fn targets(&self) -> &TargetMap {
+    pub fn targets(&self) -> &crate::TargetMap {
         self.project.targets()
     }
 
     /// Get project target from project.targets using target_name
-    pub fn get_target(&self, target_name: &str) -> Option<&Target> {
+    pub fn get_target(&self, target_name: &str) -> Option<&crate::Target> {
         self.project.targets().get(target_name)
     }
 
     /// Regenerate compiled commands and xcodeGen if project.yml exists
-    pub async fn on_dirctory_change(&mut self, path: PathBuf, _event: EventKind) -> Result<()> {
+    #[cfg(feature = "xcode")]
+    pub async fn on_dirctory_change(
+        &mut self,
+        path: PathBuf,
+        _event: notify::EventKind,
+    ) -> Result<()> {
         if self.is_xcodegen_project() {
             let is_config_file = path.file_name().unwrap().eq("project");
             self.update_xcodeproj(is_config_file).await?;
@@ -115,9 +121,10 @@ impl Workspace {
            number of paths by default.
         */
         let xcodegen_path = dirs::home_dir().unwrap().join(".mint/bin/xcodegen");
-        let xcodegen = Command::new(xcodegen_path)
+        // TODO: move xcodegen generate command to it's own module
+        let xcodegen = tokio::process::Command::new(xcodegen_path)
             .current_dir(self.root.clone())
-            .stdout(Stdio::null())
+            .stdout(std::process::Stdio::null())
             .arg("generate")
             .spawn()
             .expect("Failed to start xcodeGen.")
@@ -137,6 +144,7 @@ impl Workspace {
         Ok(())
     }
 
+    /// TODO: move xcodegen related code to it's own module
     /// Checks whether current workspace is xcodegen project.
     pub fn is_xcodegen_project(&self) -> bool {
         self.xcodegen_config_path().exists()

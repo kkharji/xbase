@@ -1,20 +1,22 @@
-use std::collections::HashMap;
-
+#[cfg(feature = "xcode")]
 use crate::xcode;
-use anyhow::{Context, Result};
-use serde::Deserialize;
+#[allow(unused_imports)]
+use anyhow::Result;
+use std::collections::HashMap;
 use std::path::PathBuf;
-use tokio::fs;
 
 /// Represent Xcode Target
+#[derive(Debug)]
 #[allow(dead_code)]
-#[derive(Deserialize, Debug)]
+#[cfg_attr(feature = "serial", derive(serde::Deserialize))]
 pub struct Target {
     r#type: String,
     platform: String,
     sources: Vec<PathBuf>,
 }
-#[derive(Deserialize, Debug)]
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serial", derive(serde::Deserialize))]
 pub struct LocalConfig {
     pub ignore: Vec<String>,
 }
@@ -22,27 +24,35 @@ pub struct LocalConfig {
 pub type TargetMap = HashMap<String, Target>;
 
 /// Represent XcodeGen Project
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serial", derive(serde::Deserialize))]
 pub struct Project {
     /// Project Name or rather xproj generated file name.
     name: String,
     /// The list of targets in the project mapped by name
     targets: TargetMap,
     /// XcodeBase local configuration
-    #[serde(rename(deserialize = "XcodeBase"))]
+    #[cfg_attr(feature = "serial", serde(rename(deserialize = "XcodeBase")))]
     xcode_base: LocalConfig,
     /// Root directory
-    #[serde(skip)]
+    #[cfg_attr(feature = "serial", serde(skip))]
+    #[allow(dead_code)]
     root: PathBuf,
 }
 
 impl Project {
+    #[cfg(feature = "async")]
     pub async fn new_from_project_yml(root: PathBuf, path: PathBuf) -> Result<Self> {
-        let content = fs::read_to_string(path).await?;
-        let mut project: Project =
-            serde_yaml::from_str(&content).context("Unable to parse project.yaml")?;
-        project.root = root;
-        Ok(project)
+        use anyhow::bail;
+
+        let content = tokio::fs::read_to_string(path).await?;
+        if cfg!(feature = "serial") {
+            let mut project = serde_yaml::from_str::<Project>(&content)?;
+            project.root = root;
+            Ok(project)
+        } else {
+            bail!(r#"feature = "serial" is to be created from yml"#)
+        }
     }
 
     pub fn config(&self) -> &LocalConfig {
@@ -60,6 +70,7 @@ impl Project {
     }
 
     /// Build project with clean and return build log
+    #[cfg(all(feature = "async", feature = "xcode"))]
     pub async fn fresh_build(&self) -> Result<Vec<String>> {
         /*
            TODO: Find away to get commands ran without doing xcodebuild clean
