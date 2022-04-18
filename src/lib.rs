@@ -19,5 +19,5 @@ pub use util::mlua::LuaExtension;
 #[cfg(feature = "logging")]
 pub use util::tracing::install_tracing;
 
-#[cfg(feature = "daemon")]
+#[cfg(feature = "watcher")]
 pub use util::watch;

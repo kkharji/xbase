@@ -1,16 +1,37 @@
-use crate::daemon::DaemonCommand;
-use crate::state::SharedState;
 use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::Path;
-use std::result::Result;
-use std::sync::Arc;
-use std::time::Duration;
+#[cfg(feature = "daemon")]
+use std::{path::Path, time::Duration};
+#[cfg(feature = "async")]
 use tokio::sync::{mpsc, Mutex};
-use tracing::{debug, trace};
 use wax::{Glob, Pattern};
 
+/// HACK: ignore seen paths.
+///
+/// Sometiems we get event for the same path, particularly
+/// `ModifyKind::Name::Any` is ommited twice for the new path
+/// and once for the old path.
+///
+/// This will compare last_seen with path, updates `last_seen` if not match,
+/// else returns true.
+#[cfg(feature = "async")]
+async fn should_ignore(last_seen: std::sync::Arc<Mutex<String>>, path: &str) -> bool {
+    // HACK: Always return false for project.yml
+    let path = path.to_string();
+    if path.contains("project.yml") {
+        return false;
+    }
+    let mut last_seen = last_seen.lock().await;
+    if last_seen.to_string() == path {
+        return true;
+    } else {
+        *last_seen = path;
+        return false;
+    }
+}
+
 // TODO: Stop handle
-pub async fn update(state: SharedState, _msg: DaemonCommand) {
+#[cfg(feature = "daemon")]
+pub async fn update(state: crate::state::SharedState, _msg: crate::DaemonCommand) {
     let copy = state.clone();
     let mut current_state = copy.lock().await;
     let mut watched_roots: Vec<String> = vec![];
@@ -34,31 +55,9 @@ pub async fn update(state: SharedState, _msg: DaemonCommand) {
     }
 }
 
-/// HACK: ignore seen paths.
-///
-/// Sometiems we get event for the same path, particularly
-/// `ModifyKind::Name::Any` is ommited twice for the new path
-/// and once for the old path.
-///
-/// This will compare last_seen with path, updates `last_seen` if not match,
-/// else returns true.
-async fn should_ignore(last_seen: Arc<Mutex<String>>, path: &str) -> bool {
-    // HACK: Always return false for project.yml
-    let path = path.to_string();
-    if path.contains("project.yml") {
-        return false;
-    }
-    let mut last_seen = last_seen.lock().await;
-    if last_seen.to_string() == path {
-        return true;
-    } else {
-        *last_seen = path;
-        return false;
-    }
-}
-
 // TODO: Cleanup get_ignore_patterns and decrease duplications
-async fn get_ignore_patterns(state: SharedState, root: &String) -> Vec<String> {
+#[cfg(feature = "daemon")]
+async fn get_ignore_patterns(state: crate::SharedState, root: &String) -> Vec<String> {
     let mut patterns: Vec<String> = vec![
         "**/.git/**",
         "**/*.xcodeproj/**",
@@ -86,7 +85,8 @@ async fn get_ignore_patterns(state: SharedState, root: &String) -> Vec<String> {
     patterns
 }
 
-fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Result<()>> {
+#[cfg(feature = "daemon")]
+fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Result<()>> {
     // NOTE: should watch for registerd directories?
     // TODO: Support provideing additional ignore wildcard
     //
@@ -108,7 +108,7 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
         watcher.configure(notify::Config::NoticeEvents(true))?;
 
         // HACK: ignore seen paths.
-        let last_seen = Arc::new(Mutex::new(String::default()));
+        let last_seen = std::sync::Arc::new(Mutex::new(String::default()));
 
         // HACK: convert back to Vec<&str> for Glob to work.
         let patterns = get_ignore_patterns(state.clone(), &root).await;
@@ -136,11 +136,13 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
             match &event.kind {
                 notify::EventKind::Create(_) => {
                     tokio::time::sleep(Duration::new(1, 0)).await;
-                    debug!("[FileCreated]: {:?}", path);
+                    #[cfg(feature = "logging")]
+                    tracing::debug!("[FileCreated]: {:?}", path);
                 }
                 notify::EventKind::Remove(_) => {
                     tokio::time::sleep(Duration::new(1, 0)).await;
-                    debug!("[FileRemoved]: {:?}", path);
+                    #[cfg(feature = "logging")]
+                    tracing::debug!("[FileRemoved]: {:?}", path);
                 }
                 notify::EventKind::Modify(m) => {
                     match m {
@@ -150,7 +152,8 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                                     continue;
                                 }
                                 tokio::time::sleep(Duration::new(1, 0)).await;
-                                debug!("[XcodeGenConfigUpdate]");
+                                #[cfg(feature = "logging")]
+                                tracing::debug!("[XcodeGenConfigUpdate]");
                                 // HACK: Not sure why, but this is needed because xcodegen break.
                             }
                             _ => continue,
@@ -163,7 +166,8 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                                 continue;
                             }
                             tokio::time::sleep(Duration::new(1, 0)).await;
-                            debug!("[FileRenamed]: {:?}", path);
+                            #[cfg(feature = "logging")]
+                            tracing::debug!("[FileRenamed]: {:?}", path);
                         }
                         _ => continue,
                     }
@@ -171,7 +175,8 @@ fn new(state: SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Resu
                 _ => continue,
             }
 
-            trace!("[NewEvent] {:#?}", &event);
+            #[cfg(feature = "logging")]
+            tracing::trace!("[NewEvent] {:#?}", &event);
 
             // let mut state = state.lock().await;
 
