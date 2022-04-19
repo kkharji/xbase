@@ -19,7 +19,7 @@ pub struct CompilationCommand {
     file: String,
 
     /// The wroking directory for the compilation
-    directory: String,
+    pub directory: String,
 
     /// The compile command, this is alias with commandLine or split form of command
     #[serde(skip_serializing_if = "Vec::is_empty")]

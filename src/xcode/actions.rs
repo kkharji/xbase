@@ -33,6 +33,10 @@ where
         .map(|s| s.to_string())
         .collect();
 
+    // TODO: Check xcodebuild build output if it contains failure
+    //
+    // Command succeed (return 0 status) but the output contains failure! need to be handled
+    // somehow as errror
     tracing::trace!(
         "xcodebuild output: \n{:#?}\n\n\n---------------------------------- end",
         output

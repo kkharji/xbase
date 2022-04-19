@@ -60,7 +60,7 @@ impl Daemon {
 
                 let msg = msg.unwrap();
                 if let Err(e) = msg.handle(state.clone()).await {
-                    tracing::error!("[Handling Error]: {:?}", e);
+                    tracing::error!("[Failure]: Cause: ({:?}), Message: {:?}", e, msg);
                     return;
                 };
 

@@ -28,7 +28,7 @@ pub type SharedState = std::sync::Arc<tokio::sync::Mutex<State>>;
 impl State {
     pub fn update_clients(&mut self) {
         self.clients
-            .retain(|pid| crate::util::proc::exists(pid, || tracing::info!("Removeing {pid}")));
+            .retain(|pid| crate::util::proc::exists(pid, || tracing::info!("Removing {pid}")));
 
         self.workspaces
             .iter_mut()
@@ -42,6 +42,8 @@ impl State {
                 let workspace = {
                     let root: &str = &root;
                     let mut ws = Workspace::new(&root).await?;
+                    tracing::info!("New Workspace: {:?}", ws.project.name());
+                    tracing::trace!("{:?}", ws);
                     ws.add_client(pid);
                     ws
                 };
@@ -66,7 +68,8 @@ impl State {
                 .eq(&0)
                 .then(|| name = workspace.project.name().to_string().into());
         } else {
-            anyhow::bail!("workspace with '{root}' with given pid {pid} doesn't exist")
+            tracing::trace!("'{root}' is not a registered workspace!");
+            anyhow::bail!("No Workspace")
         }
         if let Some(name) = name {
             tracing::info!("Dropping [{}] {:?}", name, root);

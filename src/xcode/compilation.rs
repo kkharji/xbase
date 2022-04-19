@@ -55,19 +55,6 @@ impl Compiliation {
     }
 }
 
-lazy_static! {
-    static ref RE: HashMap<&'static str, Regex> = HashMap::from([
-        (
-            "swift_module",
-            Regex::new(r"^CompileSwiftSources\s*").unwrap()
-        ),
-        (
-            "swift",
-            Regex::new(r"^CompileSwift\s+ \w+\s+ \w+\s+ (.+)$").unwrap()
-        )
-    ]);
-}
-
 impl Compiliation {
     /// Parse starting from current line as swift module
     /// Matching r"^CompileSwiftSources\s*"
@@ -90,7 +77,8 @@ impl Compiliation {
 
         match command::CompilationCommand::new(directory, command) {
             Ok(command) => {
-                tracing::debug!("Extracting swift module commands for [{}]", command.name);
+                tracing::debug!("Got Swift commands for {}", command.directory);
+                tracing::trace!("{:#?}", command);
                 Some(command)
             }
             Err(e) => {
@@ -119,4 +107,17 @@ fn test() {
 
         println!("{}", compiliation.to_json().unwrap())
     });
+}
+
+lazy_static! {
+    static ref RE: HashMap<&'static str, Regex> = HashMap::from([
+        (
+            "swift_module",
+            Regex::new(r"^CompileSwiftSources\s*").unwrap()
+        ),
+        (
+            "swift",
+            Regex::new(r"^CompileSwift\s+ \w+\s+ \w+\s+ (.+)$").unwrap()
+        )
+    ]);
 }

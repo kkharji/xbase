@@ -89,7 +89,6 @@ impl Workspace {
     pub fn get_target(&self, target_name: &str) -> Option<&crate::Target> {
         self.project.targets().get(target_name)
     }
-
     /// Regenerate compiled commands and xcodeGen if project.yml exists
     #[cfg(all(feature = "xcode", feature = "watcher"))]
     pub async fn on_directory_change(

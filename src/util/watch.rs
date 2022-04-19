@@ -136,18 +136,19 @@ fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyho
                 continue;
             }
 
-            let pass_threshold = debounce.elapsed().unwrap().as_millis() > 1;
+            let last_run = debounce.elapsed().unwrap().as_millis();
+            let pass_threshold = last_run > 1;
             if !pass_threshold {
                 #[cfg(feature = "logging")]
-                tracing::debug!(
-                    "Skipping event: milliseconds: {} pass_threshold: {pass_threshold}, path: {:?}\n",
+                tracing::debug!("{:?}, paths: {:?}", event.kind, &event.paths);
+                tracing::trace!(
+                    "   milliseconds: {} pass_threshold: {pass_threshold}, {:?}",
                     debounce.elapsed().unwrap().as_millis(),
-                    event.paths
+                    event
                 );
                 continue;
             }
 
-            // debug!("[FSEVENT] {:?}", &event);
             // NOTE: maybe better handle in tokio::spawn?
             match &event.kind {
                 notify::EventKind::Create(_) => {
@@ -160,34 +161,33 @@ fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyho
                     #[cfg(feature = "logging")]
                     tracing::debug!("[FileRemoved]: {:?}", path);
                 }
-                notify::EventKind::Modify(m) => {
-                    match m {
-                        notify::event::ModifyKind::Data(e) => match e {
-                            notify::event::DataChange::Content => {
-                                if !path_string.contains("project.yml") {
-                                    continue;
-                                }
-                                tokio::time::sleep(Duration::new(1, 0)).await;
-                                #[cfg(feature = "logging")]
-                                tracing::debug!("[XcodeGenConfigUpdate]");
-                                // HACK: Not sure why, but this is needed because xcodegen break.
-                            }
-                            _ => continue,
-                        },
-                        notify::event::ModifyKind::Name(_) => {
-                            // HACK: only account for new path and skip duplications
-                            if !Path::new(&path).exists()
-                                || should_ignore(last_seen.clone(), &path_string).await
-                            {
+                notify::EventKind::Modify(m) => match m {
+                    notify::event::ModifyKind::Data(e) => match e {
+                        notify::event::DataChange::Content => {
+                            if !path_string.contains("project.yml") {
                                 continue;
                             }
                             tokio::time::sleep(Duration::new(1, 0)).await;
                             #[cfg(feature = "logging")]
-                            tracing::debug!("[FileRenamed]: {:?}", path);
+                            tracing::debug!("[XcodeGenConfigUpdate]");
+                            // HACK: Not sure why, but this is needed because xcodegen break.
                         }
                         _ => continue,
+                    },
+                    notify::event::ModifyKind::Name(_) => {
+                        // HACK: only account for new path and skip duplications
+                        if !Path::new(&path).exists()
+                            || should_ignore(last_seen.clone(), &path_string).await
+                        {
+                            continue;
+                        }
+                        tokio::time::sleep(Duration::new(1, 0)).await;
+                        #[cfg(feature = "logging")]
+                        tracing::debug!("[FileRenamed]: {:?}", path);
                     }
-                }
+                    _ => continue,
+                },
+
                 _ => continue,
             }
 
