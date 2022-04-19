@@ -28,6 +28,7 @@ pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<Vec<String>> {
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .arg("generate")
+        .arg("-c")
         .spawn()
         .expect("Failed to start xcodeGen.")
         .wait_with_output()

@@ -51,6 +51,8 @@ pub async fn update(state: crate::state::SharedState, _msg: crate::DaemonCommand
 
     for root in start_watching {
         let handle = new(state.clone(), root.clone());
+        #[cfg(feature = "logging")]
+        tracing::info!("Watching {root}");
         current_state.watchers.insert(root, handle);
     }
 }
@@ -69,7 +71,7 @@ async fn get_ignore_patterns(state: crate::SharedState, root: &String) -> Vec<St
     .map(|e| e.to_string())
     .collect();
 
-    // FIXME: Addding extra ignore patterns to `ignore` local config requires restarting deamon.
+    // FIXME: Adding extra ignore patterns to `ignore` local config requires restarting daemon.
     let extra_patterns = state
         .lock()
         .await
@@ -87,7 +89,7 @@ async fn get_ignore_patterns(state: crate::SharedState, root: &String) -> Vec<St
 
 #[cfg(feature = "daemon")]
 fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Result<()>> {
-    // NOTE: should watch for registerd directories?
+    // NOTE: should watch for registered directories?
     // TODO: Support provideing additional ignore wildcard
     //
     // Some files can be generated as direct result of running build command.
@@ -95,12 +97,15 @@ fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyho
     //
     // For example,  define key inside project.yml under xcodebase key, ignoreGlob of type array.
 
+    let mut debounce = Box::new(std::time::SystemTime::now());
     tokio::spawn(async move {
         let (tx, mut rx) = mpsc::channel(100);
 
         let mut watcher = RecommendedWatcher::new(move |res: Result<Event, Error>| {
-            if res.is_ok() {
-                tx.blocking_send(res.unwrap()).unwrap()
+            if let Ok(event) = res {
+                tx.blocking_send(event).unwrap();
+            } else {
+                tracing::error!("Watch Error: {:?}", res);
             };
         })?;
 
@@ -128,6 +133,17 @@ fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyho
             };
 
             if ignore.is_match(&*path_string) {
+                continue;
+            }
+
+            let pass_threshold = debounce.elapsed().unwrap().as_millis() > 1;
+            if !pass_threshold {
+                #[cfg(feature = "logging")]
+                tracing::debug!(
+                    "Skipping event: milliseconds: {} pass_threshold: {pass_threshold}, path: {:?}\n",
+                    debounce.elapsed().unwrap().as_millis(),
+                    event.paths
+                );
                 continue;
             }
 
@@ -182,8 +198,13 @@ fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyho
 
             match state.lock().await.workspaces.get_mut(&root) {
                 Some(w) => {
-                    w.on_directory_change(path, event.kind).await?;
+                    if let Err(e) = w.on_directory_change(path, &event.kind).await {
+                        #[cfg(feature = "logging")]
+                        tracing::error!("Fail to process {:?}:\n {:#?}", event, e);
+                    }
+                    debounce = Box::new(std::time::SystemTime::now())
                 }
+
                 // NOTE: should stop watch here
                 None => continue,
             };

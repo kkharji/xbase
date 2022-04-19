@@ -14,6 +14,7 @@ pub fn install_tracing(root: &str, filename: &str) -> Result<()> {
                 fmt::Layer::new()
                     .with_writer(io::stdout)
                     .with_target(true)
+                    .with_line_number(true)
                     .with_file(false),
             )
             .with(

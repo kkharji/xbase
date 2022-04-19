@@ -95,7 +95,7 @@ impl Workspace {
     pub async fn on_directory_change(
         &mut self,
         path: PathBuf,
-        _event: notify::EventKind,
+        _event: &notify::EventKind,
     ) -> Result<()> {
         if crate::xcodegen::is_workspace(self) {
             self.update_xcodeproj(path.file_name().unwrap().eq("project.yml"))
@@ -126,7 +126,7 @@ impl Workspace {
                 Ok(())
             }
             Err(e) => {
-                tracing::error!("{:?}", e);
+                tracing::error!("xcodegen generate: {:#?}", e);
                 Err(e)
             }
         }

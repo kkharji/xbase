@@ -90,7 +90,7 @@ impl Compiliation {
 
         match command::CompilationCommand::new(directory, command) {
             Ok(command) => {
-                tracing::debug!("Extracted {} Module Command", command.name);
+                tracing::debug!("Extracting swift module commands for [{}]", command.name);
                 Some(command)
             }
             Err(e) => {
