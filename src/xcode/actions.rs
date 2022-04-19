@@ -18,7 +18,7 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<ffi::OsStr>,
 {
-    tracing::debug!("Building {:?}", root);
+    tracing::info!("Building {:?}", root);
     let output = Command::new("/usr/bin/xcodebuild")
         .arg("build")
         .args(args)
@@ -47,7 +47,7 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<ffi::OsStr>,
 {
-    tracing::debug!("Cleaning {:?}", root);
+    tracing::info!("Cleaning {:?}", root);
 
     Command::new("/usr/bin/xcodebuild")
         .arg("clean")
@@ -63,21 +63,19 @@ where
 
 #[cfg(feature = "serial")]
 pub async fn update_compiled_commands(root: &PathBuf, build_log: Vec<String>) -> Result<()> {
-    fs::write(
-        root.join(".compile"),
-        Compiliation::new(build_log).to_json()?,
-    )
-    .await?;
-    tracing::info!("Updated Compiled Commands");
+    let path = root.join(".compile");
+    tracing::info!("Updating {:?}", path);
+    fs::write(path, Compiliation::new(build_log).to_json()?).await?;
     Ok(())
 }
 
 pub async fn ensure_server_config_file(root: &PathBuf) -> Result<()> {
     let path = root.join("buildServer.json");
     if fs::File::open(&path).await.is_ok() {
-        tracing::debug!("buildServer.json exists.");
         return Ok(());
     }
+
+    tracing::info!("Creating {:?}", path);
 
     let mut file = fs::File::create(path).await?;
     let config = json! ({
@@ -98,8 +96,6 @@ pub async fn ensure_server_config_file(root: &PathBuf) -> Result<()> {
     file.write_all(config.to_string().as_ref()).await?;
     file.sync_all().await?;
     file.shutdown().await?;
-
-    tracing::debug!("buildServer.json created!");
 
     Ok(())
 }

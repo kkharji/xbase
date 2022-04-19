@@ -111,25 +111,26 @@ impl Workspace {
     /// Update .compile commands
     #[cfg(feature = "xcodegen")]
     pub async fn update_xcodeproj(&mut self, update_config: bool) -> Result<()> {
-        match xcodegen::generate(&self.root).await {
-            Ok(msg) => {
-                tracing::info!("Updated {}.xcodeproj", self.name());
-                tracing::trace!("{:?}", msg);
-                if update_config {
-                    tracing::info!("Updated internal state.{}.project", self.name());
-                    self.project = Project::new_from_project_yml(
-                        self.root.clone(),
-                        xcodegen::config_path(self),
-                    )
-                    .await?;
+        tracing::info!("Updating {}.xcodeproj", self.name());
+
+        let retry_count = 0;
+        while retry_count < 3 {
+            if let Ok(code) = xcodegen::generate(&self.root).await {
+                if code.success() {
+                    if update_config {
+                        tracing::info!("Updating State.{}.Project", self.name());
+                        self.project = Project::new_from_project_yml(
+                            self.root.clone(),
+                            xcodegen::config_path(self),
+                        )
+                        .await?;
+                    }
+                    return Ok(());
                 }
-                Ok(())
-            }
-            Err(e) => {
-                tracing::error!("xcodegen generate: {:#?}", e);
-                Err(e)
             }
         }
+
+        anyhow::bail!("Fail to update_xcodeproj")
     }
 
     pub fn get_ignore_patterns(&self) -> Option<Vec<String>> {

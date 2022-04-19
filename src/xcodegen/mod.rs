@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
+use std::process::ExitStatus;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use crate::Workspace;
 
@@ -22,33 +23,17 @@ fn xcodgen() -> tokio::process::Command {
 }
 
 // Run xcodgen generate
-pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<Vec<String>> {
-    let output = xcodgen()
+pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<ExitStatus> {
+    xcodgen()
         .current_dir(root)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .arg("generate")
         .arg("-c")
-        .spawn()
-        .expect("Failed to start xcodeGen.")
-        .wait_with_output()
+        .spawn()?
+        .wait()
         .await
-        .expect("Failed to run xcodeGen.");
-
-    if output.status.code().unwrap().ne(&0) {
-        anyhow::bail!(
-            "{:#?}",
-            String::from_utf8(output.stderr)?
-                .split("\n")
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>()
-        )
-    } else {
-        Ok(String::from_utf8(output.stdout)?
-            .split("\n")
-            .map(|s| s.to_string())
-            .collect())
-    }
+        .context("xcodegen generate")
 }
 
 // NOTE: passing workspace in-case in the future we would allow configurability of project.yml path
