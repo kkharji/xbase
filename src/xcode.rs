@@ -1,14 +1,12 @@
 use anyhow::Result;
+use serde_json::json;
 use std::ffi;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::process::{ExitStatus, Stdio};
-use tokio::process::Command;
-
-use super::compilation::Compiliation;
-use serde_json::json;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
 
 // https://github.com/Gordon-F/cargo-xcodebuild
 /// run xcodebuild build with extra arguments
@@ -65,14 +63,6 @@ where
         .await
 }
 
-#[cfg(feature = "serial")]
-pub async fn update_compiled_commands(root: &PathBuf, build_log: Vec<String>) -> Result<()> {
-    let path = root.join(".compile");
-    tracing::info!("Updating {:?}", path);
-    fs::write(path, Compiliation::new(build_log).to_json()?).await?;
-    Ok(())
-}
-
 pub async fn ensure_server_config_file(root: &PathBuf) -> Result<()> {
     let path = root.join("buildServer.json");
     if fs::File::open(&path).await.is_ok() {
@@ -85,7 +75,7 @@ pub async fn ensure_server_config_file(root: &PathBuf) -> Result<()> {
     let config = json! ({
         "name": "XcodeBase Server",
         // FIXME: Point to user xcode-build-server
-        "argv": ["/Users/tami5/repos/neovim/XcodeBase.nvim/target/debug/xcodebase-build-server"],
+        "argv": ["/Users/tami5/repos/neovim/XcodeBase.nvim/target/debug/xcodebase-server"],
         "version": "0.1",
         "bspVersion": "0.2",
         "languages": [
@@ -94,7 +84,7 @@ pub async fn ensure_server_config_file(root: &PathBuf) -> Result<()> {
             "objective-cpp",
             "c",
             "cpp"
-        ],
+        ]
     });
 
     file.write_all(config.to_string().as_ref()).await?;

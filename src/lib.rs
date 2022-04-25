@@ -9,6 +9,9 @@ pub use state::*;
 #[cfg(feature = "xcode")]
 pub mod xcode;
 
+#[cfg(feature = "compilation")]
+pub mod compile;
+
 #[cfg(feature = "xcodegen")]
 pub mod xcodegen;
 
@@ -24,3 +27,9 @@ pub use util::tracing::install_tracing;
 
 #[cfg(feature = "watcher")]
 pub use util::watch;
+
+#[cfg(feature = "server")]
+pub mod server;
+
+#[cfg(feature = "server")]
+pub use server::*;
