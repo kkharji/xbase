@@ -7,12 +7,12 @@ use crate::xcode;
 #[cfg(feature = "daemon")]
 use anyhow::Result;
 
-use std::path::PathBuf;
-
-use crate::Project;
-
 #[cfg(feature = "xcodegen")]
 use crate::xcodegen;
+
+use crate::compile::CompileCommands;
+use crate::Project;
+use std::path::PathBuf;
 
 /// Managed Workspace
 #[derive(Debug)]
@@ -32,6 +32,8 @@ impl Workspace {
     pub async fn new(root: &str) -> Result<Self> {
         use anyhow::Context;
         let root = PathBuf::from(root);
+
+        // TODO: Ensure .compile and BuildServer.json exists
 
         let project = {
             let path = root.join("project.yml");
@@ -102,7 +104,7 @@ impl Workspace {
         }
 
         xcode::ensure_server_config_file(&self.root).await?;
-        xcode::update_compiled_commands(&self.root, self.project.fresh_build().await?).await?;
+        CompileCommands::update(&self.root, self.project.fresh_build().await?).await?;
 
         Ok(())
     }
