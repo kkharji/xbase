@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
                 return;
             }
 
-            let msg = DaemonCommand::parse(string.as_str().trim());
+            let msg = DaemonRequest::parse(string.as_str().trim());
 
             if let Err(e) = msg {
                 tracing::error!("[Parse Error]: {:?}", e);

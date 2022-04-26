@@ -1,7 +1,7 @@
 use crate::daemon::Daemon;
 use anyhow::Result;
 
-/// Action to build a project.
+/// Build a project.
 #[derive(Debug)]
 pub struct Build {
     pub target: Option<String>,
@@ -16,7 +16,7 @@ pub struct Build {
 //  with the options needed to build
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::daemon::DaemonCommandExt for Build {
+impl crate::daemon::DaemonRequestHandler for Build {
     async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
         tracing::info!("build command");
         Ok(())
@@ -39,7 +39,7 @@ impl Build {
     pub const KEY: &'static str = "build";
 
     pub fn request(target: &str, configuration: &str, scheme: &str) -> Result<()> {
-        Daemon::execute(&["build", target, configuration, scheme])
+        Daemon::execute(&[KEY, target, configuration, scheme])
     }
 }
 

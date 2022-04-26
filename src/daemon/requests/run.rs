@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-/// Action to Run a project.
+/// Run a project.
 #[derive(Debug)]
 pub struct Run {
     _simulator: bool,
@@ -13,7 +13,7 @@ pub struct Run {
 // macos apps, which is wrong
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::daemon::DaemonCommandExt for Run {
+impl crate::daemon::DaemonRequestHandler for Run {
     async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
         tracing::info!("Run command");
         Ok(())

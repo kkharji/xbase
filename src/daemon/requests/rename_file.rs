@@ -12,7 +12,7 @@ pub struct RenameFile {
 // TODO: Implement file rename along with it's main class if any.
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::daemon::DaemonCommandExt for RenameFile {
+impl crate::daemon::DaemonRequestHandler for RenameFile {
     async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
         tracing::info!("Reanmed command");
         Ok(())

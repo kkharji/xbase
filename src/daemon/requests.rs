@@ -12,16 +12,16 @@ pub use register::Register;
 pub use rename_file::RenameFile;
 pub use run::Run;
 
-/// Trait to be implemented by actions to be processable
+/// Requirement for daemon actions
 #[async_trait::async_trait]
 #[cfg(feature = "daemon")]
-pub trait DaemonCommandExt {
-    async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()>;
+pub trait DaemonRequestHandler {
+    async fn handle(&self, state: super::DaemonState) -> Result<()>;
 }
 
-/// Daemon Actions
+/// Representations of all the supported daemon requests
 #[derive(Debug)]
-pub enum DaemonCommand {
+pub enum DaemonRequest {
     Build(Build),
     Run(Run),
     RenameFile(RenameFile),
@@ -29,10 +29,11 @@ pub enum DaemonCommand {
     Drop(Drop),
 }
 
-impl DaemonCommand {
+impl DaemonRequest {
     #[cfg(feature = "daemon")]
-    pub async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()> {
-        use DaemonCommand::*;
+    /// Handle daemon request
+    pub async fn handle(&self, state: super::DaemonState) -> Result<()> {
+        use DaemonRequest::*;
 
         match self {
             Build(c) => c.handle(state).await,
@@ -43,6 +44,7 @@ impl DaemonCommand {
         }
     }
 
+    /// Parse [`super::Daemon`] request from string
     pub fn parse(str: &str) -> Result<Self> {
         let mut args = str.split(" ").collect::<Vec<&str>>();
         Ok(match args.remove(0) {

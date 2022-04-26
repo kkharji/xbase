@@ -1,22 +1,26 @@
 use anyhow::Result;
 
-/// Register new client with workspace
+/// Drop a client
 #[derive(Debug)]
-pub struct Register {
+pub struct Drop {
     pub pid: i32,
     pub root: String,
 }
 
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::daemon::DaemonCommandExt for Register {
+impl crate::daemon::DaemonRequestHandler for Drop {
     async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()> {
         tracing::trace!("{:?}", self);
-        state.lock().await.add_workspace(&self.root, self.pid).await
+        state
+            .lock()
+            .await
+            .remove_workspace(&self.root, self.pid)
+            .await
     }
 }
 
-impl TryFrom<Vec<&str>> for Register {
+impl TryFrom<Vec<&str>> for Drop {
     type Error = anyhow::Error;
 
     fn try_from(args: Vec<&str>) -> Result<Self, Self::Error> {
@@ -26,23 +30,19 @@ impl TryFrom<Vec<&str>> for Register {
                 root: root.to_string(),
             })
         } else {
-            anyhow::bail!("Missing arugments: got {:?}", args)
+            anyhow::bail!("Missing arugments: {:?}", args)
         }
     }
 }
 
-impl Register {
-    pub const KEY: &'static str = "register";
+impl Drop {
+    pub const KEY: &'static str = "drop";
     pub fn request(pid: i32, root: String) -> Result<()> {
         crate::daemon::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
     }
-}
 
-#[cfg(feature = "lua")]
-impl Register {
-    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
-        use crate::util::mlua::LuaExtension;
-        lua.trace(&format!("Add (pid: {pid} cwd: {root})"))?;
+    #[cfg(feature = "lua")]
+    pub fn lua(_: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
         Self::request(pid, root).map_err(mlua::Error::external)
     }
 }

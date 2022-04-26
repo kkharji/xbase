@@ -1,9 +1,9 @@
 //! Handle requests from neovim and manage dev workflow
 use anyhow::{bail, Context, Result};
-mod command;
+mod requests;
 pub mod state;
 
-pub use command::*;
+pub use requests::*;
 
 #[cfg(feature = "daemon")]
 pub use state::DaemonState;
