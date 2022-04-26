@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 /// Main state
 #[derive(Default, Debug)]
-pub struct State {
+pub struct DaemonStateData {
     /// Manged workspaces
     pub workspaces: HashMap<String, Workspace>,
     /// Connected clients
@@ -22,10 +22,10 @@ pub struct State {
 }
 
 #[cfg(feature = "async")]
-pub type SharedState = std::sync::Arc<tokio::sync::Mutex<State>>;
+pub type DaemonState = std::sync::Arc<tokio::sync::Mutex<DaemonStateData>>;
 
 #[cfg(feature = "daemon")]
-impl State {
+impl DaemonStateData {
     pub fn update_clients(&mut self) {
         self.clients
             .retain(|pid| crate::util::proc::exists(pid, || tracing::info!("Removing {pid}")));

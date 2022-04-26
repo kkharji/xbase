@@ -7,7 +7,7 @@ use anyhow::Result;
 #[cfg(feature = "xcodegen")]
 use crate::xcodegen;
 
-use crate::Project;
+use super::Project;
 use std::path::PathBuf;
 
 /// Managed Workspace
@@ -79,12 +79,12 @@ impl Workspace {
 
     /// Wrapper around project.targets
     /// Returns all avaliable targets
-    pub fn targets(&self) -> &crate::TargetMap {
+    pub fn targets(&self) -> &crate::daemon::state::TargetMap {
         self.project.targets()
     }
 
     /// Get project target from project.targets using target_name
-    pub fn get_target(&self, target_name: &str) -> Option<&crate::Target> {
+    pub fn get_target(&self, target_name: &str) -> Option<&crate::daemon::state::Target> {
         self.project.targets().get(target_name)
     }
     /// Regenerate compiled commands and xcodeGen if project.yml exists

@@ -1,6 +1,11 @@
 use anyhow::{bail, Context, Result};
 mod command;
+pub mod state;
+
 pub use command::*;
+
+#[cfg(feature = "daemon")]
+pub use state::DaemonState;
 
 pub const DAEMON_SOCKET_PATH: &str = "/tmp/xcodebase-daemon.socket";
 pub const DAEMON_BINARY: &str =
@@ -8,69 +13,20 @@ pub const DAEMON_BINARY: &str =
 
 pub struct Daemon {
     #[cfg(feature = "daemon")]
-    state: std::sync::Arc<tokio::sync::Mutex<crate::state::State>>,
+    pub state: std::sync::Arc<tokio::sync::Mutex<state::DaemonStateData>>,
     #[cfg(feature = "daemon")]
-    listener: tokio::net::UnixListener,
+    pub listener: tokio::net::UnixListener,
 }
 
-#[cfg(feature = "daemon")]
 impl Daemon {
-    pub fn default() -> Self {
-        if std::fs::metadata(DAEMON_SOCKET_PATH).is_ok() {
-            std::fs::remove_file(DAEMON_SOCKET_PATH).ok();
-        }
-
-        tracing::info!("Started");
-
+    #[cfg(feature = "daemon")]
+    pub fn new() -> Self {
         Self {
             state: Default::default(),
             listener: tokio::net::UnixListener::bind(DAEMON_SOCKET_PATH).unwrap(),
         }
     }
 
-    /// Run Main daemon server loop
-    pub async fn run(&mut self) -> ! {
-        use tokio::io::AsyncReadExt;
-
-        loop {
-            let state = self.state.clone();
-            let (mut s, _) = self.listener.accept().await.unwrap();
-            tokio::spawn(async move {
-                // let mut current_state = state.lock().await;
-                // current_state.update_clients();
-
-                // trace!("Current State: {:?}", state.lock().await)
-                let mut string = String::default();
-
-                if let Err(e) = s.read_to_string(&mut string).await {
-                    tracing::error!("[Read Error]: {:?}", e);
-                    return;
-                };
-
-                if string.len() == 0 {
-                    return;
-                }
-
-                let msg = DaemonCommand::parse(string.as_str().trim());
-
-                if let Err(e) = msg {
-                    tracing::error!("[Parse Error]: {:?}", e);
-                    return;
-                };
-
-                let msg = msg.unwrap();
-                if let Err(e) = msg.handle(state.clone()).await {
-                    tracing::error!("[Failure]: Cause: ({:?}), Message: {:?}", e, msg);
-                    return;
-                };
-
-                crate::watch::update(state, msg).await;
-            });
-        }
-    }
-}
-
-impl Daemon {
     /// Spawn new instance of the server via running binaray is a child process
     pub fn spawn() -> Result<()> {
         std::process::Command::new(DAEMON_BINARY)

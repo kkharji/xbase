@@ -13,8 +13,8 @@ pub struct Run {
 // macos apps, which is wrong
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::DaemonCommandExt for Run {
-    async fn handle(&self, _state: crate::state::SharedState) -> Result<()> {
+impl crate::daemon::DaemonCommandExt for Run {
+    async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
         tracing::info!("Run command");
         Ok(())
     }
@@ -33,14 +33,14 @@ impl Run {
     pub const KEY: &'static str = "run";
 
     pub fn request(with_simulator: bool) -> Result<()> {
-        crate::Daemon::execute(&[Self::KEY, &with_simulator.to_string()])
+        crate::daemon::Daemon::execute(&[Self::KEY, &with_simulator.to_string()])
     }
 }
 
 #[cfg(feature = "lua")]
 impl Run {
     pub fn lua(lua: &mlua::Lua, with_simulator: bool) -> mlua::Result<()> {
-        use crate::LuaExtension;
+        use crate::util::mlua::LuaExtension;
         lua.trace(&format!("Run command called"))?;
         Self::request(with_simulator).map_err(mlua::Error::external)
     }

@@ -4,7 +4,7 @@ use std::process::ExitStatus;
 
 use anyhow::{Context, Result};
 
-use crate::Workspace;
+use crate::daemon::state::Workspace;
 
 /*
    FIXME: make xCodeGen binary path configurable.

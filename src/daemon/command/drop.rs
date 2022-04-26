@@ -9,8 +9,8 @@ pub struct Drop {
 
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::DaemonCommandExt for Drop {
-    async fn handle(&self, state: crate::state::SharedState) -> Result<()> {
+impl crate::daemon::DaemonCommandExt for Drop {
+    async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()> {
         tracing::trace!("{:?}", self);
         state
             .lock()
@@ -38,7 +38,7 @@ impl TryFrom<Vec<&str>> for Drop {
 impl Drop {
     pub const KEY: &'static str = "drop";
     pub fn request(pid: i32, root: String) -> Result<()> {
-        crate::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
+        crate::daemon::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
     }
 
     #[cfg(feature = "lua")]

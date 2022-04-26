@@ -9,8 +9,8 @@ pub struct Register {
 
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::DaemonCommandExt for Register {
-    async fn handle(&self, state: crate::SharedState) -> Result<()> {
+impl crate::daemon::DaemonCommandExt for Register {
+    async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()> {
         tracing::trace!("{:?}", self);
         state.lock().await.add_workspace(&self.root, self.pid).await
     }
@@ -34,14 +34,14 @@ impl TryFrom<Vec<&str>> for Register {
 impl Register {
     pub const KEY: &'static str = "register";
     pub fn request(pid: i32, root: String) -> Result<()> {
-        crate::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
+        crate::daemon::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
     }
 }
 
 #[cfg(feature = "lua")]
 impl Register {
     pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
-        use crate::LuaExtension;
+        use crate::util::mlua::LuaExtension;
         lua.trace(&format!("Add (pid: {pid} cwd: {root})"))?;
         Self::request(pid, root).map_err(mlua::Error::external)
     }

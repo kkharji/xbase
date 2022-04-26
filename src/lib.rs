@@ -1,11 +1,7 @@
-mod daemon;
-pub use daemon::*;
-
-mod state;
-pub use state::*;
+//! Daemon Module: Manage projects and Handle requests from neovim
+pub mod daemon;
 
 // Submodules
-
 #[cfg(feature = "xcode")]
 pub mod xcode;
 
@@ -16,17 +12,7 @@ pub mod compile;
 pub mod xcodegen;
 
 // Utilities
-
 pub mod util;
-
-#[cfg(feature = "lua")]
-pub use util::mlua::LuaExtension;
-
-#[cfg(feature = "logging")]
-pub use util::tracing::install_tracing;
-
-#[cfg(feature = "watcher")]
-pub use util::watch;
 
 #[cfg(feature = "server")]
 pub mod server;

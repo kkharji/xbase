@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::Daemon;
+use crate::daemon::Daemon;
 
 #[derive(Debug)]
 pub struct Build {
@@ -16,8 +16,8 @@ pub struct Build {
 //  with the options needed to build
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::DaemonCommandExt for Build {
-    async fn handle(&self, _state: crate::state::SharedState) -> Result<()> {
+impl crate::daemon::DaemonCommandExt for Build {
+    async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
         tracing::info!("build command");
         Ok(())
     }
@@ -46,7 +46,7 @@ impl Build {
 impl Build {
     #[cfg(feature = "lua")]
     pub fn lua(lua: &mlua::Lua, (t, c, s): (String, String, String)) -> mlua::Result<()> {
-        use crate::LuaExtension;
+        use crate::util::mlua::LuaExtension;
         lua.trace(format!("Build (target: {t} configuration: {c}, scheme: {s})").as_ref())?;
         Self::request(&t, &c, &s).map_err(mlua::Error::external)
     }

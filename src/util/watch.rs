@@ -31,7 +31,7 @@ async fn should_ignore(last_seen: std::sync::Arc<Mutex<String>>, path: &str) -> 
 
 // TODO: Stop handle
 #[cfg(feature = "daemon")]
-pub async fn update(state: crate::state::SharedState, _msg: crate::DaemonCommand) {
+pub async fn update(state: crate::daemon::DaemonState, _msg: crate::daemon::DaemonCommand) {
     let copy = state.clone();
     let mut current_state = copy.lock().await;
     let mut watched_roots: Vec<String> = vec![];
@@ -50,7 +50,7 @@ pub async fn update(state: crate::state::SharedState, _msg: crate::DaemonCommand
     }
 
     for root in start_watching {
-        let handle = new(state.clone(), root.clone());
+        let handle = handler(state.clone(), root.clone());
         #[cfg(feature = "logging")]
         tracing::info!("Watching {root}");
         current_state.watchers.insert(root, handle);
@@ -59,7 +59,7 @@ pub async fn update(state: crate::state::SharedState, _msg: crate::DaemonCommand
 
 // TODO: Cleanup get_ignore_patterns and decrease duplications
 #[cfg(feature = "daemon")]
-async fn get_ignore_patterns(state: crate::SharedState, root: &String) -> Vec<String> {
+async fn get_ignore_patterns(state: crate::daemon::DaemonState, root: &String) -> Vec<String> {
     let mut patterns: Vec<String> = vec![
         "**/.git/**",
         "**/*.xcodeproj/**",
@@ -88,7 +88,10 @@ async fn get_ignore_patterns(state: crate::SharedState, root: &String) -> Vec<St
 }
 
 #[cfg(feature = "daemon")]
-fn new(state: crate::SharedState, root: String) -> tokio::task::JoinHandle<anyhow::Result<()>> {
+pub fn handler(
+    state: crate::daemon::DaemonState,
+    root: String,
+) -> tokio::task::JoinHandle<anyhow::Result<()>> {
     // NOTE: should watch for registered directories?
     // TODO: Support provideing additional ignore wildcard
     //

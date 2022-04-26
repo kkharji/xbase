@@ -15,7 +15,7 @@ pub use run::Run;
 #[async_trait::async_trait]
 #[cfg(feature = "daemon")]
 pub trait DaemonCommandExt {
-    async fn handle(&self, state: crate::SharedState) -> Result<()>;
+    async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -29,7 +29,7 @@ pub enum DaemonCommand {
 
 impl DaemonCommand {
     #[cfg(feature = "daemon")]
-    pub async fn handle(&self, state: crate::SharedState) -> Result<()> {
+    pub async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()> {
         use DaemonCommand::*;
 
         match self {
