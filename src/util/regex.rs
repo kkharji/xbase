@@ -1,3 +1,4 @@
+//! Functions to match strings
 use lazy_static::lazy_static;
 use regex::Regex;
 

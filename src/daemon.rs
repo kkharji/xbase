@@ -1,3 +1,4 @@
+//! Handle requests from neovim and manage dev workflow
 use anyhow::{bail, Context, Result};
 mod command;
 pub mod state;
@@ -11,6 +12,7 @@ pub const DAEMON_SOCKET_PATH: &str = "/tmp/xcodebase-daemon.socket";
 pub const DAEMON_BINARY: &str =
     "/Users/tami5/repos/neovim/xcodebase.nvim/target/debug/xcodebase-daemon";
 
+/// Representation of daemon
 pub struct Daemon {
     #[cfg(feature = "daemon")]
     pub state: std::sync::Arc<tokio::sync::Mutex<state::DaemonStateData>>,

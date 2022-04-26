@@ -1,3 +1,4 @@
+//! Helper functions to communicate with xcodebuild
 use anyhow::Result;
 use serde_json::json;
 use std::ffi;
@@ -63,6 +64,7 @@ where
         .await
 }
 
+/// Ensure that buildServer.json exists in root directory.
 pub async fn ensure_server_config_file(root: &PathBuf) -> Result<()> {
     let path = root.join("buildServer.json");
     if fs::File::open(&path).await.is_ok() {

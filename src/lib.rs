@@ -1,18 +1,11 @@
-//! Daemon Module: Manage projects and Handle requests from neovim
-pub mod daemon;
-
-// Submodules
-#[cfg(feature = "xcode")]
-pub mod xcode;
-
 #[cfg(feature = "compilation")]
 pub mod compile;
-
+#[cfg(feature = "server")]
+pub mod server;
+#[cfg(feature = "xcode")]
+pub mod xcode;
 #[cfg(feature = "xcodegen")]
 pub mod xcodegen;
 
-// Utilities
+pub mod daemon;
 pub mod util;
-
-#[cfg(feature = "server")]
-pub mod server;

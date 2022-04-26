@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-/// Register new client with workspace
+/// Drop a client
 #[derive(Debug)]
 pub struct Drop {
     pub pid: i32,

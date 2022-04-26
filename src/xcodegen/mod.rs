@@ -1,10 +1,9 @@
+//! Helper functions to communicate with xcodegen
+use crate::daemon::state::Workspace;
+use anyhow::{Context, Result};
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
-
-use anyhow::{Context, Result};
-
-use crate::daemon::state::Workspace;
 
 /*
    FIXME: make xCodeGen binary path configurable.
@@ -37,7 +36,7 @@ pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<ExitStatus> {
 }
 
 // NOTE: passing workspace in-case in the future we would allow configurability of project.yml path
-pub fn config_path(ws: &Workspace) -> PathBuf {
+pub fn get_config_path(ws: &Workspace) -> PathBuf {
     /*
     TODO: support otherways to identify xcodegen project
 
@@ -49,5 +48,5 @@ pub fn config_path(ws: &Workspace) -> PathBuf {
 
 /// Checks whether current workspace is xcodegen project.
 pub fn is_workspace(ws: &Workspace) -> bool {
-    crate::xcodegen::config_path(ws).exists()
+    crate::xcodegen::get_config_path(ws).exists()
 }

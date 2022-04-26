@@ -1,3 +1,4 @@
+//! mlua functions and extensions
 use mlua::prelude::*;
 
 pub trait LuaExtension {

@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-/// Rename file + class
+/// Action to Run a project.
 #[derive(Debug)]
 pub struct Run {
     _simulator: bool,

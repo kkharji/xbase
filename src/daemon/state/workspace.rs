@@ -130,7 +130,7 @@ impl Workspace {
                         tracing::info!("Updating State.{}.Project", self.name());
                         self.project = Project::new_from_project_yml(
                             self.root.clone(),
-                            xcodegen::config_path(self),
+                            xcodegen::get_config_path(self),
                         )
                         .await?;
                     }

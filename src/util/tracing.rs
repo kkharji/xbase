@@ -1,3 +1,4 @@
+//! Wrapping functions for tracing module
 use anyhow::Result;
 use std::io;
 use tracing::subscriber::set_global_default;

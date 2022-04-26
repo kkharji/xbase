@@ -1,7 +1,7 @@
+use crate::daemon::Daemon;
 use anyhow::Result;
 
-use crate::daemon::Daemon;
-
+/// Action to build a project.
 #[derive(Debug)]
 pub struct Build {
     pub target: Option<String>,

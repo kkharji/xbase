@@ -1,3 +1,4 @@
+//! Functions to query filesystem for files and directories
 use anyhow::Result;
 use std::{
     fs::read_to_string,

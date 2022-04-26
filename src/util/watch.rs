@@ -1,3 +1,6 @@
+//! Function to watch file system
+//!
+//! Mainly used for creation/removal of files and editing of xcodegen config.
 use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 #[cfg(feature = "daemon")]
 use std::{path::Path, time::Duration};
@@ -5,88 +8,7 @@ use std::{path::Path, time::Duration};
 use tokio::sync::{mpsc, Mutex};
 use wax::{Glob, Pattern};
 
-/// HACK: ignore seen paths.
-///
-/// Sometiems we get event for the same path, particularly
-/// `ModifyKind::Name::Any` is ommited twice for the new path
-/// and once for the old path.
-///
-/// This will compare last_seen with path, updates `last_seen` if not match,
-/// else returns true.
-#[cfg(feature = "async")]
-async fn should_ignore(last_seen: std::sync::Arc<Mutex<String>>, path: &str) -> bool {
-    // HACK: Always return false for project.yml
-    let path = path.to_string();
-    if path.contains("project.yml") {
-        return false;
-    }
-    let mut last_seen = last_seen.lock().await;
-    if last_seen.to_string() == path {
-        return true;
-    } else {
-        *last_seen = path;
-        return false;
-    }
-}
-
-// TODO: Stop handle
-#[cfg(feature = "daemon")]
-pub async fn update(state: crate::daemon::DaemonState, _msg: crate::daemon::DaemonCommand) {
-    let copy = state.clone();
-    let mut current_state = copy.lock().await;
-    let mut watched_roots: Vec<String> = vec![];
-    let mut start_watching: Vec<String> = vec![];
-
-    // TODO: Remove wathcers for workspaces that are no longer exist
-
-    for key in current_state.watchers.keys() {
-        watched_roots.push(key.clone());
-    }
-
-    for key in current_state.workspaces.keys() {
-        if !watched_roots.contains(key) {
-            start_watching.push(key.clone());
-        }
-    }
-
-    for root in start_watching {
-        let handle = handler(state.clone(), root.clone());
-        #[cfg(feature = "logging")]
-        tracing::info!("Watching {root}");
-        current_state.watchers.insert(root, handle);
-    }
-}
-
-// TODO: Cleanup get_ignore_patterns and decrease duplications
-#[cfg(feature = "daemon")]
-async fn get_ignore_patterns(state: crate::daemon::DaemonState, root: &String) -> Vec<String> {
-    let mut patterns: Vec<String> = vec![
-        "**/.git/**",
-        "**/*.xcodeproj/**",
-        "**/.*",
-        "**/build/**",
-        "**/buildServer.json",
-    ]
-    .iter()
-    .map(|e| e.to_string())
-    .collect();
-
-    // FIXME: Adding extra ignore patterns to `ignore` local config requires restarting daemon.
-    let extra_patterns = state
-        .lock()
-        .await
-        .workspaces
-        .get(root)
-        .unwrap()
-        .get_ignore_patterns();
-
-    if let Some(extra_patterns) = extra_patterns {
-        patterns.extend(extra_patterns);
-    }
-
-    patterns
-}
-
+/// Create new handler to watch workspace root.
 #[cfg(feature = "daemon")]
 pub fn handler(
     state: crate::daemon::DaemonState,
@@ -214,4 +136,58 @@ pub fn handler(
         }
         Ok(())
     })
+}
+
+/// HACK: ignore seen paths.
+///
+/// Sometiems we get event for the same path, particularly
+/// `ModifyKind::Name::Any` is ommited twice for the new path
+/// and once for the old path.
+///
+/// This will compare last_seen with path, updates `last_seen` if not match,
+/// else returns true.
+#[cfg(feature = "async")]
+async fn should_ignore(last_seen: std::sync::Arc<Mutex<String>>, path: &str) -> bool {
+    // HACK: Always return false for project.yml
+    let path = path.to_string();
+    if path.contains("project.yml") {
+        return false;
+    }
+    let mut last_seen = last_seen.lock().await;
+    if last_seen.to_string() == path {
+        return true;
+    } else {
+        *last_seen = path;
+        return false;
+    }
+}
+
+// TODO: Cleanup get_ignore_patterns and decrease duplications
+#[cfg(feature = "daemon")]
+async fn get_ignore_patterns(state: crate::daemon::DaemonState, root: &String) -> Vec<String> {
+    let mut patterns: Vec<String> = vec![
+        "**/.git/**",
+        "**/*.xcodeproj/**",
+        "**/.*",
+        "**/build/**",
+        "**/buildServer.json",
+    ]
+    .iter()
+    .map(|e| e.to_string())
+    .collect();
+
+    // FIXME: Adding extra ignore patterns to `ignore` local config requires restarting daemon.
+    let extra_patterns = state
+        .lock()
+        .await
+        .workspaces
+        .get(root)
+        .unwrap()
+        .get_ignore_patterns();
+
+    if let Some(extra_patterns) = extra_patterns {
+        patterns.extend(extra_patterns);
+    }
+
+    patterns
 }

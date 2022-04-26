@@ -12,12 +12,14 @@ pub use register::Register;
 pub use rename_file::RenameFile;
 pub use run::Run;
 
+/// Trait to be implemented by actions to be processable
 #[async_trait::async_trait]
 #[cfg(feature = "daemon")]
 pub trait DaemonCommandExt {
     async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()>;
 }
 
+/// Daemon Actions
 #[derive(Debug)]
 pub enum DaemonCommand {
     Build(Build),
