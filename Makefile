@@ -18,3 +18,6 @@ watchlua:
 
 watchdaemon:
 	RUST_LOG="xcodebase=debug" cargo watch -x 'run --bin xcodebase-daemon --features=daemon' -w 'src' -w 'Cargo.toml'
+
+watchserver:
+	RUST_LOG="trace" cargo watch -x 'build --bin xcodebase-server --features=server' -w 'src' -w 'Cargo.toml'

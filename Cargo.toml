@@ -7,6 +7,7 @@ edition = "2021"
 default     = [ ]
 xcodegen    = [ "async", "dirs" ]
 daemon      = [ "serial", "compilation", "logging", "xcode", "async", "watcher", "proc", "xcodegen" ]
+server      = [ "serial", "logging", "dirs", "bsp-server", "url", "wax", "shell-words", "compilation" ]
 lua         = [ "mlua" ]
 serial      = [ "serde", "serde_json", "serde_yaml" ]
 compilation = [ "serial", "lazy_static", "regex", "shell-words" ]
@@ -15,6 +16,7 @@ xcode       = [ ]
 async       = [ "tokio", "async-trait" ]
 proc        = [ "libproc" ]
 watcher     = [ "dirs", "notify", "wax" ]
+jsonrpc     = [ "serial" ]
 
 [lib]
 name = "xcodebase"
@@ -30,40 +32,39 @@ name = "xcodebase-daemon"
 path = "src/daemon/bin.rs"
 required-features = ["daemon"]
 
+[[bin]]
+name = "xcodebase-server"
+path = "src/server/bin.rs"
+required-features = [ "server" ]
+
 [dependencies]
-
 # Error Handling
-anyhow             = "^1.0.42"
+anyhow                = "^1.0.42"
 # suffix-position pipeline
-tap = "1.0.1"
-
+tap                   = "1.0.1"
 # Serialization Feature
 serde                 = { version = "1.0",    features = ["derive"], optional = true }
 serde_json            = { version = "1.0.79", optional = true }
 serde_yaml            = { version = "0.8.23", optional = true }
-
 # Async Runtime Feature
 tokio                 = { version = "1.17.0", features = ["full"], optional = true }
-tokio-util            = { version = "0.7.1", features = ["codec"], optional = true }
+tokio-util            = { version = "0.7.1",  features = ["codec"], optional = true }
 async-trait           = { version = "0.1.52", optional = true }
-
 # Logging Feature
 tracing               = { version = "0.1.32", optional = true }
 tracing-subscriber    = { version = "0.3.9",  features = ["env-filter"], optional = true}
 tracing-appender      = { version = "0.2.1",  optional = true }
-
 # Filesystem watcher
 notify                = { version = "5.0.0-pre.13", optional = true }
-dirs                  = { version = "4.0",   optional = true }
-wax                   = { version = "0.4.0", optional = true }
-
+dirs                  = { version = "4.0",    optional = true }
+wax                   = { version = "0.4.0",  optional = true }
 # Build Logs/Command Compilation feature
-regex                 = { version = "1.5",   optional = true }
-lazy_static           = { version = "1.4.0", optional = true }
+regex                 = { version = "1.5",    optional = true }
+lazy_static           = { version = "1.4.0",  optional = true }
 shell-words           = { version  = "1.1.0", optional = true }
-mlua                  = { version = "0.7.4", features = ["lua51", "vendored"], optional = true } 
-
-
-# Proc feature: processes, processors, disks, components and networks
-# sysinfo = "0.23.5"
-libproc               = { version = "0.10.0", optional = true }
+# Other
+mlua                  = { version = "0.7.4",  features = ["lua51", "vendored"], optional = true } 
+bsp-server            = { version  = "0.1.2", path = "../../rust/build-server-protocol/bsp-server/", optional = true }
+# Proc feature: processes, processors, disks, components and networks (sysinfo = "0.23.5")
+libproc               = { version = "0.11.1", optional = true }
+url                   = { version = "2.2.2",  features = ["serde"], optional = true }
