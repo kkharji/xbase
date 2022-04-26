@@ -30,6 +30,3 @@ pub use util::watch;
 
 #[cfg(feature = "server")]
 pub mod server;
-
-#[cfg(feature = "server")]
-pub use server::*;

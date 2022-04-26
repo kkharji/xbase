@@ -1,17 +1,37 @@
 mod command;
+mod flags;
 pub use command::CompileCommand;
+pub use flags::CompileFlags;
 
 use crate::util::regex::matches_compile_swift_sources;
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::{ops::Deref, path::Path};
 use tap::Pipe;
 
 // TODO: Support compiling commands for objective-c files
 // TODO: Test multiple module command compile
 
 #[derive(Debug, Deserialize)]
-pub struct CompileCommands(Vec<CompileCommand>);
+pub struct CompileCommands(pub Vec<CompileCommand>);
+
+impl IntoIterator for CompileCommands {
+    type Item = CompileCommand;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl Deref for CompileCommands {
+    type Target = Vec<CompileCommand>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl CompileCommands {
     pub fn from_logs(lines: Vec<String>) -> Self {
@@ -39,7 +59,7 @@ impl CompileCommands {
         Self(commands)
     }
 
-    pub fn from_file(path: &PathBuf) -> Result<Self> {
+    pub fn from_file(path: &Path) -> Result<Self> {
         std::fs::read_to_string(path)?
             .pipe_ref(|s| serde_json::from_str(s))
             .context("Deserialize .compile")
@@ -47,7 +67,7 @@ impl CompileCommands {
 
     /// Generate and write compile commands from build logs to directory
     #[cfg(feature = "async")]
-    pub async fn update(dir: &PathBuf, build_log: Vec<String>) -> Result<()> {
+    pub async fn update(dir: &std::path::PathBuf, build_log: Vec<String>) -> Result<()> {
         tracing::info!("Updating .compile in {:?}", dir);
         Self::from_logs(build_log)
             .pipe(|cmd| serde_json::to_vec_pretty(&cmd.0))?
@@ -59,6 +79,7 @@ impl CompileCommands {
 
 #[test]
 fn test() {
+    #[cfg(feature = "async")]
     tokio::runtime::Runtime::new().unwrap().block_on(async {
         use tap::Pipe;
         tokio::fs::read_to_string("/Users/tami5/repos/swift/wordle/build.log")

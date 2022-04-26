@@ -1,16 +1,12 @@
 #[cfg(feature = "proc")]
 use crate::util::proc;
 
-#[cfg(feature = "xcode")]
-use crate::xcode;
-
 #[cfg(feature = "daemon")]
 use anyhow::Result;
 
 #[cfg(feature = "xcodegen")]
 use crate::xcodegen;
 
-use crate::compile::CompileCommands;
 use crate::Project;
 use std::path::PathBuf;
 
@@ -92,7 +88,7 @@ impl Workspace {
         self.project.targets().get(target_name)
     }
     /// Regenerate compiled commands and xcodeGen if project.yml exists
-    #[cfg(all(feature = "xcode", feature = "watcher"))]
+    #[cfg(feature = "watcher")]
     pub async fn on_directory_change(
         &mut self,
         path: PathBuf,
@@ -103,8 +99,11 @@ impl Workspace {
                 .await?;
         }
 
-        xcode::ensure_server_config_file(&self.root).await?;
-        CompileCommands::update(&self.root, self.project.fresh_build().await?).await?;
+        #[cfg(feature = "xcode")]
+        crate::xcode::ensure_server_config_file(&self.root).await?;
+        #[cfg(feature = "compilation")]
+        crate::compile::CompileCommands::update(&self.root, self.project.fresh_build().await?)
+            .await?;
 
         Ok(())
     }
