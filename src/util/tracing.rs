@@ -7,8 +7,13 @@ use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::{fmt, registry, EnvFilter};
 
 /// Setup tracing
-pub fn install_tracing(root: &str, filename: &str, with_stdout: bool) -> Result<()> {
-    let default_filter = EnvFilter::from_default_env().add_directive(Level::TRACE.into());
+pub fn install_tracing(
+    root: &str,
+    filename: &str,
+    default_level: Level,
+    with_stdout: bool,
+) -> Result<()> {
+    let default_filter = EnvFilter::from_default_env().add_directive(default_level.into());
     let fmt_file = fmt::Layer::new()
         .with_writer(rolling::never(root, filename))
         .with_target(true)

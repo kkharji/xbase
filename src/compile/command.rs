@@ -1,5 +1,4 @@
 use crate::util::fs;
-use crate::util::regex::matches_compile_swift_sources;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -7,9 +6,10 @@ use std::path::PathBuf;
 
 use super::CompileFlags;
 
+/// Single Compilation Database Command Representation
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct CompileCommand {
+pub struct CompilationCommand {
     /// Module name
     /// NOTE: not sure if this required
     #[serde(
@@ -22,7 +22,7 @@ pub struct CompileCommand {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
 
-    /// The wroking directory for the compilation
+    /// The working directory for the compilation
     pub directory: String,
 
     /// The compile command, this is alias with commandLine or split form of command
@@ -44,14 +44,18 @@ pub struct CompileCommand {
     pub index_store_path: Option<String>,
 }
 
-impl CompileCommand {
-    pub fn can_parse(line: &str) -> bool {
-        matches_compile_swift_sources(line)
-    }
-
-    /// Parse starting from current line as swift module
-    /// Matching r"^CompileSwiftSources\s*"
-    pub fn swift_module(lines: &Vec<String>, cursor: usize) -> Option<CompileCommand> {
+impl CompilationCommand {
+    /// Generate CompilationCommand starting from where r"^CompileSwiftSources\s*"
+    ///
+    /// Examples
+    ///
+    /// ```no_run
+    /// use xcodebase::compile::CompilationCommand;
+    /// let build_logs_lines = vec![];
+    /// let cursor_where_the_line_matches = 1;
+    /// CompilationCommand::swift_module(&build_logs_lines, cursor_where_the_line_matches)
+    /// ```
+    pub fn swift_module(lines: &Vec<String>, cursor: usize) -> Option<CompilationCommand> {
         let directory = match lines.get(cursor) {
             Some(s) => s.trim().replace("cd ", ""),
             None => {
@@ -113,17 +117,30 @@ impl CompileCommand {
         Some(command)
     }
 
-    /// Get a HashMap of workspace files and compile flags
+    /// Generate a map of filespaths in workspaces and their compilation flags
+    ///
+    /// See [`CompileFlags`]
+    ///
+    /// Examples
+    ///
+    /// ```no_run
+    /// use xcodebase::compile::CompilationCommand;
+    /// let build_logs_lines = vec![];
+    /// let cursor_where_the_line_matches = 1;
+    /// let command = CompilationCommand::swift_module(&build_logs_lines, cursor_where_the_line_matches);
+    ///
+    /// command.compile_flags();
+    /// ```
     pub fn compile_flags<'a>(&'a self) -> Result<HashMap<PathBuf, CompileFlags>> {
-        let mut info: HashMap<PathBuf, CompileFlags, _> = HashMap::default();
+        let mut info = HashMap::default();
         let flags = CompileFlags::from_command(&self.command)?;
 
         // Swift File Lists
         self.file_lists.iter().for_each(|path| {
             let path = &PathBuf::from(path.as_str());
             match fs::get_files_list(path) {
-                Ok(flist) => {
-                    flist.into_iter().for_each(|file_path: PathBuf| {
+                Ok(file_list) => {
+                    file_list.into_iter().for_each(|file_path: PathBuf| {
                         info.insert(file_path, flags.clone());
                     });
                 }

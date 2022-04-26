@@ -94,6 +94,9 @@ impl Workspace {
         path: PathBuf,
         _event: &notify::EventKind,
     ) -> Result<()> {
+        use anyhow::Context;
+        use tap::Pipe;
+
         if crate::xcodegen::is_workspace(self) {
             self.update_xcodeproj(path.file_name().unwrap().eq("project.yml"))
                 .await?;
@@ -102,8 +105,14 @@ impl Workspace {
         #[cfg(feature = "xcode")]
         crate::xcode::ensure_server_config_file(&self.root).await?;
         #[cfg(feature = "compilation")]
-        crate::compile::CompileCommands::update(&self.root, self.project.fresh_build().await?)
-            .await?;
+        self.project
+            .fresh_build()
+            .await?
+            .pipe(|logs| crate::compile::CompilationDatabase::from_logs(logs))
+            .pipe(|cmd| serde_json::to_vec_pretty(&cmd.0))?
+            .pipe(|json| tokio::fs::write(self.root.join(".compile"), json))
+            .await
+            .context("Write CompileCommands")?;
 
         Ok(())
     }

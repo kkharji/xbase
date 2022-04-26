@@ -1,6 +1,6 @@
-use super::CompileCommand;
+use super::CompilationCommand;
 use crate::{
-    compile::CompileCommands,
+    compile::CompilationDatabase,
     util::fs::{self, find_header_dirs, find_swift_files, find_swift_module_root},
 };
 use anyhow::Result;
@@ -13,12 +13,23 @@ use tap::{Pipe, Tap};
 
 const SDKPATH: &str = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/";
 
+/// File Compilation Flags
+///
+/// Primarily used This is used in [`crate::server::BuildServer`] to support completion and code
+/// navigation for workspace files.
 #[derive(Debug, Clone)]
 pub struct CompileFlags(Vec<String>);
 
 impl CompileFlags {
-    /// Generate compile flags from command
-    #[tracing::instrument(ret, skip_all, level = "trace")]
+    /// Generate compile flags from [`crate::compile::CompilationCommand`].command.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let compilation_command;
+    /// CompileFlags::from_command(&compilation_command.command);
+    /// ```
+    #[tracing::instrument(skip_all, level = "trace")]
     pub fn from_command(command: &str) -> Result<Self> {
         command
             .pipe(shell_words::split)
@@ -26,22 +37,30 @@ impl CompileFlags {
             .tap_mut(|flags| {
                 flags.remove(0);
             })
-            .pipe(|flags| filter_swift_args(flags))?
+            .pipe(|flags| Self::with_files_list_content(flags))?
             .pipe(Self)
             .pipe(Result::Ok)
     }
 
-    /// Generate compile flags from filepath
-    #[tracing::instrument(ret, skip_all, level = "trace")]
+    /// Generate compile flags from filepath.
+    ///
+    /// This in case a [`crate::compile::CompilationCommand`] can't be generated and only filepath
+    /// is available
+    /// # Examples
+    ///
+    /// ```no_run
+    /// CompileFlags::from_filepath("/path/to/project/src/file");
+    /// ```
+    #[tracing::instrument(skip_all, level = "trace")]
     pub fn from_filepath(filepath: &Path) -> Result<Self> {
         let (ref project_root, swiftflags_filepath, compile_filepath) =
             find_swift_module_root(filepath);
         let flags;
 
         if let Some(ref compile_filepath) = compile_filepath {
-            flags = CompileCommands::from_file(compile_filepath)?
+            flags = CompilationDatabase::from_file(compile_filepath)?
                 .iter()
-                .flat_map(CompileCommand::compile_flags)
+                .flat_map(CompilationCommand::compile_flags)
                 .flatten()
                 .collect::<HashMap<_, _>>()
                 .get(filepath)
@@ -82,6 +101,37 @@ impl CompileFlags {
 
         Ok(flags)
     }
+
+    /// Filter swift compilation arguments and inject files_list content to arguments
+    pub fn with_files_list_content(flags: Vec<String>) -> Result<Vec<String>> {
+        let mut args = vec![];
+        let mut items = flags.into_iter();
+        while let Some(arg) = items.next() {
+            // sourcekit dont support filelist, unfold it
+            if arg == "-filelist" {
+                items
+                    .next()
+                    .unwrap()
+                    .pipe(PathBuf::from)
+                    .pipe(fs::get_files_list)?
+                    .pipe_as_mut(|paths| args.append(paths));
+            }
+
+            // swift 5.1 filelist, unfold it
+            if arg.starts_with("@") {
+                arg.strip_prefix("@")
+                    .unwrap()
+                    .pipe(fs::get_files_list)?
+                    .pipe_as_mut(|paths| args.append(paths));
+
+                continue;
+            }
+
+            args.push(arg)
+        }
+
+        Ok(args)
+    }
 }
 
 impl std::ops::Deref for CompileFlags {
@@ -101,35 +151,4 @@ fn additional_flags(flags_path: &Path) -> Option<Vec<String>> {
         .map(|line| line.trim().to_string())
         .collect::<Vec<_>>()
         .into()
-}
-
-/// Filter swift arguments
-fn filter_swift_args(flags: Vec<String>) -> Result<Vec<String>> {
-    let mut args = vec![];
-    let mut items = flags.into_iter();
-    while let Some(arg) = items.next() {
-        // sourcekit dont support filelist, unfold it
-        if arg == "-filelist" {
-            items
-                .next()
-                .unwrap()
-                .pipe(PathBuf::from)
-                .pipe(fs::get_files_list)?
-                .pipe_as_mut(|paths| args.append(paths));
-        }
-
-        // swift 5.1 filelist, unfold it
-        if arg.starts_with("@") {
-            arg.strip_prefix("@")
-                .unwrap()
-                .pipe(fs::get_files_list)?
-                .pipe_as_mut(|paths| args.append(paths));
-
-            continue;
-        }
-
-        args.push(arg)
-    }
-
-    Ok(args)
 }
