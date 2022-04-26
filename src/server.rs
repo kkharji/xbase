@@ -3,7 +3,7 @@ mod extensions;
 mod state;
 
 use anyhow::{Context, Result};
-use bsp_server::{types::*, Connection, RequestId, Response};
+use bsp_server::{types::*, Connection, Request, RequestId, Response};
 use serde_json::{json, Value};
 use std::{fs::read_to_string, path::PathBuf};
 use tap::Pipe;
@@ -14,7 +14,10 @@ pub use state::BuildServerState;
 static SERVER_NAME: &str = "xcodebase-build-server";
 static SERVER_VERSION: &str = "0.1";
 
-/// Build Server to provide compile arguments. Currently focused on support compilation and code jump.
+/// SourceKit-lsp Build Server
+///
+/// Currently focused on supporting compilation and code navigation through providing file compiled
+/// arguments
 #[derive(Debug, Default)]
 // TODO: Clear build server state when .compile get updated
 //
@@ -34,8 +37,6 @@ impl BuildServer {
         let config_filepath = root_path.join("buildServer.json");
         let compile_filepath = get_compile_filepath(params);
         let response = get_initialize_response(params, &root_path, &config_filepath)?;
-        tracing::debug!("{:#?}", response);
-
         Ok((
             response,
             Self {
@@ -54,7 +55,7 @@ impl BuildServer {
         &mut self,
         conn: &Connection,
         id: RequestId,
-        params: RegisterForChanges,
+        params: OptionsChangedRequest,
     ) -> Result<()> {
         // Empty response, ensure response before notification
         conn.send(Response::ok(id, Value::Null))?;
@@ -69,7 +70,7 @@ impl BuildServer {
 
         tracing::info!("{filepath}");
 
-        let notification = SourceKitOptionsChangedNotification::new(params.uri, flags, root);
+        let notification = OptionsChangedNotification::new(params.uri, flags, root);
 
         conn.send(notification)
             .context("notify registration for changes")
@@ -81,14 +82,14 @@ impl BuildServer {
         &mut self,
         conn: &Connection,
         id: RequestId,
-        params: SourceKitOptions,
+        params: OptionsRequest,
     ) -> Result<()> {
         let filepath = params.uri.path();
         tracing::info!("{filepath}");
 
         let root = self.root_path.pipe_ref(Url::from_directory_path).ok();
         let flags = self.file_flags(filepath)?;
-        let response = SourceKitOptionsResult::new(flags, root).as_response(id);
+        let response = OptionsResponse::new(flags, root).as_response(id);
 
         conn.send(response)
             .context("Respond to textDocument/sourceKitOptions")
@@ -96,7 +97,7 @@ impl BuildServer {
 
     /// Process Workspace BuildTarget request
     #[tracing::instrument(name = "WorkspaceBuildTargets", skip_all)]
-    pub fn build_targets(&mut self, conn: &Connection, id: RequestId) -> Result<()> {
+    pub fn workspace_build_targets(&mut self, conn: &Connection, id: RequestId) -> Result<()> {
         tracing::debug!("Processing");
         let response = WorkspaceBuildTargetsResult::new(vec![]);
 
@@ -110,17 +111,17 @@ impl BuildServer {
         &mut self,
         conn: &Connection,
         id: RequestId,
-        _params: BuildTargetOutputPaths,
+        _params: BuildTargetOutputPathsRequest,
     ) -> Result<()> {
         tracing::debug!("Processing");
-        let response = BuildTargetOutputPathsResult::new(vec![]).as_response(id);
+        let response = BuildTargetOutputPathsResponse::new(vec![]).as_response(id);
         conn.send(response)
             .context("Respond to buildTarget/outputPaths")
     }
 
     /// Process BuildTarget Sources Request
     #[tracing::instrument(name = "BuildTargetsSources", skip_all)]
-    pub fn sources(
+    pub fn build_target_sources(
         &mut self,
         conn: &Connection,
         id: RequestId,
@@ -130,6 +131,33 @@ impl BuildServer {
         let response = BuildTargetSourcesResult::new(vec![]);
         conn.send((id, response))
             .context("Respond to buildTarget/outputPaths")
+    }
+
+    /// Return Default response for unhandled requests.
+    pub fn default_response(
+        &self,
+        conn: &Connection,
+        id: &RequestId,
+        method: &str,
+        params: Value,
+    ) -> Result<()> {
+        tracing::warn!("Unable to handle:\n\n{:#?}\n", method);
+        tracing::debug!("Params:\n\n{:#?}\n", params);
+        conn.send(Response::err(
+            id.clone(),
+            123,
+            format!("unhandled method {method}"),
+        ))
+        .context("Fail to respond")
+    }
+
+    /// Handle Shutdown Request
+    pub fn handle_shutdown(&self, conn: &Connection, req: &Request) -> Result<()> {
+        conn.handle_shutdown(&req)
+            .context("Shutdown server")
+            .map(|_| ())?;
+
+        Ok(())
     }
 }
 

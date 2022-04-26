@@ -16,6 +16,7 @@ pub struct BuildServerState {
 }
 
 impl BuildServerState {
+    /// Get [`CompilationDatabase`] for a .compile file path.
     pub fn compile_commands(&mut self, compile_filepath: &Path) -> Result<&CompilationDatabase> {
         if self.compile_commands.contains_key(compile_filepath) {
             &self.compile_commands[compile_filepath]
@@ -27,6 +28,7 @@ impl BuildServerState {
         .pipe(Result::Ok)
     }
 
+    /// Get [`CompileFlags`] for a file
     pub fn file_flags(
         &mut self,
         filepath: &Path,
@@ -52,6 +54,7 @@ impl BuildServerState {
         .ok_or_else(|| anyhow::anyhow!("Couldn't find file flags for {:?}", filepath))
     }
 
+    /// Clear [`BuildServerState`]
     pub fn clear(&mut self) {
         self.file_flags = Default::default();
         self.compile_commands = Default::default();
