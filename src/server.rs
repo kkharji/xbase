@@ -154,12 +154,12 @@ impl BuildServer {
     }
 
     /// Handle Shutdown Request
-    pub fn handle_shutdown(&self, conn: &Connection, req: &Request) -> Result<()> {
-        conn.handle_shutdown(&req)
-            .context("Shutdown server")
-            .map(|_| ())?;
-
-        Ok(())
+    pub fn handle_shutdown(&self, conn: &Connection, req: &Request) -> Result<bool> {
+        if conn.handle_shutdown(&req).context("Shutdown server")? {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }
 

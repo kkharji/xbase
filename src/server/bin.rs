@@ -21,48 +21,68 @@ fn main() -> Result<()> {
     })?;
 
     for msg in &conn.receiver {
-        match msg {
-            Message::Request(req) => match req {
-                Request::WorkspaceBuildTargets(id) => {
-                    server.workspace_build_targets(&conn, id)?;
-                }
-                Request::BuildTargetSources(id, value) => {
-                    server.build_target_sources(&conn, id, value)?;
-                }
-                Request::Custom(id, method, params) => match method {
-                    OptionsChangedRequest::METHOD => {
-                        server.register_for_changes(&conn, id, params.try_into()?)?;
+        if let Message::Request(ref req) = msg {
+            match server.handle_shutdown(&conn, req) {
+                Err(err) => tracing::error!("Failure to shutdown server {:#?}", err),
+                Ok(should_break) => {
+                    if should_break {
+                        tracing::info!("Shutdown");
+                        break;
                     }
-                    OptionsRequest::METHOD => {
-                        server.sourcekit_options(&conn, id, params.try_into()?)?;
-                    }
-                    BuildTargetOutputPathsRequest::METHOD => {
-                        server.output_paths(&conn, id, params.try_into()?)?;
-                    }
-                    method => {
-                        server.default_response(&conn, &id, method, params)?;
-                    }
-                },
-                Request::Shutdown(_) => {
-                    server.handle_shutdown(&conn, &req)?;
-                    break;
                 }
-                _ => {
-                    let (id, method, params) = (req.id(), req.method(), req.params()?);
-                    server.default_response(&conn, id, method, params)?;
-                }
-            },
+            };
+        }
 
-            Message::Response(_) => {
-                tracing::warn!("skipping \n\n{:?}\n", msg);
-            }
-            Message::Notification(_) => {
-                tracing::warn!("skipping \n\n{:?}\n", msg);
-            }
+        if let Err(err) = handle_message(&mut server, &conn, msg) {
+            tracing::error!("{:?}", err);
         }
     }
 
     io_threads.join()?;
     tracing::info!("Ended");
     Ok(())
+}
+
+fn handle_message(server: &mut BuildServer, conn: &Connection, msg: Message) -> Result<()> {
+    match msg {
+        Message::Request(req) => {
+            match req {
+                Request::WorkspaceBuildTargets(id) => {
+                    // WorkspaceBuildTargets
+                    server.workspace_build_targets(&conn, id)
+                }
+                Request::BuildTargetSources(id, value) => {
+                    // BuildTargetSources
+                    server.build_target_sources(&conn, id, value)
+                }
+                Request::Custom(id, method, params) => match method {
+                    OptionsChangedRequest::METHOD => {
+                        // OptionsChangedRequest
+                        server.register_for_changes(&conn, id, params.try_into()?)
+                    }
+                    OptionsRequest::METHOD => {
+                        // OptionsRequest
+                        server.sourcekit_options(&conn, id, params.try_into()?)
+                    }
+                    BuildTargetOutputPathsRequest::METHOD => {
+                        // BuildTargetOutputPathsRequest
+                        server.output_paths(&conn, id, params.try_into()?)
+                    }
+                    method => server.default_response(&conn, &id, method, params),
+                },
+                _ => {
+                    let (id, method, params) = (req.id(), req.method(), req.params()?);
+                    server.default_response(&conn, id, method, params)
+                }
+            }
+        }
+        Message::Response(_) => {
+            tracing::warn!("skipping \n\n{:?}\n", msg);
+            Ok(())
+        }
+        Message::Notification(_) => {
+            tracing::warn!("skipping \n\n{:?}\n", msg);
+            Ok(())
+        }
+    }
 }
