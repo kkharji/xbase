@@ -51,7 +51,7 @@ where
     let output = output
         .into_iter()
         .filter(|s| s.starts_with("error:"))
-        .map(|s| s.strip_prefix("error:").map(|s| s.to_string()))
+        .map(|s| s.strip_prefix("error:").map(|s| s.trim().to_string()))
         .flatten()
         .collect::<Vec<_>>();
 

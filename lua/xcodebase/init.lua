@@ -1,6 +1,8 @@
 local M = {}
 local config = require "xcodebase.config"
 local lib = require "libxcodebase"
+local pid = vim.fn.getpid()
+local address = vim.env.NVIM_LISTEN_ADDRESS
 
 ---@class XcodeBaseDaemon
 ---@field ensure fun():boolean: When the a new server started it should return true
@@ -36,9 +38,8 @@ M.try_register = function(opts)
 
   if M.should_register(root, opts) then
     local _ = M.daemon.ensure()
-    M.daemon.register(vim.fn.getpid(), root)
+    M.daemon.register(pid, root, address)
     vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.daemon.drop(vim.fn.getpid(), vim.loop.cwd())]]
-
   else
     return
   end

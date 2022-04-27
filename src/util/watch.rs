@@ -8,6 +8,11 @@ use std::{path::Path, time::Duration};
 use tokio::sync::{mpsc, Mutex};
 use wax::{Glob, Pattern};
 
+/// TODO: Move watch content to more specific scope.
+///
+/// Would make sesne if it's part of compile module, because I can't think of any other uses for
+/// watching current directory other for recompiling purpose.
+
 /// Create new handler to watch workspace root.
 #[cfg(feature = "daemon")]
 pub fn handler(
@@ -134,14 +139,34 @@ pub fn handler(
             #[cfg(feature = "logging")]
             tracing::trace!("[NewEvent] {:#?}", &event);
 
-            // let mut state = state.lock().await;
-
             match state.lock().await.workspaces.get_mut(&root) {
-                Some(w) => {
-                    if let Err(e) = w.on_directory_change(path, &event.kind).await {
-                        #[cfg(feature = "logging")]
-                        tracing::error!("Fail to process {:?}:\n {:#?}", event, e);
+                Some(ws) => {
+                    for (_, nvim) in ws.clients.iter() {
+                        if let Err(e) = nvim.log_info("CompileCommands", "Regenerating ..").await {
+                            tracing::error!("Fail to echo message to nvim clients {e}")
+                        }
                     }
+
+                    if let Err(e) = ws.on_directory_change(path, &event.kind).await {
+                        #[cfg(feature = "logging")]
+                        tracing::error!("{:?}:\n {:#?}", event, e);
+                        for (_, nvim) in ws.clients.iter() {
+                            if let Err(e) = nvim.log_error("CompileCommands", &e).await {
+                                tracing::error!("Fail to echo error to nvim clients {e}")
+                            }
+                        }
+                    } else {
+                        tracing::info!("Regenerated compile commands");
+                        for (_, nvim) in ws.clients.iter() {
+                            if let Err(e) = nvim
+                                .log_info("CompileCommands", "Regenerated successfully")
+                                .await
+                            {
+                                tracing::error!("Fail to echo message to nvim clients {e}")
+                            }
+                        }
+                    }
+
                     debounce = Box::new(std::time::SystemTime::now())
                 }
 
@@ -155,8 +180,8 @@ pub fn handler(
 
 /// HACK: ignore seen paths.
 ///
-/// Sometiems we get event for the same path, particularly
-/// `ModifyKind::Name::Any` is ommited twice for the new path
+/// Sometimes we get event for the same path, particularly
+/// `ModifyKind::Name::Any` is omitted twice for the new path
 /// and once for the old path.
 ///
 /// This will compare last_seen with path, updates `last_seen` if not match,

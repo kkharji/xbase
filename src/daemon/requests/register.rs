@@ -11,6 +11,7 @@ use anyhow::Result;
 #[derive(Debug)]
 pub struct Register {
     pub pid: i32,
+    pub address: String,
     pub root: String,
 }
 
@@ -22,30 +23,33 @@ impl Register {
 #[async_trait::async_trait]
 impl DaemonRequestHandler<Register> for Register {
     fn parse(args: Vec<&str>) -> Result<Self> {
-        if let (Some(pid), Some(root)) = (args.get(0), args.get(1)) {
+        if let (Some(pid), Some(root), Some(address)) = (args.get(0), args.get(1), args.get(2)) {
             Ok(Self {
                 pid: pid.parse::<i32>()?,
                 root: root.to_string(),
+                address: address.to_string(),
             })
         } else {
-            anyhow::bail!("Missing arugments: got {:?}", args)
+            anyhow::bail!("Missing arguments: got {:?}", args)
         }
     }
+
     async fn handle(&self, state: DaemonState) -> Result<()> {
         tracing::trace!("{:?}", self);
-        state.lock().await.add_workspace(&self.root, self.pid).await
+        state
+            .lock()
+            .await
+            .add_workspace(&self.root, self.pid, &self.address)
+            .await
     }
 }
 
 #[cfg(feature = "lua")]
 impl Register {
-    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
+    pub fn lua(lua: &mlua::Lua, (pid, root, address): (i32, String, String)) -> mlua::Result<()> {
         use crate::util::mlua::LuaExtension;
-        lua.trace(&format!("Add (pid: {pid} cwd: {root})"))?;
-        Self::request(pid, root).map_err(mlua::Error::external)
-    }
-
-    pub fn request(pid: i32, root: String) -> mlua::Result<()> {
-        Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
+        Daemon::execute(&[Self::KEY, &pid.to_string(), &root, &address])?;
+        lua.trace(&format!("registered client (pid: {pid})"))?;
+        Ok(())
     }
 }

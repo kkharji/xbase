@@ -42,16 +42,19 @@ pub struct Project {
 
 impl Project {
     #[cfg(feature = "async")]
-    pub async fn new_from_project_yml(root: PathBuf, path: PathBuf) -> Result<Self> {
-        use anyhow::bail;
+    pub async fn new(root: &PathBuf) -> Result<Self> {
+        let path = root.join("project.yml");
+        if !path.exists() {
+            anyhow::bail!("project.yaml doesn't exist in '{:?}'", root)
+        }
 
         let content = tokio::fs::read_to_string(path).await?;
         if cfg!(feature = "serial") {
             let mut project = serde_yaml::from_str::<Project>(&content)?;
-            project.root = root;
+            project.root = root.clone();
             Ok(project)
         } else {
-            bail!(r#"feature = "serial" is to be created from yml"#)
+            anyhow::bail!(r#"feature = "serial" is to be created from yml"#)
         }
     }
 
@@ -98,5 +101,3 @@ impl Project {
         xcode::build(&self.root, &["-verbose"]).await
     }
 }
-
-impl Project {}

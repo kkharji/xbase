@@ -1,4 +1,6 @@
 //! Handle requests from neovim and manage dev workflow
+#[cfg(feature = "daemon")]
+mod nvim;
 mod requests;
 pub mod state;
 

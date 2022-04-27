@@ -35,16 +35,16 @@ impl DaemonStateData {
             .for_each(|(_, ws)| ws.update_clients())
     }
 
-    pub async fn add_workspace(&mut self, root: &str, pid: i32) -> Result<()> {
+    pub async fn add_workspace(&mut self, root: &str, pid: i32, address: &str) -> Result<()> {
         match self.workspaces.get_mut(root) {
-            Some(workspace) => workspace.add_client(pid),
+            Some(workspace) => workspace.add_client(pid, address).await?,
             None => {
                 let workspace = {
                     let root: &str = &root;
                     let mut ws = Workspace::new(&root).await?;
                     tracing::info!("New Workspace: {:?}", ws.project.name());
                     tracing::trace!("{:?}", ws);
-                    ws.add_client(pid);
+                    ws.add_client(pid, address).await?;
                     ws
                 };
 
