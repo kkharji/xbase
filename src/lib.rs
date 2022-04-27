@@ -7,5 +7,6 @@ pub mod xcode;
 #[cfg(feature = "xcodegen")]
 pub mod xcodegen;
 
+#[cfg(any(feature = "daemon", feature = "mlua"))]
 pub mod daemon;
 pub mod util;

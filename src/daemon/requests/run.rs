@@ -1,9 +1,20 @@
+#[cfg(feature = "mlua")]
+use crate::daemon::Daemon;
+
+#[cfg(feature = "daemon")]
+use crate::daemon::{DaemonRequestHandler, DaemonState};
+
+#[cfg(feature = "daemon")]
 use anyhow::Result;
 
 /// Run a project.
 #[derive(Debug)]
 pub struct Run {
     _simulator: bool,
+}
+
+impl Run {
+    pub const KEY: &'static str = "run";
 }
 
 // TODO: Implement run command
@@ -13,27 +24,15 @@ pub struct Run {
 // macos apps, which is wrong
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::daemon::DaemonRequestHandler for Run {
-    async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
-        tracing::info!("Run command");
-        Ok(())
-    }
-}
-
-impl TryFrom<Vec<&str>> for Run {
-    type Error = anyhow::Error;
-
-    fn try_from(args: Vec<&str>) -> Result<Self, Self::Error> {
+impl DaemonRequestHandler<Run> for Run {
+    fn parse(args: Vec<&str>) -> Result<Self> {
         let _simulator = args.get(0).unwrap_or(&"").parse::<bool>().unwrap_or(false);
         Ok(Self { _simulator })
     }
-}
 
-impl Run {
-    pub const KEY: &'static str = "run";
-
-    pub fn request(with_simulator: bool) -> Result<()> {
-        crate::daemon::Daemon::execute(&[Self::KEY, &with_simulator.to_string()])
+    async fn handle(&self, _state: DaemonState) -> Result<()> {
+        tracing::info!("Run command");
+        Ok(())
     }
 }
 
@@ -42,6 +41,6 @@ impl Run {
     pub fn lua(lua: &mlua::Lua, with_simulator: bool) -> mlua::Result<()> {
         use crate::util::mlua::LuaExtension;
         lua.trace(&format!("Run command called"))?;
-        Self::request(with_simulator).map_err(mlua::Error::external)
+        Daemon::execute(&[Self::KEY, &with_simulator.to_string()])
     }
 }

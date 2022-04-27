@@ -1,6 +1,6 @@
 use mlua::lua_module;
 use mlua::prelude::*;
-use xcodebase::Daemon;
+use xcodebase::daemon::Daemon;
 
 #[lua_module]
 fn libxcodebase(lua: &Lua) -> LuaResult<LuaTable> {

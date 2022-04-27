@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use tokio::io::AsyncReadExt;
+use tokio::sync::Mutex;
 use xcodebase::util::tracing::install_tracing;
 use xcodebase::{daemon::*, util::watch};
 
@@ -12,11 +15,12 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Started");
 
-    let daemon = Daemon::new();
+    let state: Arc<Mutex<state::DaemonStateData>> = Default::default();
+    let listener = tokio::net::UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
     loop {
-        let state = daemon.state.clone();
-        let (mut s, _) = daemon.listener.accept().await.unwrap();
+        let state = state.clone();
+        let (mut s, _) = listener.accept().await.unwrap();
         tokio::spawn(async move {
             let mut string = String::default();
 

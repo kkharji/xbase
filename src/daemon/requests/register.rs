@@ -1,3 +1,10 @@
+#[cfg(feature = "mlua")]
+use crate::daemon::Daemon;
+
+#[cfg(feature = "daemon")]
+use crate::daemon::{DaemonRequestHandler, DaemonState};
+
+#[cfg(feature = "daemon")]
 use anyhow::Result;
 
 /// Register new client with workspace
@@ -7,19 +14,14 @@ pub struct Register {
     pub root: String,
 }
 
-#[cfg(feature = "daemon")]
-#[async_trait::async_trait]
-impl crate::daemon::DaemonRequestHandler for Register {
-    async fn handle(&self, state: crate::daemon::DaemonState) -> Result<()> {
-        tracing::trace!("{:?}", self);
-        state.lock().await.add_workspace(&self.root, self.pid).await
-    }
+impl Register {
+    pub const KEY: &'static str = "register";
 }
 
-impl TryFrom<Vec<&str>> for Register {
-    type Error = anyhow::Error;
-
-    fn try_from(args: Vec<&str>) -> Result<Self, Self::Error> {
+#[cfg(feature = "daemon")]
+#[async_trait::async_trait]
+impl DaemonRequestHandler<Register> for Register {
+    fn parse(args: Vec<&str>) -> Result<Self> {
         if let (Some(pid), Some(root)) = (args.get(0), args.get(1)) {
             Ok(Self {
                 pid: pid.parse::<i32>()?,
@@ -29,12 +31,9 @@ impl TryFrom<Vec<&str>> for Register {
             anyhow::bail!("Missing arugments: got {:?}", args)
         }
     }
-}
-
-impl Register {
-    pub const KEY: &'static str = "register";
-    pub fn request(pid: i32, root: String) -> Result<()> {
-        crate::daemon::Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
+    async fn handle(&self, state: DaemonState) -> Result<()> {
+        tracing::trace!("{:?}", self);
+        state.lock().await.add_workspace(&self.root, self.pid).await
     }
 }
 
@@ -44,5 +43,9 @@ impl Register {
         use crate::util::mlua::LuaExtension;
         lua.trace(&format!("Add (pid: {pid} cwd: {root})"))?;
         Self::request(pid, root).map_err(mlua::Error::external)
+    }
+
+    pub fn request(pid: i32, root: String) -> mlua::Result<()> {
+        Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
     }
 }

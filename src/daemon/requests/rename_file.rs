@@ -1,3 +1,10 @@
+#[cfg(feature = "mlua")]
+use crate::daemon::Daemon;
+
+#[cfg(feature = "daemon")]
+use crate::daemon::{DaemonRequestHandler, DaemonState};
+
+#[cfg(feature = "daemon")]
 use anyhow::Result;
 
 /// Rename file + class
@@ -9,20 +16,15 @@ pub struct RenameFile {
     pub new_name: String,
 }
 
+impl RenameFile {
+    pub const KEY: &'static str = "rename_file";
+}
+
 // TODO: Implement file rename along with it's main class if any.
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::daemon::DaemonRequestHandler for RenameFile {
-    async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
-        tracing::info!("Reanmed command");
-        Ok(())
-    }
-}
-
-impl TryFrom<Vec<&str>> for RenameFile {
-    type Error = anyhow::Error;
-
-    fn try_from(args: Vec<&str>) -> Result<Self, Self::Error> {
+impl DaemonRequestHandler<RenameFile> for RenameFile {
+    fn parse(args: Vec<&str>) -> Result<Self> {
         let (path, new_name, name) = (args.get(0), args.get(1), args.get(2));
         if path.is_none() || name.is_none() || new_name.is_none() {
             anyhow::bail!(
@@ -39,12 +41,10 @@ impl TryFrom<Vec<&str>> for RenameFile {
             new_name: new_name.unwrap().to_string(),
         })
     }
-}
 
-impl RenameFile {
-    pub const KEY: &'static str = "rename_file";
-    pub fn request(path: &str, name: &str, new_name: &str) -> Result<()> {
-        crate::daemon::Daemon::execute(&[Self::KEY, path, name, new_name])
+    async fn handle(&self, _state: DaemonState) -> Result<()> {
+        tracing::info!("Reanmed command");
+        Ok(())
     }
 }
 
@@ -57,5 +57,9 @@ impl RenameFile {
         use crate::util::mlua::LuaExtension;
         lua.trace(&format!("Rename command called"))?;
         Self::request(&path, &name, &new_name).map_err(mlua::Error::external)
+    }
+
+    pub fn request(path: &str, name: &str, new_name: &str) -> mlua::Result<()> {
+        Daemon::execute(&[Self::KEY, path, name, new_name])
     }
 }

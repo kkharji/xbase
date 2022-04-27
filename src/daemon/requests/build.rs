@@ -1,4 +1,10 @@
+#[cfg(feature = "mlua")]
 use crate::daemon::Daemon;
+
+#[cfg(feature = "daemon")]
+use crate::daemon::{DaemonRequestHandler, DaemonState};
+
+#[cfg(feature = "daemon")]
 use anyhow::Result;
 
 /// Build a project.
@@ -9,6 +15,10 @@ pub struct Build {
     pub scheme: Option<String>,
 }
 
+impl Build {
+    pub const KEY: &'static str = "build";
+}
+
 // TODO: Implement build command
 // On neovim side:
 // - Call the command after picking the target. If their is only a single target then just use that
@@ -16,38 +26,30 @@ pub struct Build {
 //  with the options needed to build
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl crate::daemon::DaemonRequestHandler for Build {
-    async fn handle(&self, _state: crate::daemon::DaemonState) -> Result<()> {
-        tracing::info!("build command");
-        Ok(())
-    }
-}
-
-impl TryFrom<Vec<&str>> for Build {
-    type Error = anyhow::Error;
-
-    fn try_from(_args: Vec<&str>) -> Result<Self, Self::Error> {
+impl DaemonRequestHandler<Build> for Build {
+    fn parse(_args: Vec<&str>) -> Result<Self> {
         Ok(Self {
             target: None,
             configuration: None,
             scheme: None,
         })
     }
-}
 
-impl Build {
-    pub const KEY: &'static str = "build";
-
-    pub fn request(target: &str, configuration: &str, scheme: &str) -> Result<()> {
-        Daemon::execute(&[KEY, target, configuration, scheme])
+    async fn handle(&self, _state: DaemonState) -> Result<()> {
+        tracing::info!("build command");
+        Ok(())
     }
 }
 
+#[cfg(feature = "lua")]
 impl Build {
-    #[cfg(feature = "lua")]
     pub fn lua(lua: &mlua::Lua, (t, c, s): (String, String, String)) -> mlua::Result<()> {
         use crate::util::mlua::LuaExtension;
         lua.trace(format!("Build (target: {t} configuration: {c}, scheme: {s})").as_ref())?;
         Self::request(&t, &c, &s).map_err(mlua::Error::external)
+    }
+
+    pub fn request(target: &str, configuration: &str, scheme: &str) -> mlua::Result<()> {
+        Daemon::execute(&["build", target, configuration, scheme])
     }
 }
