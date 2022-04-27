@@ -5,6 +5,7 @@ use std::ffi;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::process::{ExitStatus, Stdio};
+use tap::Pipe;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -18,29 +19,43 @@ where
     S: AsRef<ffi::OsStr>,
 {
     tracing::info!("Building {:?}", root);
-    let output = Command::new("/usr/bin/xcodebuild")
+    let mut result = Command::new("/usr/bin/xcodebuild")
         .arg("build")
         .args(args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .current_dir(root)
         .spawn()?
         .wait_with_output()
-        .await
-        .map(|o| String::from_utf8(o.stdout))??
-        .split("\n")
-        .map(|s| s.to_string())
-        .collect();
+        .await?;
 
-    // TODO: Check xcodebuild build output if it contains failure
-    //
-    // Command succeed (return 0 status) but the output contains failure! need to be handled
-    // somehow as errror
-    tracing::trace!(
-        "xcodebuild output: \n{:#?}\n\n\n---------------------------------- end",
-        output
-    );
-    Ok(output)
+    let is_successful = result.status.success();
+    let output = if is_successful {
+        result.stdout
+    } else {
+        result.stdout.extend(result.stderr);
+        result.stdout
+    }
+    .pipe(String::from_utf8)?
+    .split("\n")
+    .map(|s| s.to_string())
+    .collect();
+
+    if is_successful {
+        return Ok(output);
+    }
+
+    output.iter().for_each(|s| {
+        tracing::error!("{s}");
+    });
+    let output = output
+        .into_iter()
+        .filter(|s| s.starts_with("error:"))
+        .map(|s| s.strip_prefix("error:").map(|s| s.to_string()))
+        .flatten()
+        .collect::<Vec<_>>();
+
+    anyhow::bail!("{}", output.join("\n"));
 }
 
 /// run xcodebuild clean with extra arguments
