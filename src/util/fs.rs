@@ -81,16 +81,24 @@ pub fn find_header_dirs(root: &Path) -> Result<(Vec<String>, Vec<String>)> {
 
 /// Find directory, swiftflags and comple file from a path to file within a project.
 #[tracing::instrument(ret)]
-pub fn find_swift_module_root(file_path: &Path) -> (PathBuf, Option<PathBuf>, Option<PathBuf>) {
+pub fn find_swift_module_root(
+    file_path: &Path,
+) -> (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) {
     let mut compile_file = None;
-    let mut directory = file_path.parent().unwrap();
+    let mut directory = match file_path.parent() {
+        Some(directory) => directory,
+        None => return (None, None, None),
+    };
 
     while directory.components().count() > 1 {
-        let path = directory.parent().unwrap();
+        let path = match directory.parent() {
+            Some(path) => path,
+            None => break,
+        };
 
         let flag_path = path.join(".swiftflags");
         if flag_path.is_file() {
-            return (directory.to_path_buf(), Some(flag_path), compile_file);
+            return (Some(directory.to_path_buf()), Some(flag_path), compile_file);
         };
 
         if compile_file.is_none() {
@@ -99,11 +107,11 @@ pub fn find_swift_module_root(file_path: &Path) -> (PathBuf, Option<PathBuf>, Op
         };
 
         if is_project_root(directory) {
-            return (directory.to_path_buf(), None, compile_file);
+            return (Some(directory.to_path_buf()), None, compile_file);
         } else {
             directory = path;
         }
     }
 
-    (directory.to_path_buf(), None, compile_file)
+    (Some(directory.to_path_buf()), None, compile_file)
 }

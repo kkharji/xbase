@@ -20,9 +20,10 @@ impl OptionsChangedRequest {
     }
 }
 
-impl Into<OptionsChangedRequest> for Value {
-    fn into(self) -> OptionsChangedRequest {
-        serde_json::from_value(self).unwrap()
+impl TryInto<OptionsChangedRequest> for Value {
+    type Error = serde_json::Error;
+    fn try_into(self) -> Result<OptionsChangedRequest, Self::Error> {
+        serde_json::from_value(self)
     }
 }
 
@@ -46,9 +47,10 @@ impl OptionsRequest {
     pub const METHOD: &'static str = "textDocument/sourceKitOptions";
 }
 
-impl Into<OptionsRequest> for Value {
-    fn into(self) -> OptionsRequest {
-        serde_json::from_value(self).unwrap()
+impl TryInto<OptionsRequest> for Value {
+    type Error = serde_json::Error;
+    fn try_into(self) -> Result<OptionsRequest, Self::Error> {
+        serde_json::from_value(self)
     }
 }
 
@@ -98,13 +100,15 @@ impl OptionsChangedNotification {
     }
 }
 
-impl From<OptionsChangedNotification> for Message {
-    fn from(not: OptionsChangedNotification) -> Message {
-        Message::Notification(Notification::Custom(
+impl TryInto<Message> for OptionsChangedNotification {
+    type Error = serde_json::Error;
+
+    fn try_into(self) -> Result<Message, Self::Error> {
+        let value = serde_json::to_value(self)?;
+        Ok(Message::Notification(Notification::Custom(
             "build/sourceKitOptionsChanged",
-            // WARN: Force Unwrap
-            serde_json::to_value(not).unwrap(),
-        ))
+            value,
+        )))
     }
 }
 
@@ -115,9 +119,11 @@ pub struct BuildTargetOutputPathsRequest {
     pub targets: Vec<BuildTargetIdentifier>,
 }
 
-impl Into<BuildTargetOutputPathsRequest> for Value {
-    fn into(self) -> BuildTargetOutputPathsRequest {
-        serde_json::from_value(self).unwrap()
+impl TryInto<BuildTargetOutputPathsRequest> for Value {
+    type Error = serde_json::Error;
+
+    fn try_into(self) -> Result<BuildTargetOutputPathsRequest, Self::Error> {
+        serde_json::from_value(self)
     }
 }
 

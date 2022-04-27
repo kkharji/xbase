@@ -55,51 +55,49 @@ impl CompileFlags {
     pub fn from_filepath(filepath: &Path) -> Result<Self> {
         let (ref project_root, swiftflags_filepath, compile_filepath) =
             find_swift_module_root(filepath);
-        let flags;
+        if let Some(project_root) = project_root {
+            if let Some(ref compile_filepath) = compile_filepath {
+                return CompilationDatabase::from_file(compile_filepath)?
+                    .iter()
+                    .flat_map(CompilationCommand::compile_flags)
+                    .flatten()
+                    .collect::<HashMap<_, _>>()
+                    .get(filepath)
+                    .ok_or_else(|| anyhow::anyhow!("No flags for {:?}", filepath))?
+                    .clone()
+                    .pipe(Result::Ok);
+            } else if let Some(ref swiftflags_filepath) = swiftflags_filepath {
+                let mut flags_collect = Vec::default();
+                let (headers, frameworks) = find_header_dirs(project_root)?;
 
-        if let Some(ref compile_filepath) = compile_filepath {
-            flags = CompilationDatabase::from_file(compile_filepath)?
-                .iter()
-                .flat_map(CompilationCommand::compile_flags)
-                .flatten()
-                .collect::<HashMap<_, _>>()
-                .get(filepath)
-                .ok_or_else(|| anyhow::anyhow!("No flags for {:?}", filepath))?
-                .clone();
-        } else if let Some(ref swiftflags_filepath) = swiftflags_filepath {
-            let mut flags_collect = Vec::default();
-            let (headers, frameworks) = find_header_dirs(project_root)?;
+                headers
+                    .into_iter()
+                    .flat_map(|header| vec!["-Xcc".into(), "-I".into(), header])
+                    .collect::<Vec<String>>()
+                    .pipe_ref_mut(|flags| flags_collect.append(flags));
 
-            headers
-                .into_iter()
-                .flat_map(|header| vec!["-Xcc".into(), "-I".into(), header])
-                .collect::<Vec<String>>()
-                .pipe_ref_mut(|flags| flags_collect.append(flags));
+                frameworks
+                    .into_iter()
+                    .map(|framework| format!("-F{framework}"))
+                    .collect::<Vec<String>>()
+                    .pipe_ref_mut(|flags| flags_collect.append(flags));
 
-            frameworks
-                .into_iter()
-                .map(|framework| format!("-F{framework}"))
-                .collect::<Vec<String>>()
-                .pipe_ref_mut(|flags| flags_collect.append(flags));
+                find_swift_files(project_root)?.pipe_ref_mut(|flags| flags_collect.append(flags));
 
-            find_swift_files(project_root)?.pipe_ref_mut(|flags| flags_collect.append(flags));
+                if let Some(ref mut additional_flags) = additional_flags(swiftflags_filepath) {
+                    flags_collect.append(additional_flags)
+                }
 
-            if let Some(ref mut additional_flags) = additional_flags(swiftflags_filepath) {
-                flags_collect.append(additional_flags)
-            }
-
-            flags = flags_collect.pipe(Self);
-        } else {
-            flags = filepath
-                .to_str()
-                .ok_or_else(|| {
-                    anyhow::anyhow!("Couldn't convert filepath to string {:?}", filepath)
-                })?
-                .pipe(|f| vec![f.into(), "-sdk".into(), SDKPATH.into()])
-                .pipe(Self)
+                return flags_collect.pipe(Self).pipe(Result::Ok);
+            };
         }
 
-        Ok(flags)
+        filepath
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Couldn't convert filepath to string {:?}", filepath))?
+            .pipe(|f| vec![f.into(), "-sdk".into(), SDKPATH.into()])
+            .pipe(Self)
+            .pipe(Result::Ok)
     }
 
     /// Filter swift compilation arguments and inject files_list content to arguments
@@ -109,22 +107,21 @@ impl CompileFlags {
         while let Some(arg) = items.next() {
             // sourcekit dont support filelist, unfold it
             if arg == "-filelist" {
-                items
-                    .next()
-                    .unwrap()
-                    .pipe(PathBuf::from)
-                    .pipe(fs::get_files_list)?
-                    .pipe_as_mut(|paths| args.append(paths));
+                if let Some(arg) = items.next() {
+                    arg.pipe(PathBuf::from)
+                        .pipe(fs::get_files_list)?
+                        .pipe_as_mut(|paths| args.append(paths));
+                    continue;
+                }
             }
 
             // swift 5.1 filelist, unfold it
             if arg.starts_with("@") {
-                arg.strip_prefix("@")
-                    .unwrap()
-                    .pipe(fs::get_files_list)?
-                    .pipe_as_mut(|paths| args.append(paths));
-
-                continue;
+                if let Some(arg) = arg.strip_prefix("@") {
+                    arg.pipe(fs::get_files_list)?
+                        .pipe_as_mut(|paths| args.append(paths));
+                    continue;
+                }
             }
 
             args.push(arg)

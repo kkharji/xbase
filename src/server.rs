@@ -3,7 +3,7 @@ mod extensions;
 mod state;
 
 use anyhow::{Context, Result};
-use bsp_server::{types::*, Connection, Request, RequestId, Response};
+use bsp_server::{types::*, Connection, Message, Request, RequestId, Response};
 use serde_json::{json, Value};
 use std::{fs::read_to_string, path::PathBuf};
 use tap::Pipe;
@@ -57,6 +57,7 @@ impl BuildServer {
         id: RequestId,
         params: OptionsChangedRequest,
     ) -> Result<()> {
+        tracing::info!("Handling");
         // Empty response, ensure response before notification
         conn.send(Response::ok(id, Value::Null))?;
         if !matches!(params.action, RegisterAction::Register) {
@@ -70,7 +71,8 @@ impl BuildServer {
 
         tracing::info!("{filepath}");
 
-        let notification = OptionsChangedNotification::new(params.uri, flags, root);
+        let notification: Message =
+            OptionsChangedNotification::new(params.uri, flags, root).try_into()?;
 
         conn.send(notification)
             .context("notify registration for changes")
@@ -217,7 +219,7 @@ fn get_compile_filepath(params: &InitializeBuild) -> Option<PathBuf> {
     params
         .root_uri()
         .join(".compile")
-        .unwrap()
+        .ok()?
         .path()
         .pipe(PathBuf::from)
         .pipe(|path| path.is_file().then(|| path))

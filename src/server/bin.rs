@@ -31,13 +31,13 @@ fn main() -> Result<()> {
                 }
                 Request::Custom(id, method, params) => match method {
                     OptionsChangedRequest::METHOD => {
-                        server.register_for_changes(&conn, id, params.into())?;
+                        server.register_for_changes(&conn, id, params.try_into()?)?;
                     }
                     OptionsRequest::METHOD => {
-                        server.sourcekit_options(&conn, id, params.into())?;
+                        server.sourcekit_options(&conn, id, params.try_into()?)?;
                     }
                     BuildTargetOutputPathsRequest::METHOD => {
-                        server.output_paths(&conn, id, params.into())?;
+                        server.output_paths(&conn, id, params.try_into()?)?;
                     }
                     method => {
                         server.default_response(&conn, &id, method, params)?;

@@ -19,13 +19,13 @@ impl BuildServerState {
     /// Get [`CompilationDatabase`] for a .compile file path.
     pub fn compile_commands(&mut self, compile_filepath: &Path) -> Result<&CompilationDatabase> {
         if self.compile_commands.contains_key(compile_filepath) {
-            &self.compile_commands[compile_filepath]
+            self.compile_commands.get(compile_filepath)
         } else {
             CompilationDatabase::from_file(compile_filepath)?
                 .pipe(|cmds| self.compile_commands.insert(compile_filepath.into(), cmds))
-                .pipe(|_| &self.compile_commands[compile_filepath])
+                .pipe(|_| self.compile_commands.get(compile_filepath))
         }
-        .pipe(Result::Ok)
+        .ok_or_else(|| anyhow::anyhow!("No CompilationDatabase found for {:?}", compile_filepath))
     }
 
     /// Get [`CompileFlags`] for a file

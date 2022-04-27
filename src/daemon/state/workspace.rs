@@ -98,8 +98,12 @@ impl Workspace {
         use tap::Pipe;
 
         if crate::xcodegen::is_workspace(self) {
-            self.update_xcodeproj(path.file_name().unwrap().eq("project.yml"))
-                .await?;
+            self.update_xcodeproj(
+                path.file_name()
+                    .ok_or_else(|| anyhow::anyhow!("Fail to get filename from {:?}", path))?
+                    .eq("project.yml"),
+            )
+            .await?;
         }
 
         #[cfg(feature = "xcode")]

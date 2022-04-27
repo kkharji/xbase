@@ -28,7 +28,10 @@ pub fn handler(
 
         let mut watcher = RecommendedWatcher::new(move |res: Result<Event, Error>| {
             if let Ok(event) = res {
-                tx.blocking_send(event).unwrap();
+                if let Err(err) = tx.blocking_send(event) {
+                    #[cfg(feature = "logging")]
+                    tracing::error!("Faill send event {err}");
+                };
             } else {
                 tracing::error!("Watch Error: {:?}", res);
             };
@@ -43,7 +46,14 @@ pub fn handler(
         // HACK: convert back to Vec<&str> for Glob to work.
         let patterns = get_ignore_patterns(state.clone(), &root).await;
         let patterns = patterns.iter().map(AsRef::as_ref).collect::<Vec<&str>>();
-        let ignore = wax::any::<Glob, _>(patterns).unwrap();
+        let ignore = match wax::any::<Glob, _>(patterns) {
+            Ok(i) => i,
+            Err(err) => {
+                #[cfg(feature = "logging")]
+                tracing::error!("Fail to generate ignore glob: {err}");
+                anyhow::bail!("Fail to generate ignore glob: {err}")
+            }
+        };
 
         while let Some(event) = rx.recv().await {
             let state = state.clone();
@@ -61,16 +71,21 @@ pub fn handler(
                 continue;
             }
 
-            let last_run = debounce.elapsed().unwrap().as_millis();
+            let last_run = match debounce.elapsed() {
+                Ok(time) => time.as_millis(),
+                Err(err) => {
+                    #[cfg(feature = "logging")]
+                    tracing::error!("Fail to get last_run time: {err}");
+                    continue;
+                }
+            };
+
             let pass_threshold = last_run > 1;
             if !pass_threshold {
                 #[cfg(feature = "logging")]
                 tracing::debug!("{:?}, paths: {:?}", event.kind, &event.paths);
-                tracing::trace!(
-                    "   milliseconds: {} pass_threshold: {pass_threshold}, {:?}",
-                    debounce.elapsed().unwrap().as_millis(),
-                    event
-                );
+                #[cfg(feature = "logging")]
+                tracing::trace!("{last_run}, pass_threshold: {pass_threshold}, {:?}", event);
                 continue;
             }
 
@@ -176,17 +191,11 @@ async fn get_ignore_patterns(state: crate::daemon::DaemonState, root: &String) -
     .map(|e| e.to_string())
     .collect();
 
-    // FIXME: Adding extra ignore patterns to `ignore` local config requires restarting daemon.
-    let extra_patterns = state
-        .lock()
-        .await
-        .workspaces
-        .get(root)
-        .unwrap()
-        .get_ignore_patterns();
-
-    if let Some(extra_patterns) = extra_patterns {
-        patterns.extend(extra_patterns);
+    // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
+    if let Some(ws) = state.lock().await.workspaces.get(root) {
+        if let Some(extra_patterns) = ws.get_ignore_patterns() {
+            patterns.extend(extra_patterns);
+        }
     }
 
     patterns

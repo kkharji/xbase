@@ -36,13 +36,9 @@ impl CompilationDatabase {
     /// use xcodebase::compile::CompilationDatabase;
     /// use std::fs::read_to_string;
     ///
-    /// CompilationDatabase::from_logs(
-    ///     read_to_string("/path/to/xcode_build_logs")
-    ///            .unwrap()
-    ///            .split("\n")
-    ///            .map(|l| l.to_string())
-    ///            .collect::<Vec<_>>()
-    /// )
+    /// if let Ok(logs) = read_to_string("/path/to/xcode_build_logs") {
+    ///   CompilationDatabase::from_logs(logs.split("\n").map(|l| l.to_string()).collect::<Vec<_>>())
+    /// }
     /// ```
     pub fn from_logs(lines: Vec<String>) -> Self {
         // TODO: support index store
