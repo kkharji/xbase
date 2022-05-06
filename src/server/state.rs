@@ -21,7 +21,7 @@ impl BuildServerState {
         if self.compile_commands.contains_key(compile_filepath) {
             self.compile_commands.get(compile_filepath)
         } else {
-            CompilationDatabase::from_file(compile_filepath)?
+            CompilationDatabase::parse_from_file(compile_filepath)?
                 .pipe(|cmds| self.compile_commands.insert(compile_filepath.into(), cmds))
                 .pipe(|_| self.compile_commands.get(compile_filepath))
         }

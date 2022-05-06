@@ -1,7 +1,3 @@
-#[cfg(feature = "xcode")]
-use crate::xcode;
-#[allow(unused_imports)]
-use anyhow::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -42,7 +38,7 @@ pub struct Project {
 
 impl Project {
     #[cfg(feature = "async")]
-    pub async fn new(root: &PathBuf) -> Result<Self> {
+    pub async fn new(root: &PathBuf) -> anyhow::Result<Self> {
         let path = root.join("project.yml");
         if !path.exists() {
             anyhow::bail!("project.yaml doesn't exist in '{:?}'", root)
@@ -58,23 +54,11 @@ impl Project {
         }
     }
 
-    pub fn config(&self) -> &LocalConfig {
-        &self.xcode_base
-    }
-
-    /// Get a reference to the project's name.
-    pub fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
-    /// Get a reference to the project's targets.
-    pub fn targets(&self) -> &TargetMap {
-        &self.targets
-    }
-
     /// Build project with clean and return build log
-    #[cfg(all(feature = "async", feature = "xcode"))]
-    pub async fn fresh_build(&self) -> Result<Vec<String>> {
+    #[cfg(feature = "async")]
+    pub async fn fresh_build<'a>(
+        &'a self,
+    ) -> anyhow::Result<impl tokio_stream::Stream<Item = xcodebuild::parser::Step> + 'a> {
         /*
            TODO: Find away to get commands ran without doing xcodebuild clean
 
@@ -83,7 +67,7 @@ impl Project {
 
            NOTE: This far from possilbe after some research
         */
-        xcode::clean(&self.root, &["-verbose"]).await?;
+        xcodebuild::runner::spawn_once(&self.root, &["clean"]).await?;
 
         /*
            TODO: Support overriding xcodebuild arguments
@@ -98,6 +82,21 @@ impl Project {
            runArguments: [];
            ```
         */
-        xcode::build(&self.root, &["-verbose"]).await
+
+        xcodebuild::runner::spawn(&self.root, &["build"]).await
+    }
+
+    pub fn config(&self) -> &LocalConfig {
+        &self.xcode_base
+    }
+
+    /// Get a reference to the project's name.
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    /// Get a reference to the project's targets.
+    pub fn targets(&self) -> &TargetMap {
+        &self.targets
     }
 }

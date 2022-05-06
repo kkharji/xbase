@@ -46,6 +46,109 @@ impl Workspace {
         })
     }
 
+    /// Regenerate compiled commands and xcodeGen if project.yml exists
+    #[cfg(feature = "watcher")]
+    pub async fn on_directory_change(
+        &mut self,
+        path: PathBuf,
+        _event: &notify::EventKind,
+    ) -> Result<()> {
+        self.update_xcodeproj(path).await?;
+        self.ensure_server_config().await?;
+        self.generate_compiliation_db().await?;
+        Ok(())
+    }
+
+    async fn generate_compiliation_db(&self) -> Result<()> {
+        #[cfg(feature = "compilation")]
+        {
+            use crate::compile::CompilationDatabase;
+            use tap::Pipe;
+            use tokio_stream::StreamExt;
+            use xcodebuild::parser::Step;
+
+            let steps = self
+                .project
+                .fresh_build()
+                .await?
+                .collect::<Vec<Step>>()
+                .await;
+
+            CompilationDatabase::generate_from_steps(&steps)
+                .await?
+                .pipe(|cmd| serde_json::to_vec_pretty(&cmd.0))?
+                .pipe(|json| tokio::fs::write(self.root.join(".compile"), json))
+                .await
+                .context("Write CompileCommands")?;
+        }
+        Ok(())
+    }
+
+    /// Ensure that buildServer.json exists in root directory.
+    pub async fn ensure_server_config(&self) -> Result<()> {
+        use tokio::fs::File;
+        use tokio::io::AsyncWriteExt;
+
+        let path = self.root.join("buildServer.json");
+        if tokio::fs::File::open(&path).await.is_ok() {
+            return Ok(());
+        }
+
+        tracing::info!("Creating {:?}", path);
+
+        let mut file = tokio::fs::File::create(path).await?;
+        let config = serde_json::json! ({
+            "name": "XcodeBase Server",
+            // FIXME: Point to user xcode-build-server
+            "argv": ["/Users/tami5/repos/neovim/XcodeBase.nvim/target/debug/xcodebase-server"],
+            "version": "0.1",
+            "bspVersion": "0.2",
+            "languages": [
+                "swift",
+                "objective-c",
+                "objective-cpp",
+                "c",
+                "cpp"
+            ]
+        });
+
+        AsyncWriteExt::write_all(&mut file, config.to_string().as_ref()).await?;
+        File::sync_all(&file).await?;
+        AsyncWriteExt::shutdown(&mut file).await?;
+
+        Ok(())
+    }
+
+    /// Update .compile commands
+    #[cfg(feature = "xcodegen")]
+    pub async fn update_xcodeproj(&mut self, path: PathBuf) -> Result<()> {
+        if !crate::xcodegen::is_workspace(self) {
+            return Ok(());
+        }
+
+        tracing::info!("Updating {}.xcodeproj", self.name());
+
+        let mut retry_count = 0;
+        while retry_count < 3 {
+            if let Ok(code) = xcodegen::generate(&self.root).await {
+                if code.success() {
+                    if path
+                        .file_name()
+                        .ok_or_else(|| anyhow::anyhow!("Fail to get filename from {:?}", path))?
+                        .eq("project.yml")
+                    {
+                        tracing::info!("Updating State.{}.Project", self.name());
+                        self.project = Project::new(&self.root).await?;
+                    }
+                    return Ok(());
+                }
+            }
+            retry_count += 1
+        }
+
+        anyhow::bail!("Fail to update_xcodeproj")
+    }
+
     pub fn update_clients(&mut self) {
         let name = self.project.name();
         self.clients.retain(|pid, _| {
@@ -85,64 +188,6 @@ impl Workspace {
     /// Get project target from project.targets using target_name
     pub fn get_target(&self, target_name: &str) -> Option<&crate::daemon::state::Target> {
         self.project.targets().get(target_name)
-    }
-
-    /// Regenerate compiled commands and xcodeGen if project.yml exists
-    #[cfg(feature = "watcher")]
-    pub async fn on_directory_change(
-        &mut self,
-        path: PathBuf,
-        _event: &notify::EventKind,
-    ) -> Result<()> {
-        use tap::Pipe;
-
-        if crate::xcodegen::is_workspace(self) {
-            self.update_xcodeproj(
-                path.file_name()
-                    .ok_or_else(|| anyhow::anyhow!("Fail to get filename from {:?}", path))?
-                    .eq("project.yml"),
-            )
-            .await?;
-        }
-
-        #[cfg(feature = "xcode")]
-        crate::xcode::ensure_server_config_file(&self.root).await?;
-
-        // TODO: ensure .compile file on on_directory_change and in workspace initialization
-
-        #[cfg(feature = "compilation")]
-        self.project
-            .fresh_build()
-            .await?
-            .pipe(crate::compile::CompilationDatabase::from_logs)
-            .pipe(|cmd| serde_json::to_vec_pretty(&cmd.0))?
-            .pipe(|json| tokio::fs::write(self.root.join(".compile"), json))
-            .await
-            .context("Write CompileCommands")?;
-
-        Ok(())
-    }
-
-    /// Update .compile commands
-    #[cfg(feature = "xcodegen")]
-    pub async fn update_xcodeproj(&mut self, update_config: bool) -> Result<()> {
-        tracing::info!("Updating {}.xcodeproj", self.name());
-
-        let mut retry_count = 0;
-        while retry_count < 3 {
-            if let Ok(code) = xcodegen::generate(&self.root).await {
-                if code.success() {
-                    if update_config {
-                        tracing::info!("Updating State.{}.Project", self.name());
-                        self.project = Project::new(&self.root).await?;
-                    }
-                    return Ok(());
-                }
-            }
-            retry_count += 1
-        }
-
-        anyhow::bail!("Fail to update_xcodeproj")
     }
 
     pub fn get_ignore_patterns(&self) -> Option<Vec<String>> {

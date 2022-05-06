@@ -5,8 +5,6 @@ pub mod fs;
 pub mod mlua;
 #[cfg(feature = "proc")]
 pub mod proc;
-#[cfg(feature = "regex")]
-pub mod regex;
 #[cfg(feature = "logging")]
 pub mod tracing;
 #[cfg(feature = "watcher")]

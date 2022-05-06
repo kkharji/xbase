@@ -57,7 +57,7 @@ impl CompileFlags {
             find_swift_module_root(filepath);
         if let Some(project_root) = project_root {
             if let Some(ref compile_filepath) = compile_filepath {
-                return CompilationDatabase::from_file(compile_filepath)?
+                return CompilationDatabase::parse_from_file(compile_filepath)?
                     .iter()
                     .flat_map(CompilationCommand::compile_flags)
                     .flatten()
