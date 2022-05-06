@@ -48,6 +48,12 @@ impl DaemonStateData {
                     ws
                 };
 
+                if let Some(nvim) = workspace.clients.get(&pid) {
+                    tracing::debug!("Update nvim state for project");
+                    nvim.exec_lua(&workspace.project.nvim_update_state_script()?, vec![])
+                        .await?;
+                }
+
                 tracing::info!("Managing [{}] {:?}", workspace.project.name(), root);
 
                 self.workspaces.insert(root.to_string(), workspace);

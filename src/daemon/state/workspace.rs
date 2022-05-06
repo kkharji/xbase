@@ -40,11 +40,12 @@ impl Workspace {
             .await
             .context("Fail to create xcodegen project.")?;
 
-        let workspace = Self {
+        let mut workspace = Self {
             root,
             project,
             clients: Default::default(),
         };
+        workspace.update_lua_state().await?;
 
         if !workspace.root.join(".compile").is_file() {
             tracing::info!(".compile doesn't exist, regenerating ...");
@@ -146,6 +147,7 @@ impl Workspace {
                     {
                         tracing::info!("Updating State.{}.Project", self.name());
                         self.project = Project::new(&self.root).await?;
+                        self.update_lua_state().await?;
                     }
                     return Ok(());
                 }
@@ -154,6 +156,13 @@ impl Workspace {
         }
 
         anyhow::bail!("Fail to update_xcodeproj")
+    }
+
+    async fn update_lua_state(&mut self) -> Result<()> {
+        let script = self.project.nvim_update_state_script()?;
+        Ok(for (_, nvim) in self.clients.iter() {
+            nvim.exec_lua(&script, vec![]).await?;
+        })
     }
 
     pub fn update_clients(&mut self) {

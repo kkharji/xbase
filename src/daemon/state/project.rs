@@ -102,4 +102,13 @@ impl Project {
     pub fn targets(&self) -> &TargetMap {
         &self.targets
     }
+
+    #[cfg(feature = "daemon")]
+    pub fn nvim_update_state_script(&self) -> anyhow::Result<String> {
+        Ok(format!(
+            "require'xcodebase.state'.projects['{}'] = vim.json.decode([[{}]])",
+            self.root.display(),
+            serde_json::to_string(&self)?
+        ))
+    }
 }
