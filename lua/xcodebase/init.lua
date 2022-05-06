@@ -10,16 +10,21 @@ local address = vim.env.NVIM_LISTEN_ADDRESS
 ---@field register fun(pid: number, root: string):boolean
 M.daemon = {}
 
-M.daemon.project_info = function(root)
+M.project_info = function(root)
   require("xcodebase.state").projects[root] = nil
   lib.daemon.project_info(pid, root)
   while require("xcodebase.state").projects[root] == nil do
   end
 end
 
-M.daemon.drop = function()
+M.drop = function()
   local root = vim.loop.cwd()
   lib.daemon.drop(pid, root)
+end
+
+M.build = function(target, configuration, scheme)
+  local root = vim.loop.cwd()
+  lib.daemon.build(pid, root, target, configuration, scheme)
 end
 
 ---@class XcodeBaseCommand
@@ -51,7 +56,7 @@ M.try_register = function(opts)
   if M.should_register(root, opts) then
     local _ = lib.daemon.ensure()
     lib.daemon.register(pid, root, address)
-    vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.daemon.drop()]]
+    vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.drop()]]
   else
     return
   end

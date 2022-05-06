@@ -82,6 +82,7 @@ impl Daemon {
         table.set("ensure", lua.create_function(Self::ensure)?)?;
         table.set("register", lua.create_function(Register::lua)?)?;
         table.set("drop", lua.create_function(Drop::lua)?)?;
+        table.set("build", lua.create_function(Build::lua)?)?;
         table.set("project_info", lua.create_function(ProjectInfo::lua)?)?;
         Ok(table)
     }

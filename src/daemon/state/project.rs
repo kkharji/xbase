@@ -86,7 +86,19 @@ impl Project {
            ```
         */
 
-        xcodebuild::runner::spawn(&self.root, &["build"]).await
+        self.xcodebuild(&["build"]).await
+    }
+
+    #[cfg(feature = "daemon")]
+    pub async fn xcodebuild<'a, I: 'a, S: 'a>(
+        &'a self,
+        args: I,
+    ) -> anyhow::Result<impl tokio_stream::Stream<Item = xcodebuild::parser::Step> + 'a>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        xcodebuild::runner::spawn(&self.root, args).await
     }
 
     pub fn config(&self) -> &LocalConfig {
