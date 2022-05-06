@@ -39,11 +39,18 @@ impl Workspace {
         let project = Project::new(&root)
             .await
             .context("Fail to create xcodegen project.")?;
-        Ok(Self {
+
+        let workspace = Self {
             root,
             project,
             clients: Default::default(),
-        })
+        };
+
+        if !workspace.root.join(".compile").is_file() {
+            tracing::info!(".compile doesn't exist, regenerating ...");
+            workspace.generate_compiliation_db().await?
+        }
+        Ok(workspace)
     }
 
     /// Regenerate compiled commands and xcodeGen if project.yml exists
