@@ -40,6 +40,7 @@ pub enum DaemonRequest {
     Run(Run),
     RenameFile(RenameFile),
     Register(Register),
+    ProjectInfo(ProjectInfo),
     Drop(Drop),
 }
 
@@ -53,6 +54,7 @@ impl DaemonRequest {
             DaemonRequest::RenameFile(c) => c.handle(state).await,
             DaemonRequest::Register(c) => c.handle(state).await,
             DaemonRequest::Drop(c) => c.handle(state).await,
+            DaemonRequest::ProjectInfo(c) => c.handle(state).await,
         }
     }
 
@@ -65,6 +67,7 @@ impl DaemonRequest {
             RenameFile::KEY => Self::RenameFile(RenameFile::parse(args)?),
             Register::KEY => Self::Register(Register::parse(args)?),
             Drop::KEY => Self::Drop(Drop::parse(args)?),
+            ProjectInfo::KEY => Self::ProjectInfo(ProjectInfo::parse(args)?),
             cmd => anyhow::bail!("Unknown command messsage: {cmd}"),
         })
     }
@@ -79,6 +82,7 @@ impl Daemon {
         table.set("ensure", lua.create_function(Self::ensure)?)?;
         table.set("register", lua.create_function(Register::lua)?)?;
         table.set("drop", lua.create_function(Drop::lua)?)?;
+        table.set("project_info", lua.create_function(ProjectInfo::lua)?)?;
         Ok(table)
     }
 

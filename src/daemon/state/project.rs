@@ -1,10 +1,13 @@
+#[cfg(feature = "daemon")]
+use serde::{Deserialize, Serialize};
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Represent Xcode Target
 #[derive(Debug)]
 #[allow(dead_code)]
-#[cfg_attr(feature = "serial", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serial", derive(Deserialize, Serialize))]
 pub struct Target {
     r#type: String,
     platform: String,
@@ -12,7 +15,7 @@ pub struct Target {
 }
 
 #[derive(Debug, Default)]
-#[cfg_attr(feature = "serial", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serial", derive(Deserialize, Serialize))]
 pub struct LocalConfig {
     pub ignore: Vec<String>,
 }
@@ -21,7 +24,7 @@ pub type TargetMap = HashMap<String, Target>;
 
 /// Represent XcodeGen Project
 #[derive(Debug)]
-#[cfg_attr(feature = "serial", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serial", derive(Deserialize, Serialize))]
 pub struct Project {
     /// Project Name or rather xproj generated file name.
     name: String,
