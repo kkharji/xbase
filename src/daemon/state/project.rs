@@ -15,7 +15,7 @@ pub struct Target {
     sources: Vec<PathBuf>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[cfg_attr(feature = "serial", derive(serde::Deserialize))]
 pub struct LocalConfig {
     pub ignore: Vec<String>,
@@ -32,7 +32,7 @@ pub struct Project {
     /// The list of targets in the project mapped by name
     targets: TargetMap,
     /// XcodeBase local configuration
-    #[cfg_attr(feature = "serial", serde(rename(deserialize = "XcodeBase")))]
+    #[cfg_attr(feature = "serial", serde(rename(deserialize = "XcodeBase"), default))]
     xcode_base: LocalConfig,
     /// Root directory
     #[cfg_attr(feature = "serial", serde(skip))]
