@@ -13,9 +13,13 @@ M.daemon = {}
 M.daemon.project_info = function(root)
   require("xcodebase.state").projects[root] = nil
   lib.daemon.project_info(pid, root)
-  -- while require("xcodebase.state").projects[root] == nil do
-  --   print "Wating"
-  -- end
+  while require("xcodebase.state").projects[root] == nil do
+  end
+end
+
+M.daemon.drop = function()
+  local root = vim.loop.cwd()
+  lib.daemon.drop(pid, root)
 end
 
 ---@class XcodeBaseCommand
@@ -47,7 +51,7 @@ M.try_register = function(opts)
   if M.should_register(root, opts) then
     local _ = lib.daemon.ensure()
     lib.daemon.register(pid, root, address)
-    vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.daemon.drop(vim.fn.getpid(), vim.loop.cwd())]]
+    vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.daemon.drop()]]
   else
     return
   end
