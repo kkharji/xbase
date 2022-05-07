@@ -1,19 +1,14 @@
 #![allow(dead_code)]
-use std::{ops, path::Path};
-use tokio_stream::StreamExt;
+use std::{ops, path::Path, str::FromStr};
+use tap::Pipe;
+use tokio_stream::{Stream, StreamExt};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use nvim_rs::{
     compat::tokio::Compat, create, error::LoopError, rpc::handler::Dummy, Buffer, Neovim,
 };
 use parity_tokio_ipc::Connection;
 use tokio::{io::WriteHalf, task::JoinHandle};
-
-pub enum WindowType {
-    Float,
-    Vertical,
-    Horizontal,
-}
 
 pub struct Nvim {
     pub nvim: Neovim<Compat<WriteHalf<Connection>>>,
@@ -21,10 +16,32 @@ pub struct Nvim {
     pub log_bufnr: i64,
 }
 
+#[derive(strum::EnumString)]
+#[strum(ascii_case_insensitive)]
+pub enum WindowType {
+    Float,
+    Vertical,
+    Horizontal,
+}
+
+impl WindowType {
+    fn to_nvim_command(&self, bufnr: i64) -> String {
+        match self {
+            // TOOD: support build log float
+            WindowType::Float => format!("sbuffer {bufnr}"),
+            WindowType::Vertical => format!("vert sbuffer {bufnr}"),
+            WindowType::Horizontal => format!("sbuffer {bufnr}"),
+        }
+    }
+}
+
 impl Nvim {
     pub async fn new<P: AsRef<Path> + Clone>(address: P) -> Result<Self> {
         let (neovim, handler) = create::tokio::new_path(address, Dummy::new()).await?;
         let buffer = neovim.create_buf(false, true).await?;
+
+        buffer.set_name("[Xcodebase Logs]").await?;
+
         Ok(Self {
             nvim: neovim,
             handler,
@@ -63,8 +80,8 @@ impl Nvim {
     pub async fn log_to_buffer(
         &self,
         title: &str,
-        direction: WindowType,
-        mut stream: impl tokio_stream::Stream<Item = String> + Unpin,
+        direction: Option<WindowType>,
+        mut stream: impl Stream<Item = String> + Unpin,
         clear: bool,
     ) -> Result<()> {
         let title = format!("[ {title} ]: ----> ");
@@ -79,14 +96,14 @@ impl Nvim {
             count => count,
         };
 
-        // TODO(nvim): build log control what direction to open buffer
         // TODO(nvim): build log correct width
         // TODO(nvim): build log auto scroll
-        let command = match direction {
-            // TOOD: build log float
-            WindowType::Float => format!("sbuffer {}", self.log_bufnr),
-            WindowType::Vertical => format!("vert sbuffer {}", self.log_bufnr),
-            WindowType::Horizontal => format!("sbuffer {}", self.log_bufnr),
+        let command = match self.get_window_direction(direction).await {
+            Ok(open_command) => open_command,
+            Err(e) => {
+                tracing::error!("Unable to convert value to string {e}");
+                WindowType::Horizontal.to_nvim_command(self.log_bufnr)
+            }
         };
 
         self.exec(&command, false).await?;
@@ -100,6 +117,21 @@ impl Nvim {
         }
 
         Ok(())
+    }
+
+    async fn get_window_direction(&self, direction: Option<WindowType>) -> Result<String> {
+        if let Some(direction) = direction {
+            return Ok(direction.to_nvim_command(self.log_bufnr));
+        };
+
+        "return require'xcodebase.config'.values.default_log_buffer_direction"
+            .pipe(|str| self.exec_lua(str, vec![]))
+            .await?
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Unable to covnert value to string"))?
+            .pipe(WindowType::from_str)
+            .map(|d| d.to_nvim_command(self.log_bufnr))
+            .context("Convert to string to direction")
     }
 }
 

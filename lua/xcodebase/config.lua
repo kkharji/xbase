@@ -10,6 +10,9 @@ local defaults = {
   --- Log level. Set to error to ignore everything
   --- { "trace", "debug", "info", "warn", "error" }
   log_level = "debug",
+  --- Default log buffer direction.
+  --- { "horizontal", "vertical", "float" }
+  default_log_buffer_direction = "horizontal",
 }
 
 --- Enahnced version of builtin type function that inclued list type.
