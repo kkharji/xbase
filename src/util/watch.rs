@@ -142,7 +142,13 @@ pub fn handler(
             match state.lock().await.workspaces.get_mut(&root) {
                 Some(ws) => {
                     for (_, nvim) in ws.clients.iter() {
-                        if let Err(e) = nvim.log_info("CompileCommands", "Regenerating ..").await {
+                        if let Err(e) = nvim
+                            .exec(
+                                "echo 'xcodebase: ⚙ Regenerating compilation database ..'".into(),
+                                false,
+                            )
+                            .await
+                        {
                             tracing::error!("Fail to echo message to nvim clients {e}")
                         }
                     }
@@ -159,7 +165,10 @@ pub fn handler(
                         tracing::info!("Regenerated compile commands");
                         for (_, nvim) in ws.clients.iter() {
                             if let Err(e) = nvim
-                                .log_info("CompileCommands", "Regenerated successfully")
+                                .exec(
+                                    "echo 'xcodebase: ✅ Compilation database regenerated.'".into(),
+                                    false,
+                                )
                                 .await
                             {
                                 tracing::error!("Fail to echo message to nvim clients {e}")
