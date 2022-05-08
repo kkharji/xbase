@@ -8,6 +8,7 @@ pub trait LuaExtension {
     fn debug(&self, msg: &str) -> LuaResult<()>;
     fn warn(&self, msg: &str) -> LuaResult<()>;
     fn info(&self, msg: &str) -> LuaResult<()>;
+    fn cwd(&self) -> LuaResult<String>;
 }
 
 fn log(lua: &Lua, level: &str, msg: &str) -> LuaResult<()> {
@@ -46,5 +47,13 @@ impl LuaExtension for Lua {
 
     fn info(&self, msg: &str) -> LuaResult<()> {
         log(self, "info", msg)
+    }
+
+    fn cwd(&self) -> LuaResult<String> {
+        self.globals()
+            .get::<_, LuaTable>("vim")?
+            .get::<_, LuaTable>("loop")?
+            .get::<_, LuaFunction>("cwd")?
+            .call::<_, String>(())
     }
 }

@@ -182,6 +182,14 @@ impl Workspace {
         Ok(())
     }
 
+    /// Get nvim client
+    pub fn get_client(&self, pid: &i32) -> Result<&Nvim> {
+        match self.clients.get(pid) {
+            Some(o) => Ok(o),
+            None => anyhow::bail!("No nvim instance for {pid}"),
+        }
+    }
+
     /// Remove client from workspace
     pub fn remove_client(&mut self, pid: i32) -> usize {
         tracing::info!("[{}] Remove Client: {pid}", self.name());

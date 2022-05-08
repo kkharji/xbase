@@ -1,70 +1,44 @@
-#[cfg(feature = "mlua")]
-use crate::daemon::Daemon;
+use super::*;
 
-#[cfg(feature = "daemon")]
-use crate::daemon::{DaemonRequestHandler, DaemonState};
-
-#[cfg(feature = "daemon")]
-use anyhow::{bail, Result};
-
-/// Return curr working direcotry project info
-#[derive(Debug)]
+/// Return current working direcotry project info
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectInfo {
-    pub pid: i32,
-    pub root: String,
+    pub client: Client,
 }
 
-impl ProjectInfo {
-    pub const KEY: &'static str = "project_info";
-}
+#[cfg(feature = "lua")]
+impl<'a> Requestor<'a, ProjectInfo> for ProjectInfo {}
 
 #[cfg(feature = "daemon")]
-#[async_trait::async_trait]
-impl DaemonRequestHandler<ProjectInfo> for ProjectInfo {
-    fn parse(args: Vec<&str>) -> Result<Self> {
-        if let (Some(pid), Some(root)) = (args.get(0), args.get(1)) {
-            Ok(Self {
-                pid: pid.parse::<i32>()?,
-                root: root.to_string(),
-            })
-        } else {
-            anyhow::bail!("Missing arugments: {:?}", args)
-        }
-    }
-
+#[async_trait]
+impl Handler for ProjectInfo {
     async fn handle(&self, state: DaemonState) -> Result<()> {
-        tracing::info!("Getting info for {}", self.root);
+        let (root, pid) = (&self.client.root, self.client.pid);
+        tracing::info!("Getting info for {}", root);
+
         let state = state.lock().await;
+        let workspace = state.get_workspace(root)?;
+        let nvim = workspace.get_client(&pid)?;
+        let project = serde_json::to_string(&workspace.project)?;
+        let script = format!(
+            "require'xcodebase.state'.projects['{root}'] = vim.json.decode([[{project}]])",
+        );
 
-        let workspace = match state.workspaces.get(&self.root) {
-            Some(o) => o,
-            None => bail!("No workspace for {}", self.root),
-        };
-
-        let nvim = match workspace.clients.get(&self.pid) {
-            Some(o) => o,
-            None => bail!("No nvim instance for {}", self.pid),
-        };
-
-        nvim.exec_lua(
-            &format!(
-                "require'xcodebase.state'.projects['{}'] = vim.json.decode([[{}]])",
-                self.root,
-                serde_json::to_string(&workspace.project)?
-            ),
-            vec![],
-        )
-        .await?;
+        nvim.exec_lua(&script, vec![]).await?;
 
         Ok(())
     }
 }
 
 #[cfg(feature = "lua")]
-impl ProjectInfo {
-    pub fn lua(lua: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
-        use crate::util::mlua::LuaExtension;
-        lua.trace(&format!("grapping project info"))?;
-        Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
+impl<'a> FromLua<'a> for ProjectInfo {
+    fn from_lua(v: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+        if let LuaValue::Table(table) = v {
+            Ok(Self {
+                client: table.get("client")?,
+            })
+        } else {
+            Err(LuaError::external("Expected a table got something else"))
+        }
     }
 }

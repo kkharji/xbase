@@ -1,7 +1,8 @@
 use std::sync::Arc;
-
 use tokio::io::AsyncReadExt;
+use tokio::net::UnixListener;
 use tokio::sync::Mutex;
+use xcodebase::daemon::state::DaemonStateData;
 use xcodebase::util::tracing::install_tracing;
 use xcodebase::{daemon::*, util::watch};
 
@@ -11,8 +12,8 @@ async fn main() -> anyhow::Result<()> {
         std::fs::remove_file(DAEMON_SOCKET_PATH).ok();
     }
 
-    let state: Arc<Mutex<state::DaemonStateData>> = Default::default();
-    let listener = tokio::net::UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
+    let state: Arc<Mutex<DaemonStateData>> = Default::default();
+    let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
     install_tracing("/tmp", "xcodebase-daemon.log", tracing::Level::TRACE, true)?;
 
@@ -21,60 +22,58 @@ async fn main() -> anyhow::Result<()> {
         let state = state.clone();
         if let Ok((mut s, _)) = listener.accept().await {
             tokio::spawn(async move {
-                let mut string = String::default();
-
-                if let Err(e) = s.read_to_string(&mut string).await {
-                    tracing::error!("[Read Error]: {:?}", e);
-                    return;
+                let string = {
+                    let mut string = String::default();
+                    if let Err(e) = s.read_to_string(&mut string).await {
+                        return tracing::error!("[Read Error]: {:?}", e);
+                    };
+                    string
                 };
 
-                if string.len() == 0 {
+                if string.is_empty() {
                     return;
                 }
 
-                let msg = match DaemonRequest::parse(string.as_str().trim()) {
+                match Request::read(string.clone()) {
                     Err(e) => {
-                        tracing::error!("[Parse Error]: {:?}", e);
-                        return;
+                        return tracing::error!("[Parse Error]: {:?} message: {string}", e);
                     }
-                    Ok(msg) => msg,
+                    Ok(req) => {
+                        if let Err(e) = req.message.handle(state.clone()).await {
+                            return tracing::error!(
+                                "[Failure]: Cause: ({:?}), Message: {:?}",
+                                e,
+                                req
+                            );
+                        };
+                    }
                 };
 
-                if let Err(e) = msg.handle(state.clone()).await {
-                    tracing::error!("[Failure]: Cause: ({:?}), Message: {:?}", e, msg);
-                    return;
-                };
-
-                // watch::update(state, msg).await;
-
-                let copy = state.clone();
-                let mut current_state = copy.lock().await;
-                // let mut watched_roots: Vec<String> = vec![];
-                let mut start_watching: Vec<String> = vec![];
-
-                // TODO: Remove wathcers for workspaces that are no longer exist
-
-                let watched_roots = current_state
-                    .watchers
-                    .keys()
-                    .map(Clone::clone)
-                    .collect::<Vec<String>>();
-
-                for key in current_state.workspaces.keys() {
-                    if !watched_roots.contains(key) {
-                        start_watching.push(key.clone());
-                    }
-                }
-
-                for root in start_watching {
-                    let handle = watch::handler(state.clone(), root.clone());
-                    #[cfg(feature = "logging")]
-                    tracing::info!("Watching {root}");
-                    current_state.watchers.insert(root, handle);
-                }
+                update_watchers(state.clone()).await;
             });
         } else {
             anyhow::bail!("Fail to accept a connection")
         };
     }
+}
+
+// TODO: Remove wathcers for workspaces that are no longer exist
+async fn update_watchers(state: Arc<Mutex<DaemonStateData>>) {
+    let copy_state = state.clone();
+    let mut current_state = copy_state.lock().await;
+    let watched_roots: Vec<String> = current_state.watchers.keys().map(Clone::clone).collect();
+    let start_watching: Vec<String> = current_state
+        .workspaces
+        .keys()
+        .filter(|key| !watched_roots.contains(key))
+        .map(Clone::clone)
+        .collect();
+
+    start_watching.into_iter().for_each(|root| {
+        #[cfg(feature = "logging")]
+        tracing::info!("Watching {root}");
+
+        let handle = watch::handler(state.clone(), root.clone());
+        current_state.watchers.insert(root, handle);
+    });
 }

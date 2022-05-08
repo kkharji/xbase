@@ -1,22 +1,28 @@
 //! Handle requests from neovim and manage dev workflow
-#[cfg(feature = "daemon")]
-mod nvim;
+mod message;
 mod requests;
 pub mod state;
 
-pub use requests::*;
+mod client;
+pub use client::Client;
 
 #[cfg(feature = "daemon")]
-pub use state::DaemonState;
+mod nvim;
 
 #[cfg(feature = "lua")]
 use crate::util::mlua::LuaExtension;
+
+pub use message::*;
+pub use requests::*;
 
 #[cfg(feature = "lua")]
 use mlua::prelude::*;
 
 #[cfg(feature = "daemon")]
-use anyhow::Result;
+pub use state::DaemonState;
+
+#[cfg(feature = "lua")]
+use std::{io::Write, net::Shutdown, os::unix::net::UnixStream, process::Command};
 
 pub const DAEMON_SOCKET_PATH: &str = "/tmp/xcodebase-daemon.socket";
 pub const DAEMON_BINARY: &str =
@@ -25,81 +31,21 @@ pub const DAEMON_BINARY: &str =
 /// Representation of daemon
 pub struct Daemon;
 
-/// Requirement for daemon actions
-#[cfg(feature = "daemon")]
-#[async_trait::async_trait]
-pub trait DaemonRequestHandler<T> {
-    async fn handle(&self, state: DaemonState) -> Result<()>;
-    fn parse(args: Vec<&str>) -> Result<T>;
-}
-
-/// Representations of all the supported daemon requests
-#[derive(Debug)]
-pub enum DaemonRequest {
-    Build(Build),
-    Run(Run),
-    RenameFile(RenameFile),
-    Register(Register),
-    ProjectInfo(ProjectInfo),
-    Drop(Drop),
-}
-
-#[cfg(feature = "daemon")]
-impl DaemonRequest {
-    /// Handle daemon request
-    pub async fn handle(&self, state: DaemonState) -> Result<()> {
-        match self {
-            DaemonRequest::Build(c) => c.handle(state).await,
-            DaemonRequest::Run(c) => c.handle(state).await,
-            DaemonRequest::RenameFile(c) => c.handle(state).await,
-            DaemonRequest::Register(c) => c.handle(state).await,
-            DaemonRequest::Drop(c) => c.handle(state).await,
-            DaemonRequest::ProjectInfo(c) => c.handle(state).await,
-        }
-    }
-
-    /// Parse [`super::Daemon`] request from string
-    pub fn parse(str: &str) -> Result<Self> {
-        let mut args = str.split(" ").collect::<Vec<&str>>();
-        Ok(match args.remove(0) {
-            Build::KEY => Self::Build(Build::parse(args)?),
-            Run::KEY => Self::Run(Run::parse(args)?),
-            RenameFile::KEY => Self::RenameFile(RenameFile::parse(args)?),
-            Register::KEY => Self::Register(Register::parse(args)?),
-            Drop::KEY => Self::Drop(Drop::parse(args)?),
-            ProjectInfo::KEY => Self::ProjectInfo(ProjectInfo::parse(args)?),
-            cmd => anyhow::bail!("Unknown command messsage: {cmd}"),
-        })
-    }
-}
-
 #[cfg(feature = "lua")]
 impl Daemon {
-    /// Representation of daemon table in lua
-    pub fn lua(lua: &mlua::Lua) -> LuaResult<LuaTable> {
-        let table = lua.create_table()?;
-        table.set("is_running", lua.create_function(Self::is_running)?)?;
-        table.set("ensure", lua.create_function(Self::ensure)?)?;
-        table.set("register", lua.create_function(Register::lua)?)?;
-        table.set("drop", lua.create_function(Drop::lua)?)?;
-        table.set("build", lua.create_function(Build::lua)?)?;
-        table.set("project_info", lua.create_function(ProjectInfo::lua)?)?;
-        Ok(table)
-    }
-
     /// Check if Daemon is running
-    pub fn is_running(_: &mlua::Lua, _: ()) -> LuaResult<bool> {
-        match std::os::unix::net::UnixStream::connect(DAEMON_SOCKET_PATH) {
-            Ok(stream) => Ok(stream.shutdown(std::net::Shutdown::Both).ok().is_some()),
-            Err(_) => Ok(false),
-        }
+    pub fn is_running(_: &Lua, _: ()) -> LuaResult<bool> {
+        Ok(match UnixStream::connect(DAEMON_SOCKET_PATH) {
+            Ok(stream) => stream.shutdown(Shutdown::Both).ok().is_some(),
+            Err(_) => false,
+        })
     }
 
     /// Ensure that daemon is currently running in background
-    pub fn ensure(lua: &mlua::Lua, _: ()) -> LuaResult<bool> {
+    pub fn ensure(lua: &Lua, _: ()) -> LuaResult<bool> {
         if Self::is_running(lua, ()).unwrap() {
             Ok(false)
-        } else if std::process::Command::new(DAEMON_BINARY).spawn().is_ok() {
+        } else if Command::new(DAEMON_BINARY).spawn().is_ok() {
             lua.info("Spawned Background Server")?;
             Ok(true)
         } else {
@@ -108,17 +54,16 @@ impl Daemon {
     }
 
     /// Pass args to running daemon
-    pub fn execute(args: &[&str]) -> LuaResult<()> {
-        use std::io::Write;
-        match std::os::unix::net::UnixStream::connect(DAEMON_SOCKET_PATH) {
-            Ok(mut stream) => {
-                stream.write_all(args.join(" ").as_str().as_ref())?;
-                stream.flush().map_err(mlua::Error::external)
-            }
-            Err(e) => Err(mlua::Error::external(format!(
-                "Fail to execute {:#?}: {e}",
-                args
-            ))),
-        }
+    pub fn execute<I: Into<Request> + std::fmt::Debug>(_lua: &Lua, message: I) -> LuaResult<()> {
+        let req: Request = message.into();
+        let mut stream = UnixStream::connect(DAEMON_SOCKET_PATH)
+            .map_err(|e| format!("Connect: {e} and execute: {:#?}", req))
+            .to_lua_err()?;
+
+        serde_json::to_vec(&req)
+            .map(|value| stream.write_all(&value))
+            .to_lua_err()??;
+
+        stream.flush().to_lua_err()
     }
 }

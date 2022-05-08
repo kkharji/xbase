@@ -2,36 +2,6 @@ local M = {}
 local config = require "xcodebase.config"
 local lib = require "libxcodebase"
 local pid = vim.fn.getpid()
-local address = vim.env.NVIM_LISTEN_ADDRESS
-
----@class XcodeBaseDaemon
----@field ensure fun():boolean: When the a new server started it should return true
----@field is_running fun():boolean
----@field register fun(pid: number, root: string):boolean
-M.daemon = {}
-
-M.project_info = function(root)
-  require("xcodebase.state").projects[root] = nil
-  lib.daemon.project_info(pid, root)
-  while require("xcodebase.state").projects[root] == nil do
-  end
-end
-
-M.drop = function()
-  local root = vim.loop.cwd()
-  lib.daemon.drop(pid, root)
-end
-
-M.build = function(target, configuration, scheme)
-  local root = vim.loop.cwd()
-  lib.daemon.build(pid, root, target, configuration, scheme)
-end
-
----@class XcodeBaseCommand
-local command = lib.command
-
----@class XcodeBaseService
-local command = lib.service
 
 ---Check whether the vim instance should be registered to xcodebase server.
 ---NOTE: Only support project.yml
@@ -42,23 +12,44 @@ M.should_register = function(root, _)
   if vim.loop.fs_stat(root .. "/project.yml") then
     return true
   end
-
   return false
+end
+
+--- Register current neovim client
+M.register = function()
+  local _ = lib.ensure()
+  lib.register { address = vim.env.NVIM_LISTEN_ADDRESS }
 end
 
 ---Tries to register vim instance as client for xcodebase server.
 ---Only register the vim instance when `xcodebase.should_attach`
 ---@see xcodebase.should_attach
-M.try_register = function(opts)
+M.try_register = function(root, opts)
   opts = opts or {}
-  local root = vim.loop.cwd()
-
   if M.should_register(root, opts) then
-    local _ = lib.daemon.ensure()
-    lib.daemon.register(pid, root, address)
+    M.register()
     vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.drop()]]
-  else
-    return
+  end
+end
+
+M.drop = function()
+  lib.drop {}
+end
+
+M.build = function(opts)
+  local root = vim.loop.cwd()
+  lib.build(vim.tbl_extend("keep", opts or {}, {
+    pid = pid,
+    root = root,
+  }))
+end
+
+M.projects = {}
+
+M.project_info = function(root)
+  M.projects[root] = nil
+  lib.project_info(pid, root)
+  while M.projects[root] == nil do
   end
 end
 
@@ -67,14 +58,13 @@ end
 ---@param opts XcodeBaseOptions
 ---@overload fun()
 M.setup = function(opts)
+  local root = vim.loop.cwd()
   opts = opts or {}
-
   -- Mutate xcodebase configuration
   config.set(opts)
-
   -- Try to register current vim instance
   -- NOTE: Should this register again on cwd change?
-  M.try_register(opts)
+  M.try_register(root, opts)
 end
 
 return M

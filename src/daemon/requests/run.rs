@@ -1,21 +1,14 @@
-#[cfg(feature = "mlua")]
-use crate::daemon::Daemon;
-
-#[cfg(feature = "daemon")]
-use crate::daemon::{DaemonRequestHandler, DaemonState};
-
-#[cfg(feature = "daemon")]
-use anyhow::Result;
+use super::*;
 
 /// Run a project.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Run {
-    _simulator: bool,
+    simulator: bool,
+    client: Client,
 }
 
-impl Run {
-    pub const KEY: &'static str = "run";
-}
+#[cfg(feature = "lua")]
+impl<'a> Requestor<'a, Run> for Run {}
 
 // TODO: Implement run command
 //
@@ -24,12 +17,7 @@ impl Run {
 // macos apps, which is wrong
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl DaemonRequestHandler<Run> for Run {
-    fn parse(args: Vec<&str>) -> Result<Self> {
-        let _simulator = args.get(0).unwrap_or(&"").parse::<bool>().unwrap_or(false);
-        Ok(Self { _simulator })
-    }
-
+impl Handler for Run {
     async fn handle(&self, _state: DaemonState) -> Result<()> {
         tracing::info!("Run command");
         Ok(())
@@ -37,10 +25,15 @@ impl DaemonRequestHandler<Run> for Run {
 }
 
 #[cfg(feature = "lua")]
-impl Run {
-    pub fn lua(lua: &mlua::Lua, with_simulator: bool) -> mlua::Result<()> {
-        use crate::util::mlua::LuaExtension;
-        lua.trace(&format!("Run command called"))?;
-        Daemon::execute(&[Self::KEY, &with_simulator.to_string()])
+impl<'a> FromLua<'a> for Run {
+    fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
+        if let LuaValue::Table(table) = lua_value {
+            Ok(Self {
+                simulator: table.get("simulator")?,
+                client: table.get("client")?,
+            })
+        } else {
+            Err(LuaError::external("Expected a table got something else"))
+        }
     }
 }

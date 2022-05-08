@@ -11,3 +11,49 @@ pub use project_info::ProjectInfo;
 pub use register::Register;
 pub use rename_file::RenameFile;
 pub use run::Run;
+
+use super::Client;
+
+#[cfg(feature = "mlua")]
+use crate::util::mlua::LuaExtension;
+
+#[cfg(feature = "mlua")]
+use mlua::prelude::*;
+
+#[cfg(feature = "mlua")]
+use super::Requestor;
+
+#[cfg(feature = "daemon")]
+use async_stream::stream;
+
+#[cfg(feature = "daemon")]
+use tokio_stream::StreamExt;
+
+#[cfg(feature = "daemon")]
+use crate::daemon::{DaemonState, Handler};
+
+#[cfg(feature = "daemon")]
+use anyhow::Result;
+
+#[cfg(feature = "daemon")]
+use async_trait::async_trait;
+
+use serde::{Deserialize, Serialize};
+
+macro_rules! convertable {
+    ($type:ident) => {
+        impl From<$type> for super::Request {
+            fn from(msg: $type) -> Self {
+                Self {
+                    message: super::Message::$type(msg),
+                }
+            }
+        }
+    };
+}
+convertable!(Build);
+convertable!(Run);
+convertable!(Register);
+convertable!(RenameFile);
+convertable!(Drop);
+convertable!(ProjectInfo);

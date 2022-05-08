@@ -1,53 +1,38 @@
-#[cfg(feature = "mlua")]
-use crate::daemon::Daemon;
-
-#[cfg(feature = "daemon")]
-use crate::daemon::{DaemonRequestHandler, DaemonState};
-
-#[cfg(feature = "daemon")]
-use anyhow::Result;
+use super::*;
 
 /// Drop a client
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Drop {
-    pub pid: i32,
-    pub root: String,
-}
-
-impl Drop {
-    pub const KEY: &'static str = "drop";
+    client: Client,
 }
 
 #[cfg(feature = "daemon")]
-#[async_trait::async_trait]
-impl DaemonRequestHandler<Drop> for Drop {
-    fn parse(args: Vec<&str>) -> Result<Self> {
-        if let (Some(pid), Some(root)) = (args.get(0), args.get(1)) {
-            Ok(Self {
-                pid: pid.parse::<i32>()?,
-                root: root.to_string(),
-            })
-        } else {
-            anyhow::bail!("Missing arugments: {:?}", args)
-        }
-    }
+#[async_trait]
+impl Handler for Drop {
     async fn handle(&self, state: DaemonState) -> Result<()> {
         tracing::trace!("{:?}", self);
-        state
-            .lock()
-            .await
-            .remove_workspace(&self.root, self.pid)
-            .await
+        let (root, pid) = (&self.client.root, self.client.pid);
+        let mut state = state.lock().await;
+        state.remove_workspace(root, pid).await
     }
 }
 
 #[cfg(feature = "lua")]
-impl Drop {
-    pub fn lua(_: &mlua::Lua, (pid, root): (i32, String)) -> mlua::Result<()> {
-        Self::request(pid, root).map_err(mlua::Error::external)
+impl<'a> Requestor<'a, Drop> for Drop {
+    fn pre(_lua: &Lua, _msg: &Drop) -> LuaResult<()> {
+        Ok(())
     }
+}
 
-    pub fn request(pid: i32, root: String) -> mlua::Result<()> {
-        Daemon::execute(&[Self::KEY, pid.to_string().as_str(), root.as_str()])
+#[cfg(feature = "lua")]
+impl<'a> FromLua<'a> for Drop {
+    fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
+        if let LuaValue::Table(table) = lua_value {
+            Ok(Self {
+                client: table.get("client")?,
+            })
+        } else {
+            Err(LuaError::external("Expected a table got something else"))
+        }
     }
 }

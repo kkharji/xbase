@@ -1,4 +1,4 @@
-#[cfg(feature = "daemon")]
+#[cfg(feature = "serial")]
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
