@@ -88,7 +88,7 @@ impl Project {
            ```
         */
 
-        self.xcodebuild(&["build"], Default::default()).await
+        xcodebuild::runner::spawn(&self.root, &["build"]).await
     }
 
     #[cfg(feature = "daemon")]
@@ -96,13 +96,37 @@ impl Project {
         &'a self,
         args: I,
         _config: BuildConfiguration,
-    ) -> anyhow::Result<impl tokio_stream::Stream<Item = xcodebuild::parser::Step> + 'a>
+    ) -> anyhow::Result<impl tokio_stream::Stream<Item = String> + 'a>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
+        use async_stream::stream;
+        use tokio_stream::StreamExt;
+        use xcodebuild::runner::spawn;
+
         // TOOD: Process configuration
-        xcodebuild::runner::spawn(&self.root, args).await
+        let mut stream = spawn(&self.root, args).await?;
+        Ok(Box::pin(stream! {
+            use xcodebuild::parser::Step::*;
+            while let Some(step) = stream.next().await {
+                let line = match step {
+                    Exit(_) => { continue; }
+                    BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
+                        format! {
+                            "{} ----------------------------------------------------",
+                            step.to_string().trim().to_string()
+                        }
+                    }
+                    step => step.to_string().trim().to_string(),
+                };
+                if !line.is_empty() {
+                    for line in line.split("\n") {
+                        yield line.to_string();
+                    }
+                }
+            }
+        }))
     }
 
     pub fn config(&self) -> &LocalConfig {

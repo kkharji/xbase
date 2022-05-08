@@ -24,12 +24,6 @@ use mlua::prelude::*;
 use super::Requester;
 
 #[cfg(feature = "daemon")]
-use async_stream::stream;
-
-#[cfg(feature = "daemon")]
-use tokio_stream::StreamExt;
-
-#[cfg(feature = "daemon")]
 use crate::daemon::{DaemonState, Handler};
 
 #[cfg(feature = "daemon")]

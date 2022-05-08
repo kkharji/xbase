@@ -63,6 +63,7 @@ impl Nvim {
         };
 
         // TODO(nvim): build log correct height
+        // TODO(nvim): make auto clear configurable
         let command = match self.get_window_direction(direction).await {
             Ok(open_command) => open_command,
             Err(e) => {
@@ -73,7 +74,6 @@ impl Nvim {
 
         self.exec(&command, false).await?;
         self.exec("setl nu nornu so=9", false).await?;
-
         let win = self.get_current_win().await?;
 
         self.exec("wincmd w", false).await?;
