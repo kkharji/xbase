@@ -46,9 +46,10 @@ end
 
 M.project_info = function(root)
   M.projects[root] = nil
-  lib.project_info(pid, root)
+  lib.project_info {}
   while M.projects[root] == nil do
   end
+  return M.projects[root]
 end
 
 ---Setup xcodebase for current instance.
@@ -63,6 +64,15 @@ M.setup = function(opts)
   -- Try to register current vim instance
   -- NOTE: Should this register again on cwd change?
   M.try_register(root, opts)
+
+  vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+    pattern = { "*.m", "*.swift", "*.c" },
+    callback = function()
+      vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").all_actions, { buffer = true })
+    end,
+  })
+  -- so that on a new buffer it would work
+  vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").all_actions, { buffer = true })
 end
 
 ---@class XcodeTarget
@@ -72,8 +82,8 @@ end
 
 ---@class XcodeProject
 ---@field name string @Project name
----@field targets string @Project name
 ---@field root string @Project root
+---@field targets table<string, XcodeTarget> @Project targets
 
 ---Holds project informations
 ---@type table<string, XcodeProject>
