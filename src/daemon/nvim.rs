@@ -16,39 +16,18 @@ pub struct Nvim {
     pub log_bufnr: i64,
 }
 
-#[derive(strum::EnumString)]
-#[strum(ascii_case_insensitive)]
-pub enum WindowType {
-    Float,
-    Vertical,
-    Horizontal,
-}
-
-impl WindowType {
-    fn to_nvim_command(&self, bufnr: i64) -> String {
-        match self {
-            // TOOD: support build log float
-            WindowType::Float => format!("sbuffer {bufnr}"),
-            WindowType::Vertical => format!("vert sbuffer {bufnr}"),
-            WindowType::Horizontal => format!("sbuffer {bufnr}"),
-        }
-    }
-}
-
 impl Nvim {
     pub async fn new<P: AsRef<Path> + Clone>(address: P) -> Result<Self> {
         let (neovim, handler) = create::tokio::new_path(address, Dummy::new()).await?;
-        let buffer = neovim.create_buf(false, true).await?;
+        let buf = neovim.create_buf(false, true).await?;
 
-        buffer.set_name("[Xcodebase Logs]").await?;
-        buffer
-            .set_option("filetype", "xcodebuildlog".into())
-            .await?;
+        buf.set_name("[Xcodebase Logs]").await?;
+        buf.set_option("filetype", "xcodebuildlog".into()).await?;
 
         Ok(Self {
             nvim: neovim,
             handler,
-            log_bufnr: buffer.get_number().await?,
+            log_bufnr: buf.get_number().await?,
         })
     }
 
@@ -72,19 +51,18 @@ impl Nvim {
         clear: bool,
     ) -> Result<()> {
         let title = format!("[{title}] ------------------------------------------------------");
-        let buffer = Buffer::new(self.log_bufnr.into(), self.nvim.clone());
+        let buf = Buffer::new(self.log_bufnr.into(), self.nvim.clone());
 
         if clear {
-            buffer.set_lines(0, -1, false, vec![]).await?;
+            buf.set_lines(0, -1, false, vec![]).await?;
         }
 
-        let mut c = match buffer.line_count().await? {
+        let mut c = match buf.line_count().await? {
             1 => 0,
             count => count,
         };
 
-        // TODO(nvim): build log correct width
-        // TODO(nvim): build log auto scroll
+        // TODO(nvim): build log correct height
         let command = match self.get_window_direction(direction).await {
             Ok(open_command) => open_command,
             Err(e) => {
@@ -94,15 +72,19 @@ impl Nvim {
         };
 
         self.exec(&command, false).await?;
-        self.exec("setlocal nonumber norelativenumber", false)
-            .await?;
+        self.exec("setl nu nornu so=9", false).await?;
 
-        buffer.set_lines(c, c + 1, false, vec![title]).await?;
+        let win = self.get_current_win().await?;
+
+        self.exec("wincmd w", false).await?;
+
+        buf.set_lines(c, c + 1, false, vec![title]).await?;
         c += 1;
 
         while let Some(line) = stream.next().await {
-            buffer.set_lines(c, c + 1, false, vec![line]).await?;
-            c += 1
+            buf.set_lines(c, c + 1, false, vec![line]).await?;
+            c += 1;
+            win.set_cursor((c, 0)).await?;
         }
 
         Ok(())
@@ -137,6 +119,25 @@ impl Nvim {
     }
     pub async fn log_warn(&self, scope: &str, msg: impl ToString) -> Result<()> {
         self.log("warn", scope, msg).await
+    }
+}
+
+#[derive(strum::EnumString)]
+#[strum(ascii_case_insensitive)]
+pub enum WindowType {
+    Float,
+    Vertical,
+    Horizontal,
+}
+
+impl WindowType {
+    fn to_nvim_command(&self, bufnr: i64) -> String {
+        match self {
+            // TOOD: support build log float
+            WindowType::Float => format!("sbuffer {bufnr}"),
+            WindowType::Vertical => format!("vert sbuffer {bufnr}"),
+            WindowType::Horizontal => format!("sbuffer {bufnr}"),
+        }
     }
 }
 

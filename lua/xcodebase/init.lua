@@ -44,8 +44,6 @@ M.build = function(opts)
   }))
 end
 
-M.projects = {}
-
 M.project_info = function(root)
   M.projects[root] = nil
   lib.project_info(pid, root)
@@ -66,5 +64,19 @@ M.setup = function(opts)
   -- NOTE: Should this register again on cwd change?
   M.try_register(root, opts)
 end
+
+---@class XcodeTarget
+---@field type string
+---@field platform string
+---@field sources string[]
+
+---@class XcodeProject
+---@field name string @Project name
+---@field targets string @Project name
+---@field root string @Project root
+
+---Holds project informations
+---@type table<string, XcodeProject>
+M.projects = {}
 
 return M
