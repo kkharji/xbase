@@ -5,7 +5,6 @@ local finder = require("telescope.finders").new_table
 local picker = require("telescope.pickers").new
 local sorter = require("telescope.config").values.generic_sorter
 local maker = require("telescope.pickers.entry_display").create
-local actions = require "worktree.actions"
 local xcodebase = require "xcodebase"
 
 --[[
