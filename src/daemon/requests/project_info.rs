@@ -19,10 +19,7 @@ impl Handler for ProjectInfo {
         let state = state.lock().await;
         let workspace = state.get_workspace(root)?;
         let nvim = workspace.get_client(&pid)?;
-        let project = serde_json::to_string(&workspace.project)?;
-        let script = format!(
-            "require'xcodebase.state'.projects['{root}'] = vim.json.decode([[{project}]])",
-        );
+        let script = workspace.project.nvim_update_state_script()?;
 
         nvim.exec_lua(&script, vec![]).await?;
 
