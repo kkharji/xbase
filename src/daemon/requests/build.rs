@@ -57,7 +57,7 @@ impl<'a> FromLua<'a> for Build {
                 scheme: table.get("scheme")?,
             })
         } else {
-            Err(LuaError::external("expected a table got something else"))
+            Err(LuaError::external("Fail to deserialize Build"))
         }
     }
 }

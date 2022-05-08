@@ -37,7 +37,7 @@ impl<'a> FromLua<'a> for Register {
                 client: table.get("client")?,
             })
         } else {
-            Err(LuaError::external("Expected a table got something else"))
+            Err(LuaError::external("Fail to deserialize Register"))
         }
     }
 }

@@ -32,7 +32,7 @@ impl<'a> FromLua<'a> for Drop {
                 client: table.get("client")?,
             })
         } else {
-            Err(LuaError::external("Expected a table got something else"))
+            Err(LuaError::external("Fail to deserialize Drop"))
         }
     }
 }
