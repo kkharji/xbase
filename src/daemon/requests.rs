@@ -21,7 +21,7 @@ use crate::util::mlua::LuaExtension;
 use mlua::prelude::*;
 
 #[cfg(feature = "mlua")]
-use super::Requestor;
+use super::Requester;
 
 #[cfg(feature = "daemon")]
 use async_stream::stream;

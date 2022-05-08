@@ -1,29 +1,31 @@
 use super::*;
+use crate::types::BuildConfiguration;
 use std::fmt::Debug;
 
 /// Build a project.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Build {
-    pub pid: i32,
-    pub root: String,
-    pub target: Option<String>,
-    pub configuration: Option<String>,
-    pub scheme: Option<String>,
+    pub client: Client,
+    pub config: BuildConfiguration,
 }
 
 #[cfg(feature = "lua")]
-impl<'a> Requestor<'a, Build> for Build {}
+impl<'a> Requester<'a, Build> for Build {
+    fn pre(lua: &Lua, msg: &Build) -> LuaResult<()> {
+        lua.trace(&format!("{:?}", msg.config))
+    }
+}
 
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for Build {
-    async fn handle(&self, state: DaemonState) -> Result<()> {
+    async fn handle(self, state: DaemonState) -> Result<()> {
         tracing::debug!("Handling build request..");
 
         let state = state.lock().await;
-        let ws = state.get_workspace(&self.root)?;
-        let nvim = ws.get_client(&self.pid)?;
-        let mut logs = ws.project.xcodebuild(&["build"]).await?;
+        let ws = state.get_workspace(&self.client.root)?;
+        let nvim = ws.get_client(&self.client.pid)?;
+        let mut logs = ws.project.xcodebuild(&["build"], self.config).await?;
         let stream = Box::pin(stream! {
             while let Some(step) = logs.next().await {
                 let line = match step {
@@ -50,11 +52,8 @@ impl<'a> FromLua<'a> for Build {
     fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
         if let LuaValue::Table(table) = lua_value {
             Ok(Self {
-                pid: table.get("pid")?,
-                root: table.get("root")?,
-                target: table.get("target")?,
-                configuration: table.get("configuration")?,
-                scheme: table.get("scheme")?,
+                client: table.get("client")?,
+                config: table.get("config")?,
             })
         } else {
             Err(LuaError::external("Fail to deserialize Build"))

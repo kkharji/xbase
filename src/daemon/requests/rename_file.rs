@@ -7,13 +7,13 @@ pub struct RenameFile {
 }
 
 #[cfg(feature = "lua")]
-impl<'a> Requestor<'a, RenameFile> for RenameFile {}
+impl<'a> Requester<'a, RenameFile> for RenameFile {}
 
 // TODO: Implement file rename along with it's main class if any.
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for RenameFile {
-    async fn handle(&self, _state: DaemonState) -> Result<()> {
+    async fn handle(self, _state: DaemonState) -> Result<()> {
         tracing::info!("Reanmed command");
         Ok(())
     }

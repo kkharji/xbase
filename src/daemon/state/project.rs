@@ -1,6 +1,6 @@
+use crate::types::BuildConfiguration;
 #[cfg(feature = "serial")]
 use serde::{Deserialize, Serialize};
-
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -86,18 +86,20 @@ impl Project {
            ```
         */
 
-        self.xcodebuild(&["build"]).await
+        self.xcodebuild(&["build"], Default::default()).await
     }
 
     #[cfg(feature = "daemon")]
     pub async fn xcodebuild<'a, I: 'a, S: 'a>(
         &'a self,
         args: I,
+        _config: BuildConfiguration,
     ) -> anyhow::Result<impl tokio_stream::Stream<Item = xcodebuild::parser::Step> + 'a>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
+        // TOOD: Process configuration
         xcodebuild::runner::spawn(&self.root, args).await
     }
 

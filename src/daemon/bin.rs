@@ -40,11 +40,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                     Ok(req) => {
                         if let Err(e) = req.message.handle(state.clone()).await {
-                            return tracing::error!(
-                                "[Failure]: Cause: ({:?}), Message: {:?}",
-                                e,
-                                req
-                            );
+                            return tracing::error!("[Failure]: Cause: ({:?})", e);
                         };
                     }
                 };

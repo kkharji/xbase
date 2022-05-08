@@ -25,7 +25,7 @@ pub enum Message {
 
 #[cfg(feature = "daemon")]
 impl Message {
-    pub async fn handle(&self, state: super::DaemonState) -> anyhow::Result<()> {
+    pub async fn handle(self, state: super::DaemonState) -> anyhow::Result<()> {
         match self {
             Self::Build(c) => Handler::handle(c, state).await,
             Self::Run(c) => Handler::handle(c, state).await,
@@ -40,8 +40,8 @@ impl Message {
 /// Requirement for daemon handling request
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-pub trait Handler: std::fmt::Debug {
-    async fn handle(&self, _state: super::DaemonState) -> anyhow::Result<()> {
+pub trait Handler: std::fmt::Debug + Sized {
+    async fn handle(self, _state: super::DaemonState) -> anyhow::Result<()> {
         tracing::error!("Not Implemented! {:#?}", self);
         Ok(())
     }
@@ -49,7 +49,7 @@ pub trait Handler: std::fmt::Debug {
 
 /// Requirement for daemon sending request
 #[cfg(feature = "lua")]
-pub trait Requestor<'a, M: Into<Request> + std::fmt::Debug + FromLua<'a>> {
+pub trait Requester<'a, M: Into<Request> + std::fmt::Debug + FromLua<'a>> {
     fn request(lua: &Lua, msg: M) -> LuaResult<()> {
         Self::pre(lua, &msg)?;
         Daemon::execute(lua, msg)

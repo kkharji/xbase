@@ -10,4 +10,7 @@ pub mod xcodegen;
 #[cfg(any(feature = "daemon", feature = "mlua"))]
 pub mod daemon;
 
+#[cfg(feature = "serial")]
+pub mod types;
+
 pub mod util;

@@ -8,7 +8,7 @@ pub struct Run {
 }
 
 #[cfg(feature = "lua")]
-impl<'a> Requestor<'a, Run> for Run {}
+impl<'a> Requester<'a, Run> for Run {}
 
 // TODO: Implement run command
 //
@@ -18,7 +18,7 @@ impl<'a> Requestor<'a, Run> for Run {}
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 impl Handler for Run {
-    async fn handle(&self, _state: DaemonState) -> Result<()> {
+    async fn handle(self, _state: DaemonState) -> Result<()> {
         tracing::info!("Run command");
         Ok(())
     }

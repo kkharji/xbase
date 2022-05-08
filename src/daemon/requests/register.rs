@@ -8,7 +8,7 @@ pub struct Register {
 }
 
 #[cfg(feature = "lua")]
-impl<'a> Requestor<'a, Register> for Register {
+impl<'a> Requester<'a, Register> for Register {
     fn pre(lua: &Lua, msg: &Register) -> LuaResult<()> {
         lua.trace(&format!("Registered client ({})", msg.client.pid))
     }
@@ -17,7 +17,7 @@ impl<'a> Requestor<'a, Register> for Register {
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for Register {
-    async fn handle(&self, state: DaemonState) -> anyhow::Result<()> {
+    async fn handle(self, state: DaemonState) -> anyhow::Result<()> {
         tracing::trace!("{:?}", self);
         let mut state = state.lock().await;
         let client = &self.client;

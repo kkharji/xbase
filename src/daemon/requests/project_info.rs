@@ -7,12 +7,12 @@ pub struct ProjectInfo {
 }
 
 #[cfg(feature = "lua")]
-impl<'a> Requestor<'a, ProjectInfo> for ProjectInfo {}
+impl<'a> Requester<'a, ProjectInfo> for ProjectInfo {}
 
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for ProjectInfo {
-    async fn handle(&self, state: DaemonState) -> Result<()> {
+    async fn handle(self, state: DaemonState) -> Result<()> {
         let (root, pid) = (&self.client.root, self.client.pid);
         tracing::info!("Getting info for {}", root);
 
