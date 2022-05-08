@@ -28,12 +28,18 @@ impl Handler for Build {
         let nvim = ws.get_client(&self.client.pid)?;
         let mut logs = ws.project.xcodebuild(&["build"], self.config).await?;
         let stream = Box::pin(stream! {
+            use xcodebuild::parser::Step::*;
             while let Some(step) = logs.next().await {
                 let line = match step {
-                    xcodebuild::parser::Step::Exit(_) => { continue; }
+                    Exit(_) => { continue; }
+                    BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
+                        format! {
+                            "{} ----------------------------------------------------",
+                            step.to_string().trim().to_string()
+                        }
+                    }
                     step => step.to_string().trim().to_string(),
                 };
-
                 if !line.is_empty() {
                     for line in line.split("\n") {
                         yield line.to_string();

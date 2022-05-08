@@ -81,8 +81,7 @@ impl DaemonStateData {
                 .eq(&0)
                 .then(|| name = workspace.project.name().to_string().into());
         } else {
-            tracing::trace!("'{root}' is not a registered workspace!");
-            anyhow::bail!("No Workspace")
+            tracing::error!("'{root}' is not a registered workspace!");
         }
         if let Some(name) = name {
             tracing::info!("Dropping [{}] {:?}", name, root);

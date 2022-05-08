@@ -41,6 +41,9 @@ impl Nvim {
         let buffer = neovim.create_buf(false, true).await?;
 
         buffer.set_name("[Xcodebase Logs]").await?;
+        buffer
+            .set_option("filetype", "xcodebuildlog".into())
+            .await?;
 
         Ok(Self {
             nvim: neovim,
@@ -61,22 +64,6 @@ impl Nvim {
         Ok(())
     }
 
-    pub async fn log_info(&self, scope: &str, msg: impl ToString) -> Result<()> {
-        self.log("info", scope, msg).await
-    }
-    pub async fn log_debug(&self, scope: &str, msg: impl ToString) -> Result<()> {
-        self.log("debug", scope, msg).await
-    }
-    pub async fn log_error(&self, scope: &str, msg: impl ToString) -> Result<()> {
-        self.log("error", scope, msg).await
-    }
-    pub async fn log_trace(&self, scope: &str, msg: impl ToString) -> Result<()> {
-        self.log("trace", scope, msg).await
-    }
-    pub async fn log_warn(&self, scope: &str, msg: impl ToString) -> Result<()> {
-        self.log("warn", scope, msg).await
-    }
-
     pub async fn log_to_buffer(
         &self,
         title: &str,
@@ -84,7 +71,7 @@ impl Nvim {
         mut stream: impl Stream<Item = String> + Unpin,
         clear: bool,
     ) -> Result<()> {
-        let title = format!("[ {title} ]: ----> ");
+        let title = format!("[{title}] ------------------------------------------------------");
         let buffer = Buffer::new(self.log_bufnr.into(), self.nvim.clone());
 
         if clear {
@@ -107,6 +94,8 @@ impl Nvim {
         };
 
         self.exec(&command, false).await?;
+        self.exec("setlocal nonumber norelativenumber", false)
+            .await?;
 
         buffer.set_lines(c, c + 1, false, vec![title]).await?;
         c += 1;
@@ -132,6 +121,22 @@ impl Nvim {
             .pipe(WindowType::from_str)
             .map(|d| d.to_nvim_command(self.log_bufnr))
             .context("Convert to string to direction")
+    }
+
+    pub async fn log_info(&self, scope: &str, msg: impl ToString) -> Result<()> {
+        self.log("info", scope, msg).await
+    }
+    pub async fn log_debug(&self, scope: &str, msg: impl ToString) -> Result<()> {
+        self.log("debug", scope, msg).await
+    }
+    pub async fn log_error(&self, scope: &str, msg: impl ToString) -> Result<()> {
+        self.log("error", scope, msg).await
+    }
+    pub async fn log_trace(&self, scope: &str, msg: impl ToString) -> Result<()> {
+        self.log("trace", scope, msg).await
+    }
+    pub async fn log_warn(&self, scope: &str, msg: impl ToString) -> Result<()> {
+        self.log("warn", scope, msg).await
     }
 }
 
