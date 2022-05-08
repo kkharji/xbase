@@ -2,7 +2,7 @@
 use mlua::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, strum::Display)]
 #[serde(untagged)]
 pub enum XConfiguration {
     #[default]
@@ -53,6 +53,23 @@ pub struct BuildConfiguration {
     pub configuration: XConfiguration,
     /// Scheme to build with
     pub scheme: Option<XScheme>,
+}
+impl std::fmt::Display for BuildConfiguration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "xcodebuild")?;
+        write!(f, " -configuration {}", self.configuration)?;
+
+        if let Some(ref sysroot) = self.sysroot {
+            write!(f, " -sysroot {sysroot}")?;
+        }
+        if let Some(ref scheme) = self.scheme {
+            write!(f, " -scheme {scheme}")?;
+        }
+        if let Some(ref target) = self.target {
+            write!(f, " -target {target}")?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(feature = "lua")]

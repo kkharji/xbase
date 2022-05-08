@@ -1,4 +1,6 @@
+#[cfg(feature = "daemon")]
 use crate::types::BuildConfiguration;
+
 #[cfg(feature = "serial")]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

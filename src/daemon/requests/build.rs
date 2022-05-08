@@ -12,7 +12,8 @@ pub struct Build {
 #[cfg(feature = "lua")]
 impl<'a> Requester<'a, Build> for Build {
     fn pre(lua: &Lua, msg: &Build) -> LuaResult<()> {
-        lua.trace(&format!("{:?}", msg.config))
+        lua.print(&format!("{}", msg.config.to_string()));
+        Ok(())
     }
 }
 
