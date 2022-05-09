@@ -1,8 +1,11 @@
 //! Function to watch file system
 //!
 //! Mainly used for creation/removal of files and editing of xcodegen config.
+use crate::daemon::state::Project;
 use crate::daemon::DaemonState;
-use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use crate::{compile, xcodegen};
+use notify::event::ModifyKind;
+use notify::{Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{future::Future, path::PathBuf, sync::Arc, time::SystemTime};
 use std::{path::Path, time::Duration};
 use tokio::sync::{mpsc, Mutex};
@@ -57,8 +60,8 @@ pub async fn get_ignore_patterns(state: DaemonState, root: &String) -> Vec<Strin
 
     // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
     if let Some(ws) = state.lock().await.workspaces.get(root) {
-        if let Some(extra_patterns) = ws.get_ignore_patterns() {
-            patterns.extend(extra_patterns);
+        if crate::xcodegen::is_valid(ws) {
+            patterns.extend(ws.project.config().ignore.clone());
         }
     }
 
@@ -177,16 +180,16 @@ pub async fn recompile_handler(
     debounce: Arc<Mutex<SystemTime>>,
 ) -> Result<bool, WatchError> {
     match &event.kind {
-        notify::EventKind::Create(_) => {
+        EventKind::Create(_) => {
             tokio::time::sleep(Duration::new(1, 0)).await;
             tracing::debug!("[FileCreated]: {:?}", path);
         }
-        notify::EventKind::Remove(_) => {
+        EventKind::Remove(_) => {
             tokio::time::sleep(Duration::new(1, 0)).await;
             tracing::debug!("[FileRemoved]: {:?}", path);
         }
-        notify::EventKind::Modify(m) => match m {
-            notify::event::ModifyKind::Data(e) => match e {
+        EventKind::Modify(m) => match m {
+            ModifyKind::Data(e) => match e {
                 notify::event::DataChange::Content => {
                     if !path.display().to_string().contains("project.yml") {
                         return Ok(false);
@@ -197,7 +200,7 @@ pub async fn recompile_handler(
                 }
                 _ => return Ok(false),
             },
-            notify::event::ModifyKind::Name(_) => {
+            ModifyKind::Name(_) => {
                 let path_string = path.to_string_lossy();
                 // HACK: only account for new path and skip duplications
                 if !path.exists() || should_ignore(last_seen.clone(), &path_string).await {
@@ -220,28 +223,42 @@ pub async fn recompile_handler(
         .get_mut_workspace(&root)
         .map_err(|e| WatchError::Stop(e.to_string()))?;
 
-    for (_, nvim) in ws.clients.iter() {
-        if let Err(e) = nvim.exec(COMPILE_START_MSG.into(), false).await {
-            tracing::error!("Fail to echo message to nvim clients {e}")
-        }
-    }
+    ws.message_all_nvim_instances(COMPILE_START_MSG).await;
 
-    if let Err(e) = ws.on_directory_change(path, &event.kind).await {
-        tracing::error!("{:?}:\n {:#?}", event, e);
+    let name = ws.name();
 
-        for (_, nvim) in ws.clients.iter() {
-            if let Err(e) = nvim.log_error("CompileCommands", &e).await {
-                tracing::error!("Fail to echo error to nvim clients {e}")
+    if xcodegen::regenerate(name, path, &ws.root)
+        .await
+        .map_err(|e| WatchError::Stop(e.to_string()))?
+    {
+        tracing::info!("Updating State.{name}.Project");
+        ws.project = match Project::new(&ws.root).await {
+            Ok(p) => p,
+            Err(e) => {
+                let msg = format!("Fail to update project {e}");
+                ws.message_all_nvim_instances(&msg).await;
+                tracing::error!("{}", msg);
+                return Err(WatchError::Continue(msg));
             }
+        };
+
+        if let Err(e) = ws.update_lua_state().await {
+            ws.message_all_nvim_instances(&e.to_string()).await;
         }
-    } else {
-        tracing::info!("Regenerated compile commands");
-        for (_, nvim) in ws.clients.iter() {
-            if let Err(e) = nvim.exec(COMPILE_SUCC_MESSAGE.into(), false).await {
-                tracing::error!("Fail to echo message to nvim clients {e}")
-            }
-        }
-    }
+    };
+
+    if compile::ensure_server_config(&ws.root).await.is_err() {
+        ws.message_all_nvim_instances("Fail to ensure build server configuration!")
+            .await
+    };
+
+    if compile::update_compilation_file(&ws.root).await.is_err() {
+        ws.message_all_nvim_instances("Fail to regenerate compilation database!")
+            .await
+    };
+
+    tracing::info!("Regenerated compile commands");
+    ws.message_all_nvim_instances(COMPILE_SUCC_MESSAGE).await;
 
     let mut debounce = debounce.lock().await;
     *debounce = std::time::SystemTime::now();

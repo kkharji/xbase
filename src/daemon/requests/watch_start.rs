@@ -78,6 +78,7 @@ pub async fn event_handler(
     debounce: std::sync::Arc<tokio::sync::Mutex<std::time::SystemTime>>,
 ) -> Result<bool, crate::util::watch::WatchError> {
     use crate::util::watch::{self, WatchError};
+    use crate::xcode;
     use std::time::Duration;
 
     if !(matches!(
@@ -116,13 +117,11 @@ pub async fn event_handler(
         .ok_or_else(|| WatchError::Stop("No watch handle, breaking".into()))?;
 
     let nvim = ws
-        .get_client(&watch_req.client.pid)
+        .nvim(&watch_req.client.pid)
         .map_err(|e| WatchError::Stop(e.to_string()))?;
 
     let stream = match watch_req.watch_type {
-        WatchType::Build => ws
-            .project
-            .xcodebuild(&["build"], watch_req.config.clone())
+        WatchType::Build => xcode::stream(&ws.root, &["build"], watch_req.config.clone())
             .await
             .map_err(|e| WatchError::Continue(format!("Build Failed: {e}")))?,
 

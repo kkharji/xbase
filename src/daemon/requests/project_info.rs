@@ -18,7 +18,7 @@ impl Handler for ProjectInfo {
 
         let state = state.lock().await;
         let workspace = state.get_workspace(root)?;
-        let nvim = workspace.get_client(&pid)?;
+        let nvim = workspace.nvim(&pid)?;
         let script = workspace.project.nvim_update_state_script()?;
 
         nvim.exec_lua(&script, vec![]).await?;

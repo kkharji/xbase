@@ -7,15 +7,16 @@ edition = "2021"
 default     = [ ]
 xcodegen    = [ "async", "dirs" ]
 daemon      = [ "serial", "compilation", "logging", "async", "watcher", "proc", "xcodegen", "parity-tokio-ipc", "nvim-rs", "async-stream", "tokio-stream", "strum" ]
-server      = [ "serial", "logging", "dirs", "bsp-server", "url", "wax", "shell-words", "compilation" ]
+server      = [ "serial", "logging", "dirs", "bsp-server", "url", "wax", "shell-words", "compilation", "strum" ]
 lua         = [ "mlua", "serial", "strum" ]
 serial      = [ "serde", "serde_json", "serde_yaml" ]
-compilation = [ "serial", "lazy_static", "shell-words", "xcodebuild" ]
+compilation = [ "serial", "lazy_static", "shell-words", "xcode" ]
 logging     = [ "tracing", "tracing-appender", "tracing-subscriber" ]
 async       = [ "tokio", "async-trait" ]
 proc        = [ "libproc" ]
 watcher     = [ "dirs", "notify", "wax" ]
 jsonrpc     = [ "serial" ]
+xcode       = [ "xcodebuild" ]
 
 [lib]
 name = "xcodebase"

@@ -14,3 +14,6 @@ pub mod daemon;
 pub mod types;
 
 pub mod util;
+
+#[cfg(feature = "daemon")]
+mod xcode;

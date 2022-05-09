@@ -54,6 +54,7 @@ pub struct BuildConfiguration {
     /// Scheme to build with
     pub scheme: Option<XScheme>,
 }
+
 impl std::fmt::Display for BuildConfiguration {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "xcodebuild")?;

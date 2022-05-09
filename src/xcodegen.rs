@@ -47,6 +47,33 @@ pub fn get_config_path(ws: &Workspace) -> PathBuf {
 }
 
 /// Checks whether current workspace is xcodegen project.
-pub fn is_workspace(ws: &Workspace) -> bool {
+pub fn is_valid(ws: &Workspace) -> bool {
     crate::xcodegen::get_config_path(ws).exists()
+}
+
+pub async fn regenerate(name: &str, path: PathBuf, root: &PathBuf) -> Result<bool> {
+    if !root.join("project.yml").exists() {
+        anyhow::bail!("Project.yml is not found");
+    }
+
+    tracing::info!("Updating {name}.xcodeproj");
+
+    let mut retry_count = 0;
+    while retry_count < 3 {
+        if let Ok(code) = generate(&root).await {
+            if code.success() {
+                if path
+                    .file_name()
+                    .ok_or_else(|| anyhow::anyhow!("Fail to get filename from {:?}", path))?
+                    .eq("project.yml")
+                {
+                    return Ok(true);
+                }
+                return Ok(false);
+            }
+        }
+        retry_count += 1
+    }
+
+    anyhow::bail!("Fail to update_xcodeproj")
 }

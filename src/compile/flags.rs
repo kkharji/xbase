@@ -1,8 +1,5 @@
 use super::CompilationCommand;
-use crate::{
-    compile::CompilationDatabase,
-    util::fs::{self, find_header_dirs, find_swift_files, find_swift_module_root},
-};
+use crate::util::fs::{find_header_dirs, find_swift_files, find_swift_module_root, get_files_list};
 use anyhow::Result;
 use std::{
     collections::HashMap,
@@ -57,7 +54,7 @@ impl CompileFlags {
             find_swift_module_root(filepath);
         if let Some(project_root) = project_root {
             if let Some(ref compile_filepath) = compile_filepath {
-                return CompilationDatabase::parse_from_file(compile_filepath)?
+                return super::parse_from_file(compile_filepath)?
                     .iter()
                     .flat_map(CompilationCommand::compile_flags)
                     .flatten()
@@ -109,7 +106,7 @@ impl CompileFlags {
             if arg == "-filelist" {
                 if let Some(arg) = items.next() {
                     arg.pipe(PathBuf::from)
-                        .pipe(fs::get_files_list)?
+                        .pipe(get_files_list)?
                         .pipe_as_mut(|paths| args.append(paths));
                     continue;
                 }
@@ -118,7 +115,7 @@ impl CompileFlags {
             // swift 5.1 filelist, unfold it
             if arg.starts_with("@") {
                 if let Some(arg) = arg.strip_prefix("@") {
-                    arg.pipe(fs::get_files_list)?
+                    arg.pipe(get_files_list)?
                         .pipe_as_mut(|paths| args.append(paths));
                     continue;
                 }

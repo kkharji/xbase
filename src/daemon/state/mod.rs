@@ -45,7 +45,7 @@ impl DaemonStateData {
 
         if self.workspaces.contains_key(root) {
             let ws = self.get_mut_workspace(root).unwrap();
-            return ws.add_client(pid, address).await;
+            return ws.get_nvim_client(pid, address).await;
         }
 
         let workspace = Workspace::new(root, pid, address).await?;
@@ -85,6 +85,6 @@ impl DaemonStateData {
             .retain(|pid| pid_exists(pid, || tracing::info!("Removing {pid}")));
         self.workspaces
             .iter_mut()
-            .for_each(|(_, ws)| ws.update_clients())
+            .for_each(|(_, ws)| ws.update_nvim_clients())
     }
 }
