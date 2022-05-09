@@ -13,6 +13,9 @@ use crate::xcodegen;
 #[cfg(feature = "xcodegen")]
 use std::collections::HashMap;
 
+#[cfg(feature = "async")]
+use tokio::task::JoinHandle;
+
 use std::path::PathBuf;
 
 use super::Project;
@@ -27,6 +30,8 @@ pub struct Workspace {
     /// Active clients pids connect for the xcodebase workspace.
     #[cfg(feature = "daemon")]
     pub clients: HashMap<i32, Nvim>,
+    #[cfg(feature = "daemon")]
+    pub watch: Option<(crate::daemon::WatchStart, JoinHandle<Result<()>>)>,
 }
 
 #[cfg(feature = "daemon")]
@@ -40,12 +45,12 @@ impl Workspace {
             .await
             .context("Fail to create xcodegen project.")?;
 
-        let mut workspace = Self {
+        let workspace = Self {
             root,
             project,
+            watch: None,
             clients: Default::default(),
         };
-        workspace.update_lua_state().await?;
 
         if !workspace.root.join(".compile").is_file() {
             tracing::info!(".compile doesn't exist, regenerating ...");
@@ -159,10 +164,21 @@ impl Workspace {
     }
 
     async fn update_lua_state(&mut self) -> Result<()> {
-        let script = self.project.nvim_update_state_script()?;
-        Ok(for (_, nvim) in self.clients.iter() {
-            nvim.exec_lua(&script, vec![]).await?;
-        })
+        tracing::info!("Updating nvim state");
+        let update_project_state = self.project.nvim_update_state_script()?;
+
+        let update_watch_state = format!(
+            "require'xcodebase.watch'.is_watching = {}",
+            self.is_watch_service_running()
+        );
+
+        for (pid, nvim) in self.clients.iter() {
+            tracing::info!("Updating nvim for {pid}");
+            nvim.exec_lua(&update_project_state, vec![]).await?;
+            nvim.exec_lua(&update_watch_state, vec![]).await?;
+        }
+
+        Ok(())
     }
 
     pub fn update_clients(&mut self) {
@@ -179,6 +195,8 @@ impl Workspace {
         // NOTE: Implicitly assuming that pid is indeed a valid pid
         tracing::info!("[{}] Add Client: {pid}", self.name());
         self.clients.insert(pid, Nvim::new(address).await?);
+        // Make sure that new client inherit other client state.
+        self.update_lua_state().await?;
         Ok(())
     }
 
@@ -219,5 +237,35 @@ impl Workspace {
             return Some(self.project.config().ignore.clone());
         }
         return None;
+    }
+}
+
+/// Watch Services
+#[cfg(feature = "daemon")]
+impl Workspace {
+    /// Check if a watch service is running
+    pub fn is_watch_service_running(&self) -> bool {
+        self.watch.is_some()
+    }
+
+    /// Stop a watch service
+    pub async fn stop_watch_service(&mut self) -> Result<()> {
+        if let Some((_, ref mut handle)) = self.watch {
+            handle.abort();
+            handle.await.unwrap_err().is_cancelled();
+            tracing::debug!("Watch service stopeed",);
+        }
+        Ok(())
+    }
+
+    /// Stop a watch service
+    pub async fn start_watch_service(
+        &mut self,
+        watch_req: crate::daemon::WatchStart,
+        handle: JoinHandle<Result<()>>,
+    ) -> Result<()> {
+        self.stop_watch_service().await?;
+        self.watch = Some((watch_req, handle));
+        Ok(())
     }
 }

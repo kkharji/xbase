@@ -4,6 +4,8 @@ mod project_info;
 mod register;
 mod rename_file;
 mod run;
+mod watch_start;
+mod watch_stop;
 
 pub use build::Build;
 pub use drop::Drop;
@@ -11,6 +13,8 @@ pub use project_info::ProjectInfo;
 pub use register::Register;
 pub use rename_file::RenameFile;
 pub use run::Run;
+pub use watch_start::WatchStart;
+pub use watch_stop::WatchStop;
 
 use super::Client;
 
@@ -51,3 +55,5 @@ convertable!(Register);
 convertable!(RenameFile);
 convertable!(Drop);
 convertable!(ProjectInfo);
+convertable!(WatchStart);
+convertable!(WatchStop);

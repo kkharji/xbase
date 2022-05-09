@@ -26,8 +26,12 @@ impl Handler for Build {
         let state = state.lock().await;
         let ws = state.get_workspace(&self.client.root)?;
         let nvim = ws.get_client(&self.client.pid)?;
-        let stream = ws.project.xcodebuild(&["build"], self.config).await?;
-        nvim.log_to_buffer("Build", None, stream, false).await?;
+        let stream = ws
+            .project
+            .xcodebuild(vec!["build".to_string()], self.config)
+            .await?;
+        nvim.log_to_buffer("Build", None, stream, false, true)
+            .await?;
 
         Ok(())
     }

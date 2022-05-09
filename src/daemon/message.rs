@@ -21,6 +21,8 @@ pub enum Message {
     Register(Register),
     Drop(Drop),
     RenameFile(RenameFile),
+    WatchStart(WatchStart),
+    WatchStop(WatchStop),
 }
 
 #[cfg(feature = "daemon")]
@@ -33,6 +35,8 @@ impl Message {
             Self::Register(c) => Handler::handle(c, state).await,
             Self::Drop(c) => Handler::handle(c, state).await,
             Self::ProjectInfo(c) => Handler::handle(c, state).await,
+            Self::WatchStart(c) => Handler::handle(c, state).await,
+            Self::WatchStop(c) => Handler::handle(c, state).await,
         }
     }
 }

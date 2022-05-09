@@ -2,7 +2,7 @@
 use mlua::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Serialize, Deserialize, strum::Display)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, strum::Display)]
 #[serde(untagged)]
 pub enum XConfiguration {
     #[default]
@@ -42,7 +42,7 @@ pub type XScheme = String;
 pub type XTarget = String;
 
 /// Fields required to build a project
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct BuildConfiguration {
     /// TODO(nvim): make build config sysroot default to tmp in auto-build
     pub sysroot: Option<String>,

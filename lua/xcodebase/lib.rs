@@ -1,21 +1,25 @@
 use mlua::prelude::*;
 use xcodebase::daemon::*;
 
-#[mlua::lua_module]
-fn libxcodebase(lua: &Lua) -> LuaResult<LuaTable> {
-    let is_running = lua.create_function(Daemon::is_running)?;
-    let ensure = lua.create_function(Daemon::ensure)?;
-    let register = lua.create_function(Register::request)?;
-    let drop = lua.create_function(Drop::request)?;
-    let build = lua.create_function(Build::request)?;
-    let project_info = lua.create_function(ProjectInfo::request)?;
+macro_rules! fun {
+    ($t:ident, $lua:ident) => {
+        $lua.create_function($t::request)?
+    };
+    ($t:ident, $fun:ident, $lua:ident) => {
+        $lua.create_function($t::$fun)?
+    };
+}
 
-    lua.create_table_from([
-        ("is_running", is_running),
-        ("ensure", ensure),
-        ("register", register),
-        ("drop", drop),
-        ("build", build),
-        ("project_info", project_info),
+#[mlua::lua_module]
+fn libxcodebase(l: &Lua) -> LuaResult<LuaTable> {
+    l.create_table_from([
+        ("is_running", fun!(Daemon, is_running, l)),
+        ("ensure", fun!(Daemon, ensure, l)),
+        ("register", fun!(Register, l)),
+        ("drop", fun!(Drop, l)),
+        ("build", fun!(Build, l)),
+        ("watch_start", fun!(WatchStart, l)),
+        ("watch_stop", fun!(WatchStop, l)),
+        ("project_info", fun!(ProjectInfo, l)),
     ])
 }

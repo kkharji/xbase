@@ -6,6 +6,7 @@ local picker = require("telescope.pickers").new
 local sorter = require("telescope.config").values.generic_sorter
 local maker = require("telescope.pickers.entry_display").create
 local xcodebase = require "xcodebase"
+local watch = require "xcodebase.watch"
 
 --[[
 -- Run <Simulator>
@@ -20,7 +21,8 @@ M.all_actions = function(opts)
   local root = vim.loop.cwd()
   local info = xcodebase.projects[root]
   if info == nil then
-    info = xcodebase.project_info(root)
+    error "No info available"
+    -- info = xcodebase.project_info(root)
   end
 
   local targets = {}
@@ -36,6 +38,13 @@ M.all_actions = function(opts)
   local configurations = { "Debug", "Release" }
 
   local command_plate = {}
+
+  if watch.is_watching then
+    command_plate[#command_plate + 1] = {
+      command = "WatchStop",
+      value = "Watch Stop",
+    }
+  end
 
   for _, target in ipairs(targets) do
     for _, command in ipairs(commands) do
@@ -56,6 +65,17 @@ M.all_actions = function(opts)
           value = display,
           device = nil, -- reserverd later for run command
         }
+
+        if not watch.is_watching then
+          command_plate[#command_plate + 1] = {
+            target = target,
+            command = "Watch",
+            watch_type = command,
+            configuration = configuration,
+            value = "Watch " .. display,
+            device = nil, -- reserverd later for run command
+          }
+        end
       end
     end
   end
@@ -66,7 +86,7 @@ M.all_actions = function(opts)
     finder = finder {
       results = command_plate,
       entry_maker = function(entry)
-        entry.ordinal = entry.target .. entry.value
+        entry.ordinal = entry.value
         entry.display = function(e)
           local maker = maker {
             separator = " ",
@@ -87,6 +107,10 @@ M.all_actions = function(opts)
         local selected = s.get_selected_entry()
         if selected.command == "Build" then
           xcodebase.build(selected)
+        elseif selected.command == "Watch" then
+          watch.start(selected)
+        elseif selected.command == "WatchStop" then
+          watch.stop()
         end
       end)
       return true

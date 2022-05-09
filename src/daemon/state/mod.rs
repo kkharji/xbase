@@ -42,6 +42,13 @@ impl DaemonStateData {
         }
     }
 
+    pub fn get_mut_workspace(&mut self, root: &str) -> Result<&mut Workspace> {
+        match self.workspaces.get_mut(root) {
+            Some(o) => Ok(o),
+            None => anyhow::bail!("No workspace for {}", root),
+        }
+    }
+
     pub async fn add_workspace(&mut self, root: &str, pid: i32, address: &str) -> Result<()> {
         match self.workspaces.get_mut(root) {
             Some(workspace) => workspace.add_client(pid, address).await?,

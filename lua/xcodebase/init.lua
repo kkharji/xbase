@@ -1,7 +1,6 @@
 local M = {}
 local config = require "xcodebase.config"
 local lib = require "libxcodebase"
-local pid = vim.fn.getpid()
 
 ---Check whether the vim instance should be registered to xcodebase server.
 ---NOTE: Only support project.yml
@@ -37,11 +36,7 @@ M.drop = function()
 end
 
 M.build = function(opts)
-  local root = vim.loop.cwd()
-  lib.build(vim.tbl_extend("keep", opts or {}, {
-    pid = pid,
-    root = root,
-  }))
+  lib.build(opts)
 end
 
 M.project_info = function(root)

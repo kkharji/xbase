@@ -5,7 +5,7 @@ use tokio_stream::{Stream, StreamExt};
 
 use anyhow::{Context, Result};
 use nvim_rs::{
-    compat::tokio::Compat, create, error::LoopError, rpc::handler::Dummy, Buffer, Neovim,
+    compat::tokio::Compat, create, error::LoopError, rpc::handler::Dummy, Buffer, Neovim, Window,
 };
 use parity_tokio_ipc::Connection;
 use tokio::{io::WriteHalf, task::JoinHandle};
@@ -49,6 +49,7 @@ impl Nvim {
         direction: Option<WindowType>,
         mut stream: impl Stream<Item = String> + Unpin,
         clear: bool,
+        open: bool,
     ) -> Result<()> {
         let title = format!("[{title}] ------------------------------------------------------");
         let buf = Buffer::new(self.log_bufnr.into(), self.nvim.clone());
@@ -71,12 +72,13 @@ impl Nvim {
                 WindowType::Horizontal.to_nvim_command(self.log_bufnr)
             }
         };
-
-        self.exec(&command, false).await?;
-        self.exec("setl nu nornu so=9", false).await?;
-        let win = self.get_current_win().await?;
-
-        self.exec("wincmd w", false).await?;
+        let mut win: Option<Window<Compat<WriteHalf<Connection>>>> = None;
+        if open {
+            self.exec(&command, false).await?;
+            self.exec("setl nu nornu so=9", false).await?;
+            win = Some(self.get_current_win().await?);
+            self.exec("wincmd w", false).await?;
+        }
 
         buf.set_lines(c, c + 1, false, vec![title]).await?;
         c += 1;
@@ -84,7 +86,9 @@ impl Nvim {
         while let Some(line) = stream.next().await {
             buf.set_lines(c, c + 1, false, vec![line]).await?;
             c += 1;
-            win.set_cursor((c, 0)).await?;
+            if open {
+                win.as_ref().unwrap().set_cursor((c, 0)).await?;
+            }
         }
 
         Ok(())

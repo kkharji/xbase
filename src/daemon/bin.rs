@@ -69,7 +69,7 @@ async fn update_watchers(state: Arc<Mutex<DaemonStateData>>) {
         #[cfg(feature = "logging")]
         tracing::info!("Watching {root}");
 
-        let handle = watch::handler(state.clone(), root.clone());
+        let handle = watch::new(root.clone(), state.clone(), watch::recompile_handler);
         current_state.watchers.insert(root, handle);
     });
 }
