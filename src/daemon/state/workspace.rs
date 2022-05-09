@@ -164,9 +164,7 @@ impl Workspace {
     }
 
     async fn update_lua_state(&mut self) -> Result<()> {
-        tracing::info!("Updating nvim state");
         let update_project_state = self.project.nvim_update_state_script()?;
-
         let update_watch_state = format!(
             "require'xcodebase.watch'.is_watching = {}",
             self.is_watch_service_running()
@@ -254,6 +252,7 @@ impl Workspace {
             handle.abort();
             handle.await.unwrap_err().is_cancelled();
             tracing::debug!("Watch service stopeed",);
+            self.update_lua_state().await?;
         }
         Ok(())
     }
