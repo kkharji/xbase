@@ -26,15 +26,6 @@ pub type DaemonState = std::sync::Arc<tokio::sync::Mutex<DaemonStateData>>;
 
 #[cfg(feature = "daemon")]
 impl DaemonStateData {
-    pub fn update_clients(&mut self) {
-        self.clients
-            .retain(|pid| crate::util::proc::exists(pid, || tracing::info!("Removing {pid}")));
-
-        self.workspaces
-            .iter_mut()
-            .for_each(|(_, ws)| ws.update_clients())
-    }
-
     pub fn get_workspace(&self, root: &str) -> Result<&Workspace> {
         match self.workspaces.get(root) {
             Some(o) => Ok(o),
@@ -50,38 +41,27 @@ impl DaemonStateData {
     }
 
     pub async fn add_workspace(&mut self, root: &str, pid: i32, address: &str) -> Result<()> {
-        match self.workspaces.get_mut(root) {
-            Some(workspace) => workspace.add_client(pid, address).await?,
-            None => {
-                let workspace = {
-                    let root: &str = &root;
-                    let mut ws = Workspace::new(&root).await?;
-                    tracing::info!("New Workspace: {:?}", ws.project.name());
-                    tracing::trace!("{:?}", ws);
-                    ws.add_client(pid, address).await?;
-                    ws
-                };
+        // TODO: Support projects with .xproj as well as xcworkspace
 
-                if let Some(nvim) = workspace.clients.get(&pid) {
-                    tracing::debug!("Update nvim state for project");
-                    nvim.exec_lua(&workspace.project.nvim_update_state_script()?, vec![])
-                        .await?;
-                }
+        if self.workspaces.contains_key(root) {
+            let ws = self.get_mut_workspace(root).unwrap();
+            return ws.add_client(pid, address).await;
+        }
 
-                tracing::info!("Managing [{}] {:?}", workspace.project.name(), root);
+        let workspace = Workspace::new(root, pid, address).await?;
+        let root = root.to_string();
 
-                self.workspaces.insert(root.to_string(), workspace);
-            }
-        };
+        self.workspaces.insert(root, workspace);
 
-        // Print New state
         tracing::trace!("{:#?}", self);
+
         Ok(())
     }
 
     // Remove remove client from workspace and the workspace if it's this client was the last one.
     pub async fn remove_workspace(&mut self, root: &str, pid: i32) -> Result<()> {
         let mut name = None;
+
         if let Some(workspace) = self.workspaces.get_mut(root) {
             let clients_len = workspace.remove_client(pid);
             clients_len
@@ -90,10 +70,21 @@ impl DaemonStateData {
         } else {
             tracing::error!("'{root}' is not a registered workspace!");
         }
+
         if let Some(name) = name {
             tracing::info!("Dropping [{}] {:?}", name, root);
             self.workspaces.remove(root);
         }
+
         Ok(())
+    }
+
+    pub fn validate(&mut self) {
+        use crate::util::proc::exists as pid_exists;
+        self.clients
+            .retain(|pid| pid_exists(pid, || tracing::info!("Removing {pid}")));
+        self.workspaces
+            .iter_mut()
+            .for_each(|(_, ws)| ws.update_clients())
     }
 }

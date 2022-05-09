@@ -41,27 +41,32 @@ pub struct Workspace {
 
 #[cfg(feature = "daemon")]
 impl Workspace {
-    /// Create new workspace from a path representing project root.
-    /// TODO: Support projects with .xproj as well as xcworkspace
-    /// TODO: Ensure .compile and BuildServer.json exists
-    pub async fn new(root: &str) -> Result<Self> {
-        let root = PathBuf::from(root);
-        let project = Project::new(&root)
-            .await
-            .context("Fail to create xcodegen project.")?;
+    pub async fn new(root: &str, pid: i32, address: &str) -> Result<Self> {
+        let root_path = std::path::PathBuf::from(root);
+        let project = anyhow::Context::context(
+            Project::new(&root_path).await,
+            "Fail to create xcodegen project.",
+        )?;
 
-        let workspace = Self {
-            root,
+        let mut ws = Workspace {
+            root: root_path,
             project,
             watch: None,
             clients: Default::default(),
         };
 
-        if !workspace.root.join(".compile").is_file() {
+        if !ws.root.join(".compile").is_file() {
             tracing::info!(".compile doesn't exist, regenerating ...");
-            workspace.generate_compiliation_db().await?
+            ws.generate_compiliation_db().await?
         }
-        Ok(workspace)
+
+        tracing::info!("New Workspace: {:?}", ws.project.name());
+        tracing::trace!("{:?}", ws);
+
+        ws.add_client(pid, address).await?;
+
+        tracing::info!("Managing [{}] {:?}", ws.project.name(), root);
+        Ok(ws)
     }
 
     /// Regenerate compiled commands and xcodeGen if project.yml exists
@@ -77,7 +82,7 @@ impl Workspace {
         Ok(())
     }
 
-    async fn generate_compiliation_db(&self) -> Result<()> {
+    pub async fn generate_compiliation_db(&self) -> Result<()> {
         #[cfg(feature = "compilation")]
         {
             use crate::compile::CompilationDatabase;
@@ -197,7 +202,13 @@ impl Workspace {
         self.update_clients();
         // NOTE: Implicitly assuming that pid is indeed a valid pid
         tracing::info!("[{}] Add Client: {pid}", self.name());
-        self.clients.insert(pid, Nvim::new(address).await?);
+        let nvim = Nvim::new(address).await?;
+
+        tracing::debug!("Update nvim state for project");
+        let script = &self.project.nvim_update_state_script()?;
+        nvim.exec_lua(script, vec![]).await?;
+
+        self.clients.insert(pid, nvim);
         // Make sure that new client inherit other client state.
         self.update_lua_state().await?;
         Ok(())

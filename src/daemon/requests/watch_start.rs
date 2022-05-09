@@ -141,7 +141,7 @@ pub async fn event_handler(
             return Err(WatchError::Stop("Run not supported yet!".into()));
         }
     };
-    // TODO(nvim): Ensure that exiting a nvim instance will stop build watcher
+
     nvim.log_to_buffer("Watch", None, stream, false, false)
         .await
         .map_err(|e| WatchError::Continue(format!("Logging to client failed: {e}")))?;

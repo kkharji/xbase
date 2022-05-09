@@ -19,10 +19,11 @@ impl<'a> Requester<'a, Register> for Register {
 impl Handler for Register {
     async fn handle(self, state: DaemonState) -> anyhow::Result<()> {
         tracing::trace!("{:?}", self);
-        let mut state = state.lock().await;
+        let current_state = state.clone();
+        let mut current_state = current_state.lock().await;
         let client = &self.client;
 
-        state
+        current_state
             .add_workspace(&client.root, client.pid, &self.address)
             .await
     }

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::{ops, path::Path, str::FromStr};
 use tap::Pipe;
 use tokio_stream::{Stream, StreamExt};
@@ -12,13 +11,13 @@ use tokio::{io::WriteHalf, task::JoinHandle};
 
 pub struct Nvim {
     pub nvim: Neovim<Compat<WriteHalf<Connection>>>,
-    handler: JoinHandle<Result<(), Box<LoopError>>>,
+    _handler: JoinHandle<Result<(), Box<LoopError>>>,
     pub log_bufnr: i64,
 }
 
 impl Nvim {
     pub async fn new<P: AsRef<Path> + Clone>(address: P) -> Result<Self> {
-        let (neovim, handler) = create::tokio::new_path(address, Dummy::new()).await?;
+        let (neovim, _handler) = create::tokio::new_path(address, Dummy::new()).await?;
         let buf = neovim.create_buf(false, true).await?;
 
         buf.set_name("[Xcodebase Logs]").await?;
@@ -26,7 +25,7 @@ impl Nvim {
 
         Ok(Self {
             nvim: neovim,
-            handler,
+            _handler,
             log_bufnr: buf.get_number().await?,
         })
     }

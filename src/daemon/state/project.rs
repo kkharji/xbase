@@ -11,9 +11,9 @@ use std::path::PathBuf;
 #[allow(dead_code)]
 #[cfg_attr(feature = "serial", derive(Deserialize, Serialize))]
 pub struct Target {
-    r#type: String,
-    platform: String,
-    sources: Vec<PathBuf>,
+    pub r#type: String,
+    pub platform: String,
+    pub sources: Vec<PathBuf>,
 }
 
 #[derive(Debug, Default)]
