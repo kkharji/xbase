@@ -76,8 +76,8 @@ pub async fn event_handler(
     event: notify::Event,
     last_seen: std::sync::Arc<tokio::sync::Mutex<String>>,
     debounce: std::sync::Arc<tokio::sync::Mutex<std::time::SystemTime>>,
-) -> anyhow::Result<bool> {
-    use crate::util::watch;
+) -> Result<bool, crate::util::watch::WatchError> {
+    use crate::util::watch::{self, WatchError};
     use std::time::Duration;
 
     if !(matches!(
@@ -103,33 +103,51 @@ pub async fn event_handler(
         tokio::time::sleep(Duration::new(1, 0)).await;
     }
 
-    tracing::info!("Rebuilding for {:#?}", &event);
+    tracing::debug!("Rebuilding for {:#?}", &event);
 
     let state = state.lock().await;
-    let ws = state.get_workspace(&root)?;
+    let ws = state
+        .get_workspace(&root)
+        .map_err(|e| WatchError::Stop(e.to_string()))?;
+
     let (watch_req, _) = ws
         .watch
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("No watch handle, breaking"))?;
-    let nvim = ws.get_client(&watch_req.client.pid)?;
+        .ok_or_else(|| WatchError::Stop("No watch handle, breaking".into()))?;
+
+    let nvim = ws
+        .get_client(&watch_req.client.pid)
+        .map_err(|e| WatchError::Stop(e.to_string()))?;
 
     let stream = match watch_req.watch_type {
-        WatchType::Build => {
-            ws.project
-                .xcodebuild(&["build"], watch_req.config.clone())
-                .await?
-        }
+        WatchType::Build => ws
+            .project
+            .xcodebuild(&["build"], watch_req.config.clone())
+            .await
+            .map_err(|e| WatchError::Continue(format!("Build Failed: {e}")))?,
 
         WatchType::Run => {
-            nvim.log_error("Watch", "Run is not supported yet!").await?;
-            anyhow::bail!("Run not supported yet!");
+            nvim.log_error("Watch", "Run is not supported yet! .. aborting")
+                .await
+                .map_err(|e| WatchError::Stop(format!("Unable to log to nvim buffer: {e}")))?;
+
+            nvim.exec_lua(
+                "require'xcodebase.watch'.is_watching = false".into(),
+                vec![],
+            )
+            .await
+            .map_err(|e| WatchError::Stop(format!("Unable to log to nvim buffer: {e}")))?;
+
+            return Err(WatchError::Stop("Run not supported yet!".into()));
         }
     };
 
     nvim.log_to_buffer("Watch", None, stream, false, true)
-        .await?;
+        .await
+        .map_err(|e| WatchError::Continue(format!("Logging to client failed: {e}")))?;
 
     let mut debounce = debounce.lock().await;
     *debounce = std::time::SystemTime::now();
+
     Ok(true)
 }

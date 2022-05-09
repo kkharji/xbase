@@ -2,7 +2,6 @@
 //!
 //! Mainly used for creation/removal of files and editing of xcodegen config.
 use crate::daemon::DaemonState;
-use anyhow::Result;
 use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{future::Future, path::PathBuf, sync::Arc, time::SystemTime};
 use std::{path::Path, time::Duration};
@@ -12,6 +11,11 @@ use wax::{Glob, Pattern};
 
 const COMPILE_START_MSG: &str = "echo 'xcodebase: ⚙ Regenerating compilation database ..'";
 const COMPILE_SUCC_MESSAGE: &str = "echo 'xcodebase: ✅ Compilation database regenerated.'";
+
+pub enum WatchError {
+    Stop(String),
+    Continue(String),
+}
 
 /// HACK: ignore seen paths.
 ///
@@ -70,7 +74,7 @@ where
     F: Fn(DaemonState, String, PathBuf, Event, Arc<Mutex<String>>, Arc<Mutex<SystemTime>>) -> Fut
         + Send
         + 'static,
-    Fut: Future<Output = anyhow::Result<bool>> + Send,
+    Fut: Future<Output = std::result::Result<bool, WatchError>> + Send,
 {
     use notify::Config::NoticeEvents;
     let debounce = Arc::new(Mutex::new(SystemTime::now()));
@@ -145,13 +149,25 @@ where
                 debounce.clone(),
             );
             if let Err(e) = future.await {
-                tracing::error!("{e}")
+                match e {
+                    WatchError::Stop(e) => {
+                        tracing::error!("aborting watch service: {e} ... ");
+                        break;
+                    }
+                    WatchError::Continue(e) => {
+                        tracing::error!("{e}");
+                        continue;
+                    }
+                }
             }
         }
         Ok(())
     })
 }
 
+// TOOD(watch): Fix build/run and compile failure conflict on rename
+//
+// When watch build exists, if a rename happens, the watcher fails
 pub async fn recompile_handler(
     state: DaemonState,
     root: String,
@@ -159,7 +175,7 @@ pub async fn recompile_handler(
     event: Event,
     last_seen: Arc<Mutex<String>>,
     debounce: Arc<Mutex<SystemTime>>,
-) -> anyhow::Result<bool> {
+) -> Result<bool, WatchError> {
     match &event.kind {
         notify::EventKind::Create(_) => {
             tokio::time::sleep(Duration::new(1, 0)).await;
@@ -199,37 +215,35 @@ pub async fn recompile_handler(
 
     tracing::trace!("[NewEvent] {:#?}", &event);
 
-    match state.lock().await.workspaces.get_mut(&root) {
-        Some(ws) => {
-            for (_, nvim) in ws.clients.iter() {
-                if let Err(e) = nvim.exec(COMPILE_START_MSG.into(), false).await {
-                    tracing::error!("Fail to echo message to nvim clients {e}")
-                }
-            }
+    let mut state = state.lock().await;
+    let ws = state
+        .get_mut_workspace(&root)
+        .map_err(|e| WatchError::Stop(e.to_string()))?;
 
-            if let Err(e) = ws.on_directory_change(path, &event.kind).await {
-                tracing::error!("{:?}:\n {:#?}", event, e);
-
-                for (_, nvim) in ws.clients.iter() {
-                    if let Err(e) = nvim.log_error("CompileCommands", &e).await {
-                        tracing::error!("Fail to echo error to nvim clients {e}")
-                    }
-                }
-            } else {
-                tracing::info!("Regenerated compile commands");
-                for (_, nvim) in ws.clients.iter() {
-                    if let Err(e) = nvim.exec(COMPILE_SUCC_MESSAGE.into(), false).await {
-                        tracing::error!("Fail to echo message to nvim clients {e}")
-                    }
-                }
-            }
-
-            let mut debounce = debounce.lock().await;
-            *debounce = std::time::SystemTime::now();
+    for (_, nvim) in ws.clients.iter() {
+        if let Err(e) = nvim.exec(COMPILE_START_MSG.into(), false).await {
+            tracing::error!("Fail to echo message to nvim clients {e}")
         }
+    }
 
-        // NOTE: should stop watch here?
-        None => return Ok(false),
-    };
+    if let Err(e) = ws.on_directory_change(path, &event.kind).await {
+        tracing::error!("{:?}:\n {:#?}", event, e);
+
+        for (_, nvim) in ws.clients.iter() {
+            if let Err(e) = nvim.log_error("CompileCommands", &e).await {
+                tracing::error!("Fail to echo error to nvim clients {e}")
+            }
+        }
+    } else {
+        tracing::info!("Regenerated compile commands");
+        for (_, nvim) in ws.clients.iter() {
+            if let Err(e) = nvim.exec(COMPILE_SUCC_MESSAGE.into(), false).await {
+                tracing::error!("Fail to echo message to nvim clients {e}")
+            }
+        }
+    }
+
+    let mut debounce = debounce.lock().await;
+    *debounce = std::time::SystemTime::now();
     Ok(true)
 }
