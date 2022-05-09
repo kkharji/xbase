@@ -13,6 +13,13 @@ local defaults = {
   --- Default log buffer direction.
   --- { "horizontal", "vertical", "float" }
   default_log_buffer_direction = "horizontal",
+  --- Statusline provider configurations
+  statusline = {
+    running = { icon = "⚙", color = "#e0af68" },
+    success = { icon = "", color = "#1abc9c" },
+    failure = { icon = "", color = "#db4b4b" },
+    show_progress = false,
+  },
 }
 
 --- Enahnced version of builtin type function that inclued list type.

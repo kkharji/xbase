@@ -51,6 +51,8 @@ impl Nvim {
         clear: bool,
         open: bool,
     ) -> Result<()> {
+        self.exec("let g:xcodebase_watch_build_status='running'", false)
+            .await?;
         let title = format!("[{title}] ------------------------------------------------------");
         let buf = Buffer::new(self.log_bufnr.into(), self.nvim.clone());
 
@@ -82,12 +84,29 @@ impl Nvim {
 
         buf.set_lines(c, c + 1, false, vec![title]).await?;
         c += 1;
+        let mut success = false;
 
         while let Some(line) = stream.next().await {
+            if line.contains("Succeed") {
+                success = true;
+            }
             buf.set_lines(c, c + 1, false, vec![line]).await?;
             c += 1;
             if open {
                 win.as_ref().unwrap().set_cursor((c, 0)).await?;
+            }
+        }
+
+        if success {
+            self.exec("let g:xcodebase_watch_build_status='success'", false)
+                .await?;
+        } else {
+            self.exec("let g:xcodebase_watch_build_status='failure'", false)
+                .await?;
+            if !open {
+                self.exec(&command, false).await?;
+                self.get_current_win().await?.set_cursor((c, 0)).await?;
+                self.exec("call feedkeys('zt')", false).await?;
             }
         }
 

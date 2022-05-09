@@ -39,6 +39,7 @@ M.all_actions = function(opts)
 
   local command_plate = {}
 
+  --- TODO(nvim): Make nested picker based on available commands
   if watch.is_watching then
     command_plate[#command_plate + 1] = {
       command = "WatchStop",

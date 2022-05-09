@@ -31,6 +31,11 @@ pub struct Workspace {
     #[cfg(feature = "daemon")]
     pub clients: HashMap<i32, Nvim>,
     #[cfg(feature = "daemon")]
+    // TODO: support watching multiple targets at the same time
+    //
+    // One way is to change watch to watchers of (maybe hash set of WatchStart)
+    //
+    // Also to make it convinent, the hash set should contain pid as first item in union.
     pub watch: Option<(crate::daemon::WatchStart, JoinHandle<Result<()>>)>,
 }
 
@@ -254,6 +259,7 @@ impl Workspace {
             tracing::debug!("Watch service stopeed",);
             self.update_lua_state().await?;
         }
+        self.watch = None;
         Ok(())
     }
 
