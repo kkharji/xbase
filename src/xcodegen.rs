@@ -1,5 +1,5 @@
 //! Helper functions to communicate with xcodegen
-use crate::daemon::state::Workspace;
+use crate::daemon::Workspace;
 use anyhow::{Context, Result};
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};

@@ -16,7 +16,7 @@ pub use run::Run;
 pub use watch_start::WatchStart;
 pub use watch_stop::WatchStop;
 
-use super::Client;
+use crate::nvim::Client;
 
 #[cfg(feature = "mlua")]
 use crate::util::mlua::LuaExtension;
@@ -28,7 +28,10 @@ use mlua::prelude::*;
 use super::Requester;
 
 #[cfg(feature = "daemon")]
-use crate::daemon::{DaemonState, Handler};
+use crate::daemon::Handler;
+
+#[cfg(feature = "daemon")]
+use crate::state::DaemonState;
 
 #[cfg(feature = "daemon")]
 use anyhow::Result;

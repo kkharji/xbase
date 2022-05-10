@@ -1,3 +1,6 @@
+// TODO(daemon): Remove ProjectInfo Request
+//
+// This is no longer relevant as the internal state get validated automatically
 use super::*;
 
 /// Return current working direcotry project info
@@ -13,15 +16,11 @@ impl<'a> Requester<'a, ProjectInfo> for ProjectInfo {}
 #[async_trait]
 impl Handler for ProjectInfo {
     async fn handle(self, state: DaemonState) -> Result<()> {
-        let (root, pid) = (&self.client.root, self.client.pid);
+        let (root, _) = (&self.client.root, self.client.pid);
         tracing::info!("Getting info for {}", root);
 
-        let state = state.lock().await;
-        let workspace = state.get_workspace(root)?;
-        let nvim = workspace.nvim(&pid)?;
-        let script = workspace.project.nvim_update_state_script()?;
-
-        nvim.exec_lua(&script, vec![]).await?;
+        let mut state = state.lock().await;
+        state.get_mut_workspace(root)?.sync_state().await?;
 
         Ok(())
     }

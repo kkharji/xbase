@@ -15,5 +15,9 @@ pub mod types;
 
 pub mod util;
 
+mod nvim;
+
 #[cfg(feature = "daemon")]
 mod xcode;
+
+pub mod state;

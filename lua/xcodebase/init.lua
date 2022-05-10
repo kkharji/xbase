@@ -2,7 +2,10 @@ local M = {}
 local config = require "xcodebase.config"
 local lib = require "libxcodebase"
 
-vim.g.xcodebase = vim.empty_dict()
+vim.g.xcodebase = {
+  projects = vim.empty_dict(),
+  watch = vim.empty_dict(),
+}
 
 ---Check whether the vim instance should be registered to xcodebase server.
 ---NOTE: Only support project.yml

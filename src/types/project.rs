@@ -1,29 +1,24 @@
-#[cfg(feature = "serial")]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Represent Xcode Target
-#[derive(Debug)]
-#[allow(dead_code)]
-#[cfg_attr(feature = "serial", derive(Deserialize, Serialize))]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Target {
     pub r#type: String,
     pub platform: String,
     pub sources: Vec<PathBuf>,
 }
 
-#[derive(Debug, Default)]
-#[cfg_attr(feature = "serial", derive(Deserialize, Serialize))]
+pub type TargetMap = HashMap<String, Target>;
+
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct LocalConfig {
     pub ignore: Vec<String>,
 }
 
-pub type TargetMap = HashMap<String, Target>;
-
 /// Represent XcodeGen Project
-#[derive(Debug)]
-#[cfg_attr(feature = "serial", derive(Deserialize, Serialize))]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Project {
     /// Project Name or rather xproj generated file name.
     name: String,
@@ -75,12 +70,7 @@ impl Project {
         self.targets().get(target_name)
     }
 
-    #[cfg(feature = "daemon")]
-    pub fn nvim_update_state_script(&self) -> anyhow::Result<String> {
-        Ok(format!(
-            "require'xcodebase'.projects['{}'] = vim.json.decode([[{}]])",
-            self.root.display(),
-            serde_json::to_string(&self)?
-        ))
+    pub fn to_string(&self) -> anyhow::Result<String> {
+        Ok(serde_json::to_string(&self)?)
     }
 }

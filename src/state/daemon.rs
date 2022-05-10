@@ -1,12 +1,6 @@
-mod project;
-mod workspace;
-
-pub use project::*;
-pub use workspace::*;
-
-#[cfg(feature = "daemon")]
 use anyhow::Result;
 
+use crate::daemon::Workspace;
 use std::collections::HashMap;
 
 /// Main state
@@ -17,14 +11,11 @@ pub struct DaemonStateData {
     /// Connected clients
     pub clients: Vec<i32>,
     // Current System. This is required mainly to check for
-    #[cfg(feature = "async")]
     pub watchers: HashMap<String, tokio::task::JoinHandle<Result<()>>>,
 }
 
-#[cfg(feature = "async")]
 pub type DaemonState = std::sync::Arc<tokio::sync::Mutex<DaemonStateData>>;
 
-#[cfg(feature = "daemon")]
 impl DaemonStateData {
     pub fn get_workspace(&self, root: &str) -> Result<&Workspace> {
         match self.workspaces.get(root) {
@@ -45,7 +36,7 @@ impl DaemonStateData {
 
         if self.workspaces.contains_key(root) {
             let ws = self.get_mut_workspace(root).unwrap();
-            return ws.get_nvim_client(pid, address).await;
+            return ws.add_nvim_client(pid, address).await;
         }
 
         let workspace = Workspace::new(root, pid, address).await?;
@@ -80,11 +71,11 @@ impl DaemonStateData {
     }
 
     pub fn validate(&mut self) {
-        use crate::util::proc::exists as pid_exists;
+        use crate::util::proc_exists;
         self.clients
-            .retain(|pid| pid_exists(pid, || tracing::info!("Removing {pid}")));
+            .retain(|pid| proc_exists(pid, || tracing::info!("Removing {pid}")));
         self.workspaces
             .iter_mut()
-            .for_each(|(_, ws)| ws.update_nvim_clients())
+            .for_each(|(_, ws)| ws.ensure_active_clients())
     }
 }

@@ -2,6 +2,9 @@
 use mlua::prelude::*;
 use serde::{Deserialize, Serialize};
 
+mod project;
+pub use project::*;
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize, strum::Display)]
 #[serde(untagged)]
 pub enum XConfiguration {

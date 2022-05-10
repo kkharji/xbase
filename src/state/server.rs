@@ -60,6 +60,7 @@ impl BuildServerState {
         self.compile_commands = Default::default();
     }
 }
+
 #[test]
 fn test_file_flags() {
     tracing_subscriber::fmt()

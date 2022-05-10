@@ -77,6 +77,7 @@ pub async fn event_handler(
     last_seen: std::sync::Arc<tokio::sync::Mutex<String>>,
     debounce: std::sync::Arc<tokio::sync::Mutex<std::time::SystemTime>>,
 ) -> Result<bool, crate::util::watch::WatchError> {
+    use crate::nvim::BulkLogRequest;
     use crate::util::watch::{self, WatchError};
     use crate::xcode;
     use std::time::Duration;
@@ -130,18 +131,28 @@ pub async fn event_handler(
                 .await
                 .map_err(|e| WatchError::Stop(format!("Unable to log to nvim buffer: {e}")))?;
 
-            nvim.exec_lua(
-                "require'xcodebase.watch'.is_watching = false".into(),
-                vec![],
-            )
-            .await
-            .map_err(|e| WatchError::Stop(format!("Unable to log to nvim buffer: {e}")))?;
+            // TODO: update watch state
+            // nvim.exec_lua(
+            //     "require'xcodebase.watch'.is_watching = false".into(),
+            //     vec![],
+            // )
+            // .await
+            // .map_err(|e| WatchError::Stop(format!("Unable to update nvim state: {e}")))?;
 
             return Err(WatchError::Stop("Run not supported yet!".into()));
         }
     };
 
-    nvim.log_to_buffer("Watch", None, stream, false, false)
+    nvim.buffers
+        .log
+        .bulk_append(BulkLogRequest {
+            nvim,
+            title: "Watch",
+            direction: None,
+            stream,
+            clear: false,
+            open: false,
+        })
         .await
         .map_err(|e| WatchError::Continue(format!("Logging to client failed: {e}")))?;
 

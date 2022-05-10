@@ -1,8 +1,8 @@
 //! Function to watch file system
 //!
 //! Mainly used for creation/removal of files and editing of xcodegen config.
-use crate::daemon::state::Project;
-use crate::daemon::DaemonState;
+use crate::state::DaemonState;
+use crate::types::Project;
 use crate::{compile, xcodegen};
 use notify::event::ModifyKind;
 use notify::{Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -223,42 +223,50 @@ pub async fn recompile_handler(
         .get_mut_workspace(&root)
         .map_err(|e| WatchError::Stop(e.to_string()))?;
 
-    ws.message_all_nvim_instances(COMPILE_START_MSG).await;
+    ws.clients.log_info(COMPILE_START_MSG).await;
 
     let name = ws.name();
 
     if xcodegen::regenerate(name, path, &ws.root)
         .await
-        .map_err(|e| WatchError::Stop(e.to_string()))?
+        .map_err(|e| {
+            let msg = e.to_string();
+            ws.clients.log_error(&msg);
+            WatchError::Stop(msg)
+        })?
     {
         tracing::info!("Updating State.{name}.Project");
         ws.project = match Project::new(&ws.root).await {
-            Ok(p) => p,
+            Ok(p) => {
+                let msg = format!("Updating State.{name}.Project");
+                ws.clients.log_info(&msg).await;
+                p
+            }
             Err(e) => {
                 let msg = format!("Fail to update project {e}");
-                ws.message_all_nvim_instances(&msg).await;
-                tracing::error!("{}", msg);
+                ws.clients.log_error(&msg).await;
                 return Err(WatchError::Continue(msg));
             }
         };
 
-        if let Err(e) = ws.update_lua_state().await {
-            ws.message_all_nvim_instances(&e.to_string()).await;
+        if let Err(e) = ws.sync_state().await {
+            ws.clients.log_error(&e.to_string()).await;
         }
     };
 
     if compile::ensure_server_config(&ws.root).await.is_err() {
-        ws.message_all_nvim_instances("Fail to ensure build server configuration!")
+        ws.clients
+            .log_error("Fail to ensure build server configuration!")
             .await
     };
 
     if compile::update_compilation_file(&ws.root).await.is_err() {
-        ws.message_all_nvim_instances("Fail to regenerate compilation database!")
+        ws.clients
+            .log_error("Fail to regenerate compilation database!")
             .await
     };
 
-    tracing::info!("Regenerated compile commands");
-    ws.message_all_nvim_instances(COMPILE_SUCC_MESSAGE).await;
+    ws.clients.log_info(COMPILE_SUCC_MESSAGE).await;
 
     let mut debounce = debounce.lock().await;
     *debounce = std::time::SystemTime::now();

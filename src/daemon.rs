@@ -1,25 +1,19 @@
 //! Handle requests from neovim and manage dev workflow
 mod message;
 mod requests;
-pub mod state;
-
-mod client;
-pub use client::Client;
-
 #[cfg(feature = "daemon")]
-mod nvim;
+pub mod workspace;
 
 #[cfg(feature = "lua")]
 use crate::util::mlua::LuaExtension;
 
 pub use message::*;
 pub use requests::*;
+#[cfg(feature = "daemon")]
+pub use workspace::Workspace;
 
 #[cfg(feature = "lua")]
 use mlua::prelude::*;
-
-#[cfg(feature = "daemon")]
-pub use state::DaemonState;
 
 #[cfg(feature = "lua")]
 use std::{io::Write, net::Shutdown, os::unix::net::UnixStream, process::Command};

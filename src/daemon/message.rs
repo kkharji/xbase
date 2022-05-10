@@ -27,7 +27,7 @@ pub enum Message {
 
 #[cfg(feature = "daemon")]
 impl Message {
-    pub async fn handle(self, state: super::DaemonState) -> anyhow::Result<()> {
+    pub async fn handle(self, state: crate::state::DaemonState) -> anyhow::Result<()> {
         match self {
             Self::Build(c) => Handler::handle(c, state).await,
             Self::Run(c) => Handler::handle(c, state).await,
@@ -45,7 +45,7 @@ impl Message {
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 pub trait Handler: std::fmt::Debug + Sized {
-    async fn handle(self, _state: super::DaemonState) -> anyhow::Result<()> {
+    async fn handle(self, _state: crate::state::DaemonState) -> anyhow::Result<()> {
         tracing::error!("Not Implemented! {:#?}", self);
         Ok(())
     }

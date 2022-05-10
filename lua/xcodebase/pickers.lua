@@ -19,7 +19,7 @@ local watch = require "xcodebase.watch"
 M.all_actions = function(opts)
   opts = require("telescope.themes").get_dropdown(opts or {})
   local root = vim.loop.cwd()
-  local info = xcodebase.projects[root]
+  local info = vim.g.xcodebase.projects[root]
   if info == nil then
     error "No info available"
     -- info = xcodebase.project_info(root)

@@ -2,10 +2,11 @@ use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
 use tokio::sync::Mutex;
-use xcodebase::daemon::state::DaemonStateData;
+use xcodebase::state::DaemonStateData;
 use xcodebase::util::tracing::install_tracing;
 use xcodebase::{daemon::*, util::watch};
 
+use tracing::*;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     if std::fs::metadata(DAEMON_SOCKET_PATH).is_ok() {
@@ -15,34 +16,34 @@ async fn main() -> anyhow::Result<()> {
     let state: Arc<Mutex<DaemonStateData>> = Default::default();
     let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
-    install_tracing("/tmp", "xcodebase-daemon.log", tracing::Level::TRACE, true)?;
+    install_tracing("/tmp", "xcodebase-daemon.log", Level::TRACE, true)?;
 
     tracing::info!("Started");
     loop {
         let state = state.clone();
         if let Ok((mut s, _)) = listener.accept().await {
             tokio::spawn(async move {
-                let string = {
-                    let mut string = String::default();
-                    if let Err(e) = s.read_to_string(&mut string).await {
-                        return tracing::error!("[Read Error]: {:?}", e);
+                let msg = {
+                    let mut msg = String::default();
+                    if let Err(e) = s.read_to_string(&mut msg).await {
+                        return error!("[Read Error]: {:?}", e);
                     };
-                    string
+                    msg
                 };
 
-                if string.is_empty() {
+                if msg.is_empty() {
                     return;
                 }
 
-                match Request::read(string.clone()) {
+                let req = match Request::read(msg.clone()) {
                     Err(e) => {
-                        return tracing::error!("[Parse Error]: {:?} message: {string}", e);
+                        return error!("[Parse Error]: {:?} message: {msg}", e);
                     }
-                    Ok(req) => {
-                        if let Err(e) = req.message.handle(state.clone()).await {
-                            return tracing::error!("[Failure]: Cause: ({:?})", e);
-                        };
-                    }
+                    Ok(req) => req,
+                };
+
+                if let Err(e) = req.message.handle(state.clone()).await {
+                    return error!("[Failure]: Cause: ({:?})", e);
                 };
 
                 update_watchers(state.clone()).await;

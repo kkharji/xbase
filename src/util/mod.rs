@@ -3,9 +3,18 @@
 pub mod fs;
 #[cfg(feature = "lua")]
 pub mod mlua;
-#[cfg(feature = "proc")]
-pub mod proc;
 #[cfg(feature = "logging")]
 pub mod tracing;
 #[cfg(feature = "watcher")]
 pub mod watch;
+
+#[cfg(feature = "proc")]
+/// check if process exists
+pub fn proc_exists(pid: &i32, cb: impl FnOnce()) -> bool {
+    if libproc::libproc::proc_pid::name(*pid).is_err() {
+        cb();
+        false
+    } else {
+        true
+    }
+}
