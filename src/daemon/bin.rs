@@ -2,9 +2,10 @@ use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
 use tokio::sync::Mutex;
+use xcodebase::constants::*;
+use xcodebase::daemon::*;
 use xcodebase::state::DaemonStateData;
 use xcodebase::util::tracing::install_tracing;
-use xcodebase::{daemon::*, util::watch};
 
 use tracing::*;
 #[tokio::main]
@@ -46,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
                     return error!("[Failure]: Cause: ({:?})", e);
                 };
 
-                update_watchers(state.clone()).await;
+                // update_watchers(state.clone()).await;
             });
         } else {
             anyhow::bail!("Fail to accept a connection")
@@ -58,7 +59,11 @@ async fn main() -> anyhow::Result<()> {
 async fn update_watchers(state: Arc<Mutex<DaemonStateData>>) {
     let copy_state = state.clone();
     let mut current_state = copy_state.lock().await;
-    let watched_roots: Vec<String> = current_state.watchers.keys().map(Clone::clone).collect();
+    let watched_roots: Vec<String> = current_state
+        .build_watchers
+        .keys()
+        .map(Clone::clone)
+        .collect();
     let start_watching: Vec<String> = current_state
         .workspaces
         .keys()
@@ -66,11 +71,10 @@ async fn update_watchers(state: Arc<Mutex<DaemonStateData>>) {
         .map(Clone::clone)
         .collect();
 
-    start_watching.into_iter().for_each(|root| {
-        #[cfg(feature = "logging")]
+    for root in start_watching.into_iter() {
         tracing::info!("Watching {root}");
-
-        let handle = watch::new(root.clone(), state.clone(), watch::recompile_handler);
-        current_state.watchers.insert(root, handle);
-    });
+        if let Err(err) = current_state.watch(&root, None, state.clone()).await {
+            tracing::error!("{err}")
+        };
+    }
 }

@@ -21,3 +21,7 @@ mod nvim;
 mod xcode;
 
 pub mod state;
+
+pub mod constants;
+#[cfg(feature = "daemon")]
+pub mod watchers;

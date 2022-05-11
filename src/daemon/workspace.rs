@@ -1,12 +1,10 @@
-use super::WatchStart;
 use crate::compile;
 use crate::nvim::{Nvim, NvimClients};
 use crate::types::{Project, Target};
 use crate::util::proc_exists;
 use anyhow::Result;
-use std::collections::HashSet;
 use std::path::PathBuf;
-use tokio::task::JoinHandle;
+use tracing::{info, trace};
 
 /// Managed Workspace
 #[derive(Debug)]
@@ -17,8 +15,8 @@ pub struct Workspace {
     pub project: Project,
     /// Active clients pids connect for the xcodebase workspace.
     pub clients: NvimClients,
-    pub watch: Option<(crate::daemon::WatchStart, JoinHandle<Result<()>>)>,
-    pub watchers: HashSet<(WatchStart, JoinHandle<Result<()>>)>,
+    /// Ignore Patterns
+    pub ignore_patterns: Vec<String>, // pub watchers: TargetWatchers,
 }
 
 impl Workspace {
@@ -29,26 +27,35 @@ impl Workspace {
             "Fail to create xcodegen project.",
         )?;
         let name = project.name().to_string();
+        let mut ignore_patterns: Vec<String> = vec![
+            "**/.git/**".into(),
+            "**/*.xcodeproj/**".into(),
+            "**/.*".into(),
+            "**/build/**".into(),
+            "**/buildServer.json".into(),
+        ];
+
+        // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
+        ignore_patterns.extend(project.config().ignore.clone());
 
         let mut ws = Workspace {
             root: root_path,
             project,
-            watch: None,
             clients: NvimClients::new(name),
-            watchers: Default::default(),
+            ignore_patterns,
         };
 
         if !ws.root.join(".compile").is_file() {
-            tracing::info!(".compile doesn't exist, regenerating ...");
+            info!(".compile doesn't exist, regenerating ...");
             compile::update_compilation_file(&ws.root).await?;
         }
 
-        tracing::info!("New Workspace: {:?}", ws.project.name());
-        tracing::trace!("{:?}", ws);
+        info!("New Workspace: {:?}", ws.project.name());
+        trace!("{:?}", ws);
 
         ws.add_nvim_client(pid, address).await?;
 
-        tracing::info!("Managing [{}] {:?}", ws.project.name(), root);
+        info!("Managing [{}] {:?}", ws.project.name(), root);
         Ok(ws)
     }
 
@@ -63,9 +70,8 @@ impl Workspace {
     /// Remove no longer active clients
     pub fn ensure_active_clients(&mut self) {
         let name = self.project.name();
-        self.clients.retain(|pid, _| {
-            proc_exists(pid, || tracing::info!("[{}]: Remove Client: {pid}", name))
-        })
+        self.clients
+            .retain(|pid, _| proc_exists(pid, || info!("[{}]: Remove Client: {pid}", name)))
     }
 
     /// Make sure that clients have identical state.
@@ -81,7 +87,7 @@ impl Workspace {
 
     /// Remove client from workspace
     pub fn remove_client(&mut self, pid: i32) -> usize {
-        tracing::info!("[{}] Remove Client: {pid}", self.name());
+        info!("[{}] Remove Client: {pid}", self.name());
         self.clients.retain(|&p, _| p != pid);
         self.clients.len()
     }
@@ -95,36 +101,5 @@ impl Workspace {
     /// Get project target from project.targets using target_name
     pub fn get_target(&self, target_name: &str) -> Option<&Target> {
         self.project.targets().get(target_name)
-    }
-}
-
-/// Watch Services
-impl Workspace {
-    /// Check if a watch service is running
-    pub fn is_watch_service_running(&self) -> bool {
-        self.watch.is_some()
-    }
-
-    /// Stop a watch service
-    pub async fn stop_watch_service(&mut self) -> Result<()> {
-        if let Some((_, ref mut handle)) = self.watch {
-            handle.abort();
-            handle.await.unwrap_err().is_cancelled();
-            tracing::debug!("Watch service stopeed",);
-            self.sync_state().await?;
-        }
-        self.watch = None;
-        Ok(())
-    }
-
-    /// Stop a watch service
-    pub async fn start_watch_service(
-        &mut self,
-        watch_req: crate::daemon::WatchStart,
-        handle: JoinHandle<Result<()>>,
-    ) -> Result<()> {
-        self.stop_watch_service().await?;
-        self.watch = Some((watch_req, handle));
-        Ok(())
     }
 }

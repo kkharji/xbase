@@ -19,21 +19,9 @@ impl<'a> Requester<'a, WatchStop> for WatchStop {
 #[async_trait]
 impl Handler for WatchStop {
     async fn handle(self, state: DaemonState) -> Result<()> {
-        let current_state = state.clone();
         let root = self.client.root.clone();
-        let mut current_state = current_state.lock().await;
-        let ws = current_state.get_mut_workspace(&root)?;
-
-        ws.stop_watch_service().await?;
-
-        // Update state to indicate that a watch server is disabled
-        for (_, nvim) in ws.clients.iter() {
-            nvim.exec_lua(
-                "require'xcodebase.watch'.is_watching = false".into(),
-                vec![],
-            )
-            .await?;
-        }
+        let mut state = state.lock().await;
+        state.validate(Some(self.client)).await?;
 
         Ok(())
     }

@@ -2,25 +2,24 @@ use super::DaemonState;
 use crate::{daemon::Workspace, nvim::Nvim};
 use anyhow::Result;
 
-pub async fn sync_project_nvim(nvim: &Nvim, root: &str, project: String) -> Result<()> {
-    let script =
-        format!("let g:xcodebase.projects['{root}'] = v:lua.vim.json.decode('{project}')",);
-    nvim.exec(&script, false).await?;
-    Ok(())
+pub fn set_watch_script(root: &str, target: &str, is_watching: bool) -> String {
+    format!(
+        r#"
+        if not vim.g.xcodebase.watch['{root}'] then 
+            vim.g.xcodebase.watch['{root}'] = vim.empty_dict() 
+        end
+
+        vim.g.xcodebase.watch['{target}'] = {is_watching}
+        "#
+    )
 }
 
-pub async fn sync_is_watching_nvim(
-    nvim: &Nvim,
-    root: &str,
-    target: &str,
-    is_watching: bool,
-) -> Result<()> {
-    let set_script = format!("let g:xcodebase.watch['{root}'] = {{}}");
-    let watch_script = format!("let g:xcodebase.watch['{root}']['{target}'] = v:{is_watching}",);
-
-    nvim.exec(&set_script, false).await?;
-    nvim.exec(&watch_script, false).await?;
-    Ok(())
+pub fn set_state_script(root: &str, project: &str) -> String {
+    format!(
+        r#"
+        vim.g.xcodebase.projects['{root}'] = vim.json.decode('{project}')
+        "#
+    )
 }
 
 /// Update project state in workspace

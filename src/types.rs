@@ -1,6 +1,7 @@
 #[cfg(feature = "lua")]
 use mlua::prelude::*;
 use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
 
 mod project;
 pub use project::*;
@@ -44,18 +45,27 @@ pub type XScheme = String;
 /// from a set of files in a project or workspace.
 pub type XTarget = String;
 
+#[derive(Default, Clone, Debug, Serialize, Deserialize, Display, EnumString)]
+pub enum WatchType {
+    #[default]
+    Build,
+    Run,
+}
+
 /// Fields required to build a project
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct BuildConfiguration {
     /// TODO(nvim): make build config sysroot default to tmp in auto-build
     pub sysroot: Option<String>,
     /// Target to build
-    pub target: Option<XTarget>,
+    pub target: XTarget,
     /// Configuration to build with, default Debug
     #[serde(default)]
     pub configuration: XConfiguration,
     /// Scheme to build with
     pub scheme: Option<XScheme>,
+    /// Watch type
+    pub watch_type: WatchType,
 }
 
 impl std::fmt::Display for BuildConfiguration {
@@ -69,9 +79,7 @@ impl std::fmt::Display for BuildConfiguration {
         if let Some(ref scheme) = self.scheme {
             write!(f, " -scheme {scheme}")?;
         }
-        if let Some(ref target) = self.target {
-            write!(f, " -target {target}")?;
-        }
+        write!(f, " -target {}", self.target)?;
         Ok(())
     }
 }
@@ -79,12 +87,19 @@ impl std::fmt::Display for BuildConfiguration {
 #[cfg(feature = "lua")]
 impl<'a> FromLua<'a> for BuildConfiguration {
     fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
         if let LuaValue::Table(table) = lua_value {
+            let watch_type = match table.get::<_, Option<String>>("watch_type")? {
+                Some(w) => WatchType::from_str(&w).to_lua_err()?,
+                None => WatchType::Build,
+            };
+
             Ok(Self {
                 sysroot: table.get("sysroot")?,
                 target: table.get("target")?,
                 configuration: table.get("configuration")?,
                 scheme: table.get("scheme")?,
+                watch_type,
             })
         } else {
             Ok(BuildConfiguration::default())

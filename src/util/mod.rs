@@ -5,8 +5,6 @@ pub mod fs;
 pub mod mlua;
 #[cfg(feature = "logging")]
 pub mod tracing;
-#[cfg(feature = "watcher")]
-pub mod watch;
 
 #[cfg(feature = "proc")]
 /// check if process exists

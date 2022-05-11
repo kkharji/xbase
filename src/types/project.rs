@@ -25,11 +25,10 @@ pub struct Project {
     /// The list of targets in the project mapped by name
     targets: TargetMap,
     /// XcodeBase local configuration
-    #[cfg_attr(feature = "serial", serde(rename(deserialize = "XcodeBase"), default))]
+    #[serde(rename(deserialize = "XcodeBase"), default)]
     xcode_base: LocalConfig,
     /// Root directory
-    #[cfg_attr(feature = "serial", serde(skip))]
-    #[allow(dead_code)]
+    #[serde(skip)]
     root: PathBuf,
 }
 
