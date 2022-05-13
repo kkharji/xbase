@@ -4,26 +4,50 @@ use super::*;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Drop {
     client: Client,
+    #[serde(default)]
+    remove_client: bool,
 }
 
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for Drop {
-    async fn handle(self, state: DaemonState) -> Result<()> {
-        use tracing::*;
-        trace!("{:?}", self);
-        tokio::spawn(async move {
-            let (root, pid) = (&self.client.root, self.client.pid);
-            let mut state = state.lock().await;
+    async fn handle(self) -> anyhow::Result<()> {
+        use crate::constants::DAEMON_STATE;
 
-            if let Err(e) = state.remove_workspace(&root, pid).await {
-                error!("Unable to correctly drop client {e}")
-            };
+        tracing::debug!("{:#?}", self);
 
-            state.validate(None).await?;
+        let Self {
+            client,
+            remove_client,
+        } = self;
 
-            anyhow::Ok(())
-        });
+        let state = DAEMON_STATE.clone();
+        let mut state = state.lock().await;
+
+        if state.clients.contains_key(&client.pid) {
+            tracing::info!("Drop({:?})", client.pid);
+
+            // NOTE: Should only be Some if no more client depend on it
+            if let Some(project) = state.projects.remove(&client).await? {
+                // NOTE: Remove project watchers
+                state.watcher.remove_project_watcher(&client).await;
+
+                // NOTE: Remove target watchers associsated with root
+                state
+                    .watcher
+                    .remove_target_watcher_for_root(&project.root)
+                    .await;
+            }
+
+            // NOTE: Try removing client with given pid
+            if remove_client {
+                tracing::debug!("RemoveClient({})", client.pid);
+                state.clients.remove(&client.pid);
+            }
+
+            // NOTE: Sink state to all client vim.g.xcodebase.state
+            state.sync_client_state().await?;
+        }
 
         Ok(())
     }
@@ -42,6 +66,10 @@ impl<'a> FromLua<'a> for Drop {
         if let LuaValue::Table(table) = lua_value {
             Ok(Self {
                 client: table.get("client")?,
+                remove_client: match table.get::<_, bool>("remove_client") {
+                    Ok(value) => value,
+                    Err(_) => true,
+                },
             })
         } else {
             Err(LuaError::external("Fail to deserialize Drop"))

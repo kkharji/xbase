@@ -1,3 +1,5 @@
+use crate::types::Client;
+
 use super::*;
 
 /// Register new client with workspace
@@ -17,14 +19,41 @@ impl<'a> Requester<'a, Register> for Register {
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for Register {
-    async fn handle(self, state: DaemonState) -> anyhow::Result<()> {
-        tracing::trace!("{:?}", self);
-        let current_state = state.clone();
-        let mut s = current_state.lock().await;
-        let client = &self.client;
+    async fn handle(self) -> anyhow::Result<()> {
+        use crate::constants::DAEMON_STATE;
 
-        s.add_workspace(&client.root, client.pid, &self.address, state)
-            .await
+        let Register { client, .. } = &self;
+        let Client { root, pid } = &client;
+
+        tracing::info!("Register({pid}, {}): ", client.abbrev_root());
+
+        let state = DAEMON_STATE.clone();
+        let mut state = state.lock().await;
+
+        if let Some(project) = state.projects.get_mut(root) {
+            // NOTE: Add client pid to project
+            project.clients.push(*pid);
+        } else {
+            // NOTE: Create nvim client
+            state.projects.add(&self).await?;
+
+            let project = state.projects.get(root).unwrap();
+            let ignore_patterns = project.ignore_patterns.clone();
+
+            // NOTE: Add watcher
+            state
+                .watcher
+                .add_project_watcher(client, ignore_patterns)
+                .await
+        }
+
+        // NOTE: Create nvim client
+        state.clients.add(&self).await?;
+
+        // NOTE: Sink Daemon to nvim vim.g.xcodebase.state
+        let _update_handle = state.sync_client_state().await?;
+
+        Ok(())
     }
 }
 

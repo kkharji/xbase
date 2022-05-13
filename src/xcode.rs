@@ -12,7 +12,7 @@ use xcodebuild::{
 pub async fn stream<'a, I: 'a, S: 'a, P: 'a>(
     root: P,
     args: I,
-    _config: BuildConfiguration,
+    _config: &BuildConfiguration,
 ) -> Result<impl Stream<Item = String> + 'a>
 where
     I: IntoIterator<Item = S>,

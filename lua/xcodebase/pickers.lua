@@ -40,26 +40,19 @@ M.all_actions = function(opts)
   local command_plate = {}
 
   --- TODO(nvim): Make nested picker based on available commands
-  if watch.is_watching then
-    command_plate[#command_plate + 1] = {
-      command = "WatchStop",
-      value = "Watch Stop",
-    }
-  end
 
   for _, target in ipairs(targets) do
     for _, command in ipairs(commands) do
       for _, configuration in ipairs(configurations) do
         -- TODO: Get available simulator from daemon and targets
         -- value should be auto generated based on results
-        local display = string.format(
-          "%s %s %s",
+        local display = ("%s %s %s"):format(
           command,
           target,
           configuration == "Debug" and "" or ("(%s)"):format(configuration)
         )
 
-        command_plate[#command_plate + 1] = {
+        local item = {
           target = target,
           command = command,
           configuration = configuration,
@@ -67,15 +60,18 @@ M.all_actions = function(opts)
           device = nil, -- reserverd later for run command
         }
 
-        if not watch.is_watching then
-          command_plate[#command_plate + 1] = {
-            target = target,
-            command = "Watch",
-            watch_type = command,
-            configuration = configuration,
-            value = "Watch " .. display,
-            device = nil, -- reserverd later for run command
-          }
+        command_plate[#command_plate + 1] = item
+
+        if watch.is_watching(item) then
+          local stop = vim.deepcopy(item)
+          stop.value = "Stop Watch " .. stop.value
+          stop.command = "WatchStop"
+          command_plate[#command_plate + 1] = stop
+        else
+          local start = vim.deepcopy(item)
+          start.value = "Watch " .. start.value
+          start.command = "Watch"
+          command_plate[#command_plate + 1] = start
         end
       end
     end
@@ -111,7 +107,7 @@ M.all_actions = function(opts)
         elseif selected.command == "Watch" then
           watch.start(selected)
         elseif selected.command == "WatchStop" then
-          watch.stop()
+          watch.stop(selected)
         end
       end)
       return true

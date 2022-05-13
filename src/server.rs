@@ -1,6 +1,5 @@
 //! Module for communicating with SourceKit Build Server Protocol.
 mod extensions;
-mod state;
 
 use anyhow::{Context, Result};
 use bsp_server::{types::*, Connection, Message, Request, RequestId, Response};
@@ -9,7 +8,6 @@ use std::{fs::read_to_string, path::PathBuf};
 use tap::Pipe;
 
 pub use extensions::*;
-pub use state::BuildServerState;
 
 static SERVER_NAME: &str = "xcodebase-build-server";
 static SERVER_VERSION: &str = "0.1";
@@ -25,14 +23,12 @@ static SERVER_VERSION: &str = "0.1";
 pub struct BuildServer {
     compile_filepath: Option<PathBuf>,
     root_path: PathBuf,
-    state: BuildServerState,
 }
 
 impl BuildServer {
     /// Create a new instance of BuildServer
     #[tracing::instrument(skip_all, name = "InitializeServer")]
     pub fn new(params: &InitializeBuild) -> Result<(InitializeBuild, Self)> {
-        let state = BuildServerState::default();
         let root_path = params.root_path();
         let config_filepath = root_path.join("buildServer.json");
         let compile_filepath = get_compile_filepath(params);
@@ -42,7 +38,6 @@ impl BuildServer {
             Self {
                 root_path,
                 compile_filepath,
-                state,
             },
         ))
     }
@@ -168,10 +163,16 @@ impl BuildServer {
         let build_target_path = uri.pipe(PathBuf::from);
         let compile_filepath = self.compile_filepath.as_ref();
 
-        self.state
-            .file_flags(&build_target_path, compile_filepath)?
-            .to_vec()
-            .pipe(Result::Ok)
+        match crate::constants::SERVER_STATE.clone().lock() {
+            Ok(mut state) => state
+                .file_flags(&build_target_path, compile_filepath)?
+                .to_vec()
+                .pipe(Result::Ok),
+            Err(err) => {
+                tracing::error!("fail to get file flags {err}");
+                anyhow::bail!("fail to get file flags {err}")
+            }
+        }
     }
 }
 

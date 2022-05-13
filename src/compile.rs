@@ -9,7 +9,7 @@ mod flags;
 use anyhow::{Context, Result};
 pub use command::CompilationCommand;
 pub use flags::CompileFlags;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{ops::Deref, path};
 use tap::Pipe;
 use xcodebuild::parser::Step;
@@ -23,7 +23,7 @@ use xcodebuild::parser::Step;
 /// `xcodebuild clean -verbose && xcodebuild build`
 ///
 /// See <https://clang.llvm.org/docs/JSONCompilationDatabase.html>
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct CompilationDatabase(pub Vec<CompilationCommand>);
 
 impl IntoIterator for CompilationDatabase {
@@ -110,6 +110,7 @@ pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
     use tokio_stream::StreamExt;
 
     let steps = fresh_build(&root).await?.collect::<Vec<Step>>().await;
+    // TODO(build): Ensure that build successed. check for Exit Code
     let json = generate_from_steps(&steps)
         .await?
         .pipe(|cmd| serde_json::to_vec_pretty(&cmd.0))?;

@@ -1,9 +1,8 @@
-use super::*;
-
 #[cfg(feature = "daemon")]
-pub struct Buffers {
-    pub log: NvimLogBuffer,
-}
+use super::NvimClient;
+#[cfg(feature = "daemon")]
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, strum::EnumString, Serialize, Deserialize)]
 #[strum(ascii_case_insensitive)]
@@ -25,11 +24,13 @@ impl BufferDirection {
     }
 
     pub async fn get_window_direction(
-        nvim: &Nvim,
+        nvim: &NvimClient,
         direction: Option<BufferDirection>,
         bufnr: i64,
     ) -> Result<String> {
         use std::str::FromStr;
+        use tap::Pipe;
+
         if let Some(direction) = direction {
             return Ok(direction.to_nvim_command(bufnr));
         };

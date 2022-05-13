@@ -18,7 +18,7 @@ impl<'a> Requester<'a, Run> for Run {}
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 impl Handler for Run {
-    async fn handle(self, _state: DaemonState) -> Result<()> {
+    async fn handle(self) -> Result<()> {
         tracing::info!("Run command");
         Ok(())
     }

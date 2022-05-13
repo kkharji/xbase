@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[cfg(feature = "lua")]
 use mlua::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -6,7 +8,9 @@ use strum::{Display, EnumString};
 mod project;
 pub use project::*;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, strum::Display)]
+pub type Root = PathBuf;
+
+#[derive(Hash, Clone, Debug, Default, Serialize, Deserialize, strum::Display, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum XConfiguration {
     #[default]
@@ -33,19 +37,9 @@ impl<'a> FromLua<'a> for XConfiguration {
     }
 }
 
-/// Xcode Scheme
-///
-/// An Xcode scheme defines a collection of targets to build, a configuration to use when building,
-/// and a collection of tests to execute.
-pub type XScheme = String;
-
-/// Xcode Target
-///
-/// A target specifies a product to build and contains the instructions for building the product
-/// from a set of files in a project or workspace.
-pub type XTarget = String;
-
-#[derive(Default, Clone, Debug, Serialize, Deserialize, Display, EnumString)]
+#[derive(
+    Hash, Default, Clone, Debug, Serialize, Deserialize, Display, EnumString, PartialEq, Eq,
+)]
 pub enum WatchType {
     #[default]
     Build,
@@ -53,17 +47,17 @@ pub enum WatchType {
 }
 
 /// Fields required to build a project
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct BuildConfiguration {
     /// TODO(nvim): make build config sysroot default to tmp in auto-build
     pub sysroot: Option<String>,
     /// Target to build
-    pub target: XTarget,
+    pub target: String,
     /// Configuration to build with, default Debug
     #[serde(default)]
     pub configuration: XConfiguration,
     /// Scheme to build with
-    pub scheme: Option<XScheme>,
+    pub scheme: Option<String>,
     /// Watch type
     pub watch_type: WatchType,
 }
@@ -104,5 +98,32 @@ impl<'a> FromLua<'a> for BuildConfiguration {
         } else {
             Ok(BuildConfiguration::default())
         }
+    }
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
+pub struct Client {
+    pub pid: i32,
+    pub root: Root,
+}
+
+impl Client {
+    pub fn abbrev_root(&self) -> String {
+        self.root
+            .strip_prefix(self.root.ancestors().nth(2).unwrap())
+            .unwrap()
+            .display()
+            .to_string()
+    }
+}
+
+#[cfg(feature = "lua")]
+impl<'a> mlua::FromLua<'a> for Client {
+    fn from_lua(_lua_value: mlua::Value<'a>, lua: &'a mlua::Lua) -> mlua::Result<Self> {
+        use crate::util::mlua::LuaExtension;
+        Ok(Self {
+            pid: std::process::id() as i32,
+            root: LuaExtension::cwd(lua).map(PathBuf::from)?,
+        })
     }
 }

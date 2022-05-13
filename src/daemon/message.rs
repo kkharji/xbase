@@ -26,22 +26,20 @@ pub enum Message {
     Register(Register),
     Drop(Drop),
     RenameFile(RenameFile),
-    WatchStart(WatchStart),
-    WatchStop(WatchStop),
+    WatchTarget(WatchTarget),
 }
 
 #[cfg(feature = "daemon")]
 impl Message {
-    pub async fn handle(self, state: crate::state::DaemonState) -> anyhow::Result<()> {
+    pub async fn handle(self) -> anyhow::Result<()> {
         match self {
-            Self::Build(c) => Handler::handle(c, state).await,
-            Self::Run(c) => Handler::handle(c, state).await,
-            Self::RenameFile(c) => Handler::handle(c, state).await,
-            Self::Register(c) => Handler::handle(c, state).await,
-            Self::Drop(c) => Handler::handle(c, state).await,
-            Self::ProjectInfo(c) => Handler::handle(c, state).await,
-            Self::WatchStart(c) => Handler::handle(c, state).await,
-            Self::WatchStop(c) => Handler::handle(c, state).await,
+            Self::Build(c) => Handler::handle(c).await,
+            Self::Run(c) => Handler::handle(c).await,
+            Self::RenameFile(c) => Handler::handle(c).await,
+            Self::Register(c) => Handler::handle(c).await,
+            Self::Drop(c) => Handler::handle(c).await,
+            Self::ProjectInfo(c) => Handler::handle(c).await,
+            Self::WatchTarget(c) => Handler::handle(c).await,
         }
     }
 }
@@ -50,7 +48,7 @@ impl Message {
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 pub trait Handler: std::fmt::Debug + Sized {
-    async fn handle(self, _state: crate::state::DaemonState) -> anyhow::Result<()> {
+    async fn handle(self) -> anyhow::Result<()> {
         tracing::error!("Not Implemented! {:#?}", self);
         Ok(())
     }

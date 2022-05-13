@@ -37,7 +37,9 @@ M.try_register = function(root, opts)
 end
 
 M.drop = function()
-  lib.drop {}
+  lib.drop {
+    remove_client = true,
+  }
 end
 
 M.build = function(opts)

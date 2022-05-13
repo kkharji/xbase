@@ -1,6 +1,7 @@
 use super::CompilationCommand;
 use crate::util::fs::{find_header_dirs, find_swift_files, find_swift_module_root, get_files_list};
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs::read_to_string,
@@ -14,7 +15,7 @@ const SDKPATH: &str = "/Applications/Xcode.app/Contents/Developer/Platforms/MacO
 ///
 /// Primarily used This is used in [`crate::server::BuildServer`] to support completion and code
 /// navigation for workspace files.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompileFlags(Vec<String>);
 
 impl CompileFlags {

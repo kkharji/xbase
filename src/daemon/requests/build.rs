@@ -2,6 +2,9 @@ use super::*;
 use crate::{nvim::BufferDirection, types::BuildConfiguration};
 use std::fmt::Debug;
 
+#[cfg(feature = "daemon")]
+use crate::{constants::DAEMON_STATE, nvim::WatchLogger, xcode::stream};
+
 /// Build a project.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Build {
@@ -10,38 +13,38 @@ pub struct Build {
     pub direction: Option<BufferDirection>,
 }
 
-#[cfg(feature = "lua")]
-impl<'a> Requester<'a, Build> for Build {
-    fn pre(lua: &Lua, msg: &Build) -> LuaResult<()> {
-        lua.print(&format!("{}", msg.config.to_string()));
+#[cfg(feature = "daemon")]
+#[async_trait]
+impl Handler for Build {
+    async fn handle(self) -> Result<()> {
+        let Self { client, config, .. } = &self;
+        let Client { pid, root } = client;
+
+        tracing::debug!("Handling build request..");
+
+        let state = DAEMON_STATE.lock().await;
+        let nvim = state
+            .clients
+            .get(pid)
+            .ok_or_else(|| anyhow::anyhow!("no client found with {}", self.client.pid))?;
+
+        WatchLogger::new(nvim, "Build", &config)
+            .log_stream(
+                stream(&root, vec!["build".to_string()], &config).await?,
+                None,
+                true,
+                false,
+            )
+            .await?;
+
         Ok(())
     }
 }
 
-#[cfg(feature = "daemon")]
-#[async_trait]
-impl Handler for Build {
-    async fn handle(self, state: DaemonState) -> Result<()> {
-        tracing::debug!("Handling build request..");
-        use crate::nvim::BulkLogRequest;
-        use crate::xcode;
-
-        let state = state.lock().await;
-        let ws = state.get_workspace(&self.client.root)?;
-        let nvim = ws.nvim(&self.client.pid)?;
-
-        nvim.buffers
-            .log
-            .bulk_append(BulkLogRequest {
-                nvim,
-                title: "Build",
-                direction: self.direction,
-                stream: xcode::stream(&ws.root, vec!["build".to_string()], self.config).await?,
-                clear: false,
-                open: true,
-            })
-            .await?;
-
+#[cfg(feature = "lua")]
+impl<'a> Requester<'a, Build> for Build {
+    fn pre(lua: &Lua, msg: &Build) -> LuaResult<()> {
+        lua.print(&format!("{}", msg.config.to_string()));
         Ok(())
     }
 }

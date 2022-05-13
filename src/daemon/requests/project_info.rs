@@ -15,15 +15,15 @@ impl<'a> Requester<'a, ProjectInfo> for ProjectInfo {}
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for ProjectInfo {
-    async fn handle(self, state: DaemonState) -> Result<()> {
-        let (root, _) = (&self.client.root, self.client.pid);
-        tracing::info!("Getting info for {}", root);
+    // async fn handle(self, state: DaemonState) -> Result<()> {
+    //     let (root, _) = (&self.client.root, self.client.pid);
+    //     tracing::info!("Getting info for {}", root);
 
-        let mut state = state.lock().await;
-        state.get_mut_workspace(root)?.sync_state().await?;
+    //     let mut state = state.lock().await;
+    //     state.get_mut_workspace(root)?.sync_state().await?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
 
 #[cfg(feature = "lua")]

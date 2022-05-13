@@ -1,5 +1,4 @@
 //! Helper functions to communicate with xcodegen
-use crate::daemon::Workspace;
 use anyhow::{Context, Result};
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
@@ -36,27 +35,25 @@ pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<ExitStatus> {
 }
 
 // NOTE: passing workspace in-case in the future we would allow configurability of project.yml path
-pub fn get_config_path(ws: &Workspace) -> PathBuf {
+pub fn get_config_path(root: &PathBuf) -> PathBuf {
     /*
     TODO: support otherways to identify xcodegen project
 
     Some would have xcodegen config as json file or
     have different location to where they store xcodegen project config.
     */
-    ws.root.join("project.yml")
+    root.join("project.yml")
 }
 
 /// Checks whether current workspace is xcodegen project.
-pub fn is_valid(ws: &Workspace) -> bool {
-    crate::xcodegen::get_config_path(ws).exists()
+pub fn is_valid(root: &PathBuf) -> bool {
+    get_config_path(root).exists()
 }
 
-pub async fn regenerate(name: &str, path: PathBuf, root: &PathBuf) -> Result<bool> {
+pub async fn regenerate(path: PathBuf, root: &PathBuf) -> Result<bool> {
     if !root.join("project.yml").exists() {
         anyhow::bail!("Project.yml is not found");
     }
-
-    tracing::info!("Updating {name}.xcodeproj");
 
     let mut retry_count = 0;
     while retry_count < 3 {

@@ -23,5 +23,8 @@ mod xcode;
 pub mod state;
 
 pub mod constants;
+
+pub mod store;
+
 #[cfg(feature = "daemon")]
-pub mod watchers;
+pub mod watcher;
