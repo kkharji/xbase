@@ -1,6 +1,6 @@
 mod buffer;
 #[cfg(feature = "daemon")]
-mod watchlogger;
+mod logger;
 
 pub use buffer::BufferDirection;
 
@@ -8,7 +8,7 @@ pub use buffer::BufferDirection;
 use nvim_rs::compat::tokio::Compat;
 
 #[cfg(feature = "daemon")]
-pub use watchlogger::*;
+pub use logger::*;
 
 use serde::{Deserialize, Serialize};
 

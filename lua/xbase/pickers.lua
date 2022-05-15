@@ -1,5 +1,6 @@
 local M = {}
 local a = require "telescope.actions"
+local action_set = require "telescope.actions.set"
 local s = require "telescope.actions.state"
 local finder = require("telescope.finders").new_table
 local picker = require("telescope.pickers").new
@@ -8,9 +9,10 @@ local maker = require("telescope.pickers.entry_display").create
 local xbase = require "xbase"
 local watch = require "xbase.watch"
 
-local handle_action = function(bufnr)
+local handle_action = function(direction, bufnr)
   a.close(bufnr)
   local selected = s.get_selected_entry()
+  selected.direction = direction
 
   if selected.command == "Build" then
     xbase.build(selected)
@@ -105,7 +107,9 @@ M.watch = function(opts)
       end,
     },
     attach_mappings = function(_, _)
-      a.select_default:replace(handle_action)
+      a.select_default:replace(function(bufnr)
+        handle_action(nil, bufnr)
+      end)
       return true
     end,
   }):find()
@@ -160,7 +164,9 @@ M.build_run = function(command, opts)
       end,
     },
     attach_mappings = function(_, _)
-      a.select_default:replace(handle_action)
+      action_set.select:replace(function(bufnr, direction)
+        handle_action(direction, bufnr)
+      end)
       return true
     end,
   }):find()

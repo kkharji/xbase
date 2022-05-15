@@ -5,13 +5,13 @@ use anyhow::Result;
 use nvim_rs::{Buffer, Window};
 use tokio_stream::{Stream, StreamExt};
 
-pub struct WatchLogger<'a> {
+pub struct Logger<'a> {
     pub nvim: &'a NvimClient,
     pub title: &'a str,
     pub request: &'a BuildConfiguration,
 }
 
-impl<'a> WatchLogger<'a> {
+impl<'a> Logger<'a> {
     pub fn new(nvim: &'a NvimClient, title: &'a str, request: &'a BuildConfiguration) -> Self {
         Self {
             nvim,
@@ -47,6 +47,9 @@ impl<'a> WatchLogger<'a> {
         );
 
         let buf = Buffer::new(nvim.log_bufnr.into(), nvim.inner().clone());
+        // TODO(nvim): close log buffer if it is open for new direction
+        //
+        // Currently the buffer direction will be ignored if the buffer is opened already
 
         if clear {
             buf.set_lines(0, -1, false, vec![]).await?;
@@ -58,7 +61,6 @@ impl<'a> WatchLogger<'a> {
         };
 
         // TODO(nvim): build log correct height
-        // TODO(nvim): make auto clear configurable
         let command =
             match BufferDirection::get_window_direction(nvim, direction, nvim.log_bufnr).await {
                 Ok(open_command) => open_command,
