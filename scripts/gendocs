@@ -1,6 +1,6 @@
 #!/bin/lua
--- Setup xcodebase with defaults
-require("xcodebase").setup()
+-- Setup xbase with defaults
+require("xbase").setup()
 
 local docgen = require "docgen"
 
@@ -9,7 +9,7 @@ local docs = {}
 docs.test = function()
   -- TODO: Fix the other files so that we can add them here.
   local input_files = {
-    "./lua/xcodebase/init.lua",
+    "./lua/xbase/init.lua",
   }
 
   table.sort(input_files, function(a, b)

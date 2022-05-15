@@ -43,7 +43,7 @@ impl CompilationCommand {
     /// Examples
     ///
     /// ```no_run
-    /// use xcodebase::compile::CompilationCommand;
+    /// use xbase::compile::CompilationCommand;
     /// let build_logs_lines = vec![];
     /// let cursor_where_the_line_matches = 1;
     /// let command = CompilationCommand::swift_module(&build_logs_lines, cursor_where_the_line_matches);

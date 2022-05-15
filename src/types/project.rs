@@ -12,8 +12,8 @@ pub struct Project {
     pub name: String,
     /// The list of targets in the project mapped by name
     pub targets: HashMap<String, Target>,
-    /// XcodeBase local configuration
-    #[serde(rename(deserialize = "XcodeBase"), default)]
+    /// xbase local configuration
+    #[serde(rename(deserialize = "xbase"), default)]
     pub xcode_base: LocalConfig,
     /// Root directory
     #[serde(skip)]

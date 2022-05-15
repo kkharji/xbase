@@ -2,7 +2,6 @@ use super::*;
 use crate::types::BuildConfiguration;
 use std::fmt::Debug;
 use strum::{Display, EnumString};
-use tap::Pipe;
 
 #[derive(Clone, Debug, Serialize, Deserialize, strum::Display)]
 pub enum WatchOps {
@@ -109,6 +108,7 @@ impl<'a> Requester<'a, WatchTarget> for WatchTarget {
 impl<'a> FromLua<'a> for WatchTarget {
     fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
         use std::str::FromStr;
+        use tap::Pipe;
 
         if let LuaValue::Table(table) = lua_value {
             let ops = if table.get::<_, String>("ops")? == "Start" {

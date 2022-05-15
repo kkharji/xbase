@@ -1,10 +1,10 @@
-local lib = require "libxcodebase"
-local config = require("xcodebase.config").values
+local lib = require "libxbase"
+local config = require("xbase.config").values
 local M = {}
 
 M.is_watching = function(config, command)
   local root = vim.loop.cwd()
-  local targets = vim.g.xcodebase.watcher.targets
+  local targets = vim.g.xbase.watcher.targets
   local key = string.format("%s:%s:xcodebuild -configuration %s", root, command, config.configuration)
 
   if config.sysroot then
@@ -34,7 +34,7 @@ M.feline_provider = function()
       icon = {}
       --- TODO(nvim): only show build status in xcode supported files?
       local config = config.statusline
-      local status = vim.g.xcodebase_watch_build_status
+      local status = vim.g.xbase_watch_build_status
 
       if status == "running" then
         icon.str = config.running.icon

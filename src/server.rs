@@ -9,7 +9,7 @@ use tap::Pipe;
 
 pub use extensions::*;
 
-static SERVER_NAME: &str = "xcodebase-build-server";
+static SERVER_NAME: &str = "xbase-build-server";
 static SERVER_VERSION: &str = "0.1";
 
 /// SourceKit-lsp Build Server
@@ -233,7 +233,7 @@ fn get_build_cache_dir(root_path: &PathBuf) -> Result<String> {
         let name = root_path.file_name()?.to_str()?;
         Some(
             dirs::cache_dir()?
-                .join("xcodebase-build-server")
+                .join("xbase-build-server")
                 .join(format!("{parent}-{name}"))
                 .to_string_lossy()
                 .to_string(),

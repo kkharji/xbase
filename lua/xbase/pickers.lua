@@ -5,23 +5,23 @@ local finder = require("telescope.finders").new_table
 local picker = require("telescope.pickers").new
 local sorter = require("telescope.config").values.generic_sorter
 local maker = require("telescope.pickers.entry_display").create
-local xcodebase = require "xcodebase"
-local watch = require "xcodebase.watch"
+local xbase = require "xbase"
+local watch = require "xbase.watch"
 
 local handle_action = function(bufnr)
   a.close(bufnr)
   local selected = s.get_selected_entry()
 
   if selected.command == "Build" then
-    xcodebase.build(selected)
+    xbase.build(selected)
   elseif selected.command == "Watch" then
-    xcodebase.watch(selected)
+    xbase.watch(selected)
   end
 end
 
 local get_current_dir_targets = function()
   local root = vim.loop.cwd()
-  local info = vim.g.xcodebase.projects[root]
+  local info = vim.g.xbase.projects[root]
   if info == nil then
     error "No info available"
   end

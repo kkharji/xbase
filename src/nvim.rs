@@ -41,11 +41,11 @@ impl NvimClient {
         let buf = nvim.create_buf(false, true).await?;
         let log_bufnr = buf.get_number().await?;
 
-        buf.set_name("[Xcodebase Logs]").await?;
+        buf.set_name("[xbase Logs]").await?;
         buf.set_option("filetype", "xcodebuildlog".into()).await?;
 
         // NOTE: store log bufnr somewhere in vim state
-        nvim.exec(&format!("let g:xcodebase_log_bufnr={log_bufnr}"), false)
+        nvim.exec(&format!("let g:xbase_log_bufnr={log_bufnr}"), false)
             .await?;
 
         Ok(NvimClient {
@@ -67,7 +67,7 @@ impl NvimClient {
     async fn log(&self, level: &str, scope: &str, value: impl ToString) -> Result<()> {
         for line in value.to_string().split("\n") {
             let msg = format!(
-                r#"require'xcodebase.log'.{level}("[{scope}]: {}")"#,
+                r#"require'xbase.log'.{level}("[{scope}]: {}")"#,
                 line.escape_default()
             );
             self.exec_lua(&msg, Vec::default()).await?;

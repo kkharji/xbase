@@ -1,4 +1,4 @@
-# XcodeBase.nvim
+# xbase.nvim
 
 Like Xcode but for neovim.
 

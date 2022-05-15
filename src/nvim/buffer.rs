@@ -35,7 +35,7 @@ impl BufferDirection {
             return Ok(direction.to_nvim_command(bufnr));
         };
 
-        "return require'xcodebase.config'.values.default_log_buffer_direction"
+        "return require'xbase.config'.values.default_log_buffer_direction"
             .pipe(|str| nvim.exec_lua(str, vec![]))
             .await?
             .as_str()

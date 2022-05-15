@@ -662,12 +662,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "libxcodebase"
+name = "libxbase"
 version = "0.1.0"
 dependencies = [
  "mlua",
  "serde_json",
- "xcodebase",
+ "xbase",
 ]
 
 [[package]]
@@ -1767,7 +1767,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "504a2476202769977a040c6364301a3f65d0cc9e3fb08600b2bda150a0488316"
 
 [[package]]
-name = "xcodebase"
+name = "xbase"
 version = "0.1.0"
 dependencies = [
  "anyhow",

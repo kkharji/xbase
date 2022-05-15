@@ -45,7 +45,7 @@ impl Handler for Drop {
                 state.clients.remove(&client.pid);
             }
 
-            // NOTE: Sink state to all client vim.g.xcodebase.state
+            // NOTE: Sink state to all client vim.g.xbase.state
             state.sync_client_state().await?;
         }
 

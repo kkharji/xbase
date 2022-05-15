@@ -1,5 +1,5 @@
 [package]
-name = "xcodebase"
+name = "xbase"
 version = "0.1.0"
 edition = "2021"
 
@@ -19,21 +19,21 @@ jsonrpc     = [ "serial" ]
 xcode       = [ "xcodebuild" ]
 
 [lib]
-name = "xcodebase"
+name = "xbase"
 path = "src/lib.rs"
 
 [workspace]
 members = [
-  "lua/xcodebase",
+  "lua/xbase",
 ]
 
 [[bin]]
-name = "xcodebase-daemon"
+name = "xbase-daemon"
 path = "src/daemon/bin.rs"
 required-features = ["daemon"]
 
 [[bin]]
-name = "xcodebase-server"
+name = "xbase-server"
 path = "src/server/bin.rs"
 required-features = [ "server" ]
 

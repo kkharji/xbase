@@ -50,7 +50,7 @@ impl Handler for Register {
         // NOTE: Create nvim client
         state.clients.add(&self).await?;
 
-        // NOTE: Sink Daemon to nvim vim.g.xcodebase.state
+        // NOTE: Sink Daemon to nvim vim.g.xbase.state
         let _update_handle = state.sync_client_state().await?;
 
         Ok(())

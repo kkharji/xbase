@@ -1,13 +1,13 @@
 use anyhow::Result;
 use bsp_server::{Connection, Message, Request};
 use tracing::Level;
-use xcodebase::{
+use xbase::{
     server::{BuildServer, BuildTargetOutputPathsRequest, OptionsChangedRequest, OptionsRequest},
     util::tracing::install_tracing,
 };
 
 fn main() -> Result<()> {
-    install_tracing("/tmp/", "xcodebase-server.log", Level::DEBUG, false)?;
+    install_tracing("/tmp/", "xbase-server.log", Level::DEBUG, false)?;
     let (conn, io_threads) = Connection::stdio();
     let mut server = BuildServer::default();
 

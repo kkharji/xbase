@@ -12,10 +12,10 @@ pub trait LuaExtension {
 }
 
 fn log(lua: &Lua, level: &str, msg: &str) -> LuaResult<()> {
-    // lua.load(mlua::chunk::chunk!(require("xcodebase.log").$level($msg))).exec()
-    // TODO: remove _XCODEBASELOG hack to log from rust and lua
+    // lua.load(mlua::chunk::chunk!(require("xbase.log").$level($msg))).exec()
+    // TODO: remove _XBASELOG hack to log from rust and lua
     lua.globals()
-        .get::<_, LuaTable>("_XCODEBASELOG")?
+        .get::<_, LuaTable>("_XBASELOG")?
         .get::<_, LuaFunction>(level)?
         .call::<_, ()>(msg.to_lua(lua))
 }
@@ -25,7 +25,7 @@ impl LuaExtension for Lua {
         self.globals()
             .get::<_, LuaFunction>("print")
             .unwrap()
-            .call::<_, ()>(format!("xcodebase: {}", msg).to_lua(self))
+            .call::<_, ()>(format!("xbase: {}", msg).to_lua(self))
             .unwrap()
     }
 

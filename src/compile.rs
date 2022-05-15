@@ -48,7 +48,7 @@ impl Deref for CompilationDatabase {
 ///
 /// Examples:
 ///
-/// ```no_run use xcodebase::compile::CompilationDatabase;
+/// ```no_run use xbase::compile::CompilationDatabase;
 /// CompilationDatabase::from_file("/path/to/xcode_build_logs");
 /// ```
 pub fn parse_from_file<P: AsRef<path::Path> + Clone>(path: P) -> Result<CompilationDatabase> {
@@ -137,9 +137,9 @@ pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
 
     let mut file = tokio::fs::File::create(path).await?;
     let config = serde_json::json! ({
-        "name": "XcodeBase Server",
+        "name": "xbase Server",
         // FIXME: Point to user xcode-build-server
-        "argv": ["/Users/tami5/repos/neovim/XcodeBase.nvim/target/debug/xcodebase-server"],
+        "argv": ["/Users/tami5/repos/neovim/xbase.nvim/target/debug/xbase-server"],
         "version": "0.1",
         "bspVersion": "0.2",
         "languages": [

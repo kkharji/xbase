@@ -1,8 +1,8 @@
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
-use xcodebase::constants::*;
-use xcodebase::daemon::*;
-use xcodebase::util::tracing::install_tracing;
+use xbase::constants::*;
+use xbase::daemon::*;
+use xbase::util::tracing::install_tracing;
 
 use tracing::*;
 #[tokio::main]
@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
-    install_tracing("/tmp", "xcodebase-daemon.log", Level::TRACE, true)?;
+    install_tracing("/tmp", "xbase-daemon.log", Level::TRACE, true)?;
 
     tracing::info!("Started");
     loop {

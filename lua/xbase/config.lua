@@ -1,11 +1,11 @@
 local config = {}
-local log = require "xcodebase.log"
+local log = require "xbase.log"
 
-_XCODEBASECONFIG = _XCODEBASECONFIG or {}
+_XBASECONFIG = _XBASECONFIG or {}
 
-config.values = _XCODEBASECONFIG
+config.values = _XBASECONFIG
 
----@class XcodeBaseOptions
+---@class xbaseOptions
 local defaults = {
   --- Log level. Set to error to ignore everything
   --- { "trace", "debug", "info", "warn", "error" }
@@ -93,21 +93,21 @@ config.set = function(opts)
 
   if next(opts) ~= nil then
     for k, v in pairs(opts) do
-      local typ = check_type(_XCODEBASECONFIG[k], v, k)
+      local typ = check_type(_XBASECONFIG[k], v, k)
       if typ ~= "table" then
-        _XCODEBASECONFIG[k] = v
+        _XBASECONFIG[k] = v
       else
-        consume_opts(k, _XCODEBASECONFIG[k], v)
+        consume_opts(k, _XBASECONFIG[k], v)
       end
     end
   else
-    if vim.tbl_isempty(_XCODEBASECONFIG) then
-      _XCODEBASECONFIG = defaults
-      config.values = _XCODEBASECONFIG
+    if vim.tbl_isempty(_XBASECONFIG) then
+      _XBASECONFIG = defaults
+      config.values = _XBASECONFIG
     end
   end
 
-  _XCODEBASELOG.level = opts.log_level or defaults.log_level
+  _XBASELOG.level = opts.log_level or defaults.log_level
 end
 
 config.set()

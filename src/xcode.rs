@@ -65,7 +65,7 @@ pub async fn fresh_build<'a, P: AsRef<Path> + 'a>(
        when generating compiled commands, as well as doing actual builds and runs.
 
        ```yaml
-       XcodeBase:
+       xbase:
        buildArguments: [];
        compileArguments: [];
        runArguments: [];

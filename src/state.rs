@@ -114,7 +114,7 @@ impl State {
 
     pub async fn sync_client_state(&self) -> Result<()> {
         let state_str = self.try_into_string()?;
-        let update_state_script = format!("vim.g.xcodebase= vim.json.decode([[{state_str}]])");
+        let update_state_script = format!("vim.g.xbase= vim.json.decode([[{state_str}]])");
         tracing::info!("Syncing state to all nvim instance");
 
         self.clients.update_state(&update_state_script).await?;

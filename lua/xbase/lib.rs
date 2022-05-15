@@ -1,6 +1,6 @@
 use mlua::{lua_module, prelude::*};
 use std::{net::Shutdown, os::unix::net::UnixStream, process::Command};
-use xcodebase::{constants::*, daemon::*, util::mlua::LuaExtension};
+use xbase::{constants::*, daemon::*, util::mlua::LuaExtension};
 
 macro_rules! fun {
     ($t:ident, $lua:ident) => {
@@ -12,7 +12,7 @@ macro_rules! fun {
 }
 
 #[lua_module]
-fn libxcodebase(l: &Lua) -> LuaResult<LuaTable> {
+fn libxbase(l: &Lua) -> LuaResult<LuaTable> {
     l.create_table_from([
         ("is_running", l.create_function(is_running)?),
         ("ensure", l.create_function(ensure)?),

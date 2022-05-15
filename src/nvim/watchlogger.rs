@@ -38,7 +38,7 @@ impl<'a> WatchLogger<'a> {
 
         let BuildConfiguration { .. } = request;
 
-        nvim.exec("let g:xcodebase_watch_build_status='running'", false)
+        nvim.exec("let g:xbase_watch_build_status='running'", false)
             .await?;
 
         let title = format!(
@@ -95,10 +95,10 @@ impl<'a> WatchLogger<'a> {
         }
 
         if success {
-            nvim.exec("let g:xcodebase_watch_build_status='success'", false)
+            nvim.exec("let g:xbase_watch_build_status='success'", false)
                 .await?;
         } else {
-            nvim.exec("let g:xcodebase_watch_build_status='failure'", false)
+            nvim.exec("let g:xbase_watch_build_status='failure'", false)
                 .await?;
             if !open {
                 nvim.exec(&command, false).await?;

@@ -1,13 +1,13 @@
 local M = {}
-local config = require "xcodebase.config"
-local lib = require "libxcodebase"
+local config = require "xbase.config"
+local lib = require "libxbase"
 
-vim.g.xcodebase = {
+vim.g.xbase = {
   projects = vim.empty_dict(),
   watch = vim.empty_dict(),
 }
 
----Check whether the vim instance should be registered to xcodebase server.
+---Check whether the vim instance should be registered to xbase server.
 ---NOTE: Only support project.yml
 ---@param root string: current working directory
 ---@param _ table: options to influence the result.
@@ -25,14 +25,14 @@ M.register = function()
   lib.register { address = vim.env.NVIM_LISTEN_ADDRESS }
 end
 
----Tries to register vim instance as client for xcodebase server.
----Only register the vim instance when `xcodebase.should_attach`
----@see xcodebase.should_attach
+---Tries to register vim instance as client for xbase server.
+---Only register the vim instance when `xbase.should_attach`
+---@see xbase.should_attach
 M.try_register = function(root, opts)
   opts = opts or {}
   if M.should_register(root, opts) then
     M.register()
-    vim.cmd [[ autocmd VimLeavePre * lua require'xcodebase'.drop()]]
+    vim.cmd [[ autocmd VimLeavePre * lua require'xbase'.drop()]]
   end
 end
 
@@ -50,14 +50,14 @@ M.watch = function(opts)
   lib.watch_target(opts)
 end
 
----Setup xcodebase for current instance.
+---Setup xbase for current instance.
 ---Should ran once per neovim instance
----@param opts XcodeBaseOptions
+---@param opts xbaseOptions
 ---@overload fun()
 M.setup = function(opts)
   local root = vim.loop.cwd()
   opts = opts or {}
-  -- Mutate xcodebase configuration
+  -- Mutate xbase configuration
   config.set(opts)
   -- Try to register current vim instance
   -- NOTE: Should this register again on cwd change?
@@ -66,11 +66,11 @@ M.setup = function(opts)
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
     pattern = { "*.m", "*.swift", "*.c" },
     callback = function()
-      vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").actions, { buffer = true })
+      vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
     end,
   })
   -- so that on a new buffer it would work
-  vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").actions, { buffer = true })
+  vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
 end
 
 return M
