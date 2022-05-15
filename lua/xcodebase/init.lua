@@ -46,12 +46,6 @@ M.build = function(opts)
   lib.build(opts)
 end
 
-M.project_info = function(root)
-  M.projects[root] = nil
-  lib.project_info {}
-  while M.projects[root] == nil do
-  end
-  return M.projects[root]
 end
 
 ---Setup xcodebase for current instance.

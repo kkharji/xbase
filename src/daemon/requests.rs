@@ -1,18 +1,16 @@
 mod build;
 mod drop;
-mod project_info;
 mod register;
 mod rename_file;
 mod run;
 mod watch_target;
 
-pub use build::Build;
-pub use drop::Drop;
-pub use project_info::ProjectInfo;
-pub use register::Register;
-pub use rename_file::RenameFile;
-pub use run::Run;
-pub use watch_target::WatchTarget;
+pub use build::*;
+pub use drop::*;
+pub use register::*;
+pub use rename_file::*;
+pub use run::*;
+pub use watch_target::*;
 
 #[cfg(feature = "mlua")]
 use crate::util::mlua::LuaExtension;
@@ -51,5 +49,4 @@ convertable!(Run);
 convertable!(Register);
 convertable!(RenameFile);
 convertable!(Drop);
-convertable!(ProjectInfo);
 convertable!(WatchTarget);

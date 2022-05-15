@@ -22,7 +22,6 @@ impl Request {
 pub enum Message {
     Build(Build),
     Run(Run),
-    ProjectInfo(ProjectInfo),
     Register(Register),
     Drop(Drop),
     RenameFile(RenameFile),
@@ -38,7 +37,6 @@ impl Message {
             Self::RenameFile(c) => Handler::handle(c).await,
             Self::Register(c) => Handler::handle(c).await,
             Self::Drop(c) => Handler::handle(c).await,
-            Self::ProjectInfo(c) => Handler::handle(c).await,
             Self::WatchTarget(c) => Handler::handle(c).await,
         }
     }
