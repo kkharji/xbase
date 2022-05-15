@@ -131,10 +131,12 @@ M.build_run = function(command, opts)
 
             results[#results + 1] = {
               command = command,
-              target = target,
-              configuration = configuration,
               value = display,
-              device = nil, -- reserverd later for run command
+              config = {
+                target = target,
+                configuration = configuration,
+                device = nil, -- reserverd later for run command
+              },
             }
           end
         end

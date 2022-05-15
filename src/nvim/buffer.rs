@@ -4,7 +4,7 @@ use super::NvimClient;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, strum::EnumString, Serialize, Deserialize)]
+#[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
 #[strum(ascii_case_insensitive)]
 pub enum BufferDirection {
     Float,

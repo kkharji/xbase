@@ -32,14 +32,12 @@ M.try_register = function(root, opts)
   opts = opts or {}
   if M.should_register(root, opts) then
     M.register()
-    vim.cmd [[ autocmd VimLeavePre * lua require'xbase'.drop()]]
+    vim.cmd [[ autocmd VimLeavePre * lua require'xbase'.drop(true)]]
   end
 end
 
-M.drop = function()
-  lib.drop {
-    remove_client = true,
-  }
+M.drop = function(remove_client)
+  lib.drop { remove_client = remove_client }
 end
 
 M.build = function(opts)

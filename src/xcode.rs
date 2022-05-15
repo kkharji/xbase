@@ -9,18 +9,14 @@ use xcodebuild::{
 };
 
 #[cfg(feature = "daemon")]
-pub async fn stream<'a, I: 'a, S: 'a, P: 'a>(
+pub async fn stream_build<'a, P: 'a>(
     root: P,
-    args: I,
-    _config: &BuildConfiguration,
+    config: &BuildConfiguration,
 ) -> Result<impl Stream<Item = String> + 'a>
 where
-    I: IntoIterator<Item = S>,
-    S: AsRef<std::ffi::OsStr>,
     P: AsRef<Path>,
 {
-    // TOOD: Process configuration
-    let mut stream = spawn(root, args).await?;
+    let mut stream = spawn(root, config.as_args()).await?;
 
     Ok(Box::pin(stream! {
         use xcodebuild::parser::Step::*;

@@ -49,7 +49,7 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
         .ok_or_else(|| WatchError::Stop("Fail to find nvim instance with given pid".to_string()))?;
 
     let stream = match kind {
-        WatchKind::Build => xcode::stream(&root, &["build"], &config)
+        WatchKind::Build => xcode::stream_build(&root, &config)
             .await
             .map_err(WatchError::r#continue)?,
 

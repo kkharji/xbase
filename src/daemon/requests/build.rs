@@ -3,7 +3,7 @@ use crate::{nvim::BufferDirection, types::BuildConfiguration};
 use std::fmt::Debug;
 
 #[cfg(feature = "daemon")]
-use crate::{constants::DAEMON_STATE, nvim::WatchLogger, xcode::stream};
+use crate::{constants::DAEMON_STATE, nvim::WatchLogger, xcode::stream_build};
 
 /// Build a project.
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +20,7 @@ impl Handler for Build {
         let Self { client, config, .. } = &self;
         let Client { pid, root } = client;
 
-        tracing::debug!("Handling build request..");
+        tracing::debug!("Handling build request {:#?}", self.config);
 
         let state = DAEMON_STATE.lock().await;
         let nvim = state
@@ -28,13 +28,10 @@ impl Handler for Build {
             .get(pid)
             .ok_or_else(|| anyhow::anyhow!("no client found with {}", self.client.pid))?;
 
+        let direction = self.direction.clone();
+
         WatchLogger::new(nvim, "Build", &config)
-            .log_stream(
-                stream(&root, vec!["build".to_string()], &config).await?,
-                None,
-                true,
-                false,
-            )
+            .log_stream(stream_build(&root, &config).await?, direction, true, true)
             .await?;
 
         Ok(())
@@ -53,18 +50,21 @@ impl<'a> Requester<'a, Build> for Build {
 impl<'a> FromLua<'a> for Build {
     fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
         use std::str::FromStr;
-        if let LuaValue::Table(table) = lua_value {
-            let mut direction = None;
-            if let Some(str) = table.get::<_, Option<String>>("direction")? {
-                direction = BufferDirection::from_str(&str).ok();
-            }
-            Ok(Self {
-                client: table.get("client")?,
-                config: table.get("config")?,
-                direction,
-            })
-        } else {
-            Err(LuaError::external("Fail to deserialize Build"))
+        let mut direction = None;
+
+        let table = match lua_value {
+            LuaValue::Table(table) => table,
+            _ => return Err(LuaError::external("Fail to deserialize Build")),
+        };
+
+        if let Some(str) = table.get::<_, Option<String>>("direction")? {
+            direction = BufferDirection::from_str(&str).ok();
         }
+
+        Ok(Self {
+            client: table.get("client")?,
+            config: table.get("config")?,
+            direction,
+        })
     }
 }

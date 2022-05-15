@@ -7,11 +7,9 @@ config.values = _XBASECONFIG
 
 ---@class xbaseOptions
 local defaults = {
-  --- Log level. Set to error to ignore everything
-  --- { "trace", "debug", "info", "warn", "error" }
+  --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
   log_level = "debug",
-  --- Default log buffer direction.
-  --- { "horizontal", "vertical", "float" }
+  --- Default log buffer direction: { "horizontal", "vertical", "float" }
   default_log_buffer_direction = "horizontal",
   --- Statusline provider configurations
   statusline = {
