@@ -46,6 +46,8 @@ M.build = function(opts)
   lib.build(opts)
 end
 
+M.watch = function(opts)
+  lib.watch_target(opts)
 end
 
 ---Setup xcodebase for current instance.
@@ -64,25 +66,11 @@ M.setup = function(opts)
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
     pattern = { "*.m", "*.swift", "*.c" },
     callback = function()
-      vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").all_actions, { buffer = true })
+      vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").actions, { buffer = true })
     end,
   })
   -- so that on a new buffer it would work
-  vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").all_actions, { buffer = true })
+  vim.keymap.set("n", "<leader>ef", require("xcodebase.pickers").actions, { buffer = true })
 end
-
----@class XcodeTarget
----@field type string
----@field platform string
----@field sources string[]
-
----@class XcodeProject
----@field name string @Project name
----@field root string @Project root
----@field targets table<string, XcodeTarget> @Project targets
-
----Holds project informations
----@type table<string, XcodeProject>
-M.projects = {}
 
 return M

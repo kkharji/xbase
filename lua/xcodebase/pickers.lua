@@ -8,21 +8,22 @@ local maker = require("telescope.pickers.entry_display").create
 local xcodebase = require "xcodebase"
 local watch = require "xcodebase.watch"
 
---[[
--- Run <Simulator>
--- Watch Run <Simulator>
--- Run <Device>
--- Watch Build Debug 
--- Watch Build Release
---]]
---
-M.all_actions = function(opts)
-  opts = require("telescope.themes").get_dropdown(opts or {})
+local handle_action = function(bufnr)
+  a.close(bufnr)
+  local selected = s.get_selected_entry()
+
+  if selected.command == "Build" then
+    xcodebase.build(selected)
+  elseif selected.command == "Watch" then
+    xcodebase.watch(selected)
+  end
+end
+
+local get_current_dir_targets = function()
   local root = vim.loop.cwd()
   local info = vim.g.xcodebase.projects[root]
   if info == nil then
     error "No info available"
-    -- info = xcodebase.project_info(root)
   end
 
   local targets = {}
@@ -32,56 +33,61 @@ M.all_actions = function(opts)
     targets[#targets + 1] = name
   end
 
-  local commands = { "Build", "Run" }
-
   -- TOOD(core): Support custom project configurations
   local configurations = { "Debug", "Release" }
 
-  local command_plate = {}
+  return targets, configurations
+end
 
-  --- TODO(nvim): Make nested picker based on available commands
-
-  for _, target in ipairs(targets) do
-    for _, command in ipairs(commands) do
-      for _, configuration in ipairs(configurations) do
-        -- TODO: Get available simulator from daemon and targets
-        -- value should be auto generated based on results
-        local display = ("%s %s %s"):format(
-          command,
-          target,
-          configuration == "Debug" and "" or ("(%s)"):format(configuration)
-        )
-
-        local item = {
-          target = target,
-          command = command,
-          configuration = configuration,
-          value = display,
-          device = nil, -- reserverd later for run command
-        }
-
-        command_plate[#command_plate + 1] = item
-
-        if watch.is_watching(item) then
-          local stop = vim.deepcopy(item)
-          stop.value = "Stop Watch " .. stop.value
-          stop.command = "WatchStop"
-          command_plate[#command_plate + 1] = stop
-        else
-          local start = vim.deepcopy(item)
-          start.value = "Watch " .. start.value
-          start.command = "Watch"
-          command_plate[#command_plate + 1] = start
-        end
-      end
-    end
-  end
+M.watch = function(opts)
+  opts = require("telescope.themes").get_dropdown(opts or {})
+  local targets, configurations = get_current_dir_targets()
+  local commands = { "Build", "Run" }
 
   picker(opts, {
     sorter = sorter {},
-    prompt_title = "Execute action",
+    prompt_title = "Watch",
     finder = finder {
-      results = command_plate,
+      results = (function()
+        local results = {}
+
+        --- TODO(nvim): Make nested picker based on available commands
+        for _, target in ipairs(targets) do
+          for _, command in ipairs(commands) do
+            for _, configuration in ipairs(configurations) do
+              local config = configuration == "Debug" and "" or ("(%s)"):format(configuration)
+
+              -- TODO: Get available simulator from daemon and targets value should be auto generated based on results
+              local display = ("%s %s %s"):format(command, target, config)
+
+              local item = {
+                command = "Watch",
+                config = {
+                  target = target,
+                  command = command,
+                  configuration = configuration,
+                  value = display,
+                  device = nil, -- reserverd later for run command
+                },
+              }
+
+              if watch.is_watching(item.config, command) then
+                item.ops = "Stop"
+                item.value = display
+                item.kind = command
+              else
+                item.ops = "Start"
+                item.value = display
+                item.kind = command
+              end
+
+              results[#results + 1] = item
+            end
+          end
+        end
+
+        return results
+      end)(),
       entry_maker = function(entry)
         entry.ordinal = entry.value
         entry.display = function(e)
@@ -99,15 +105,106 @@ M.all_actions = function(opts)
       end,
     },
     attach_mappings = function(_, _)
+      a.select_default:replace(handle_action)
+      return true
+    end,
+  }):find()
+end
+
+M.build_run = function(command, opts)
+  opts = require("telescope.themes").get_dropdown(opts or {})
+  local targets, configurations = get_current_dir_targets()
+
+  picker(opts, {
+    sorter = sorter {},
+    prompt_title = command,
+    finder = finder {
+      results = (function()
+        local results = {}
+        --- TODO(nvim): Make nested picker based on available commands
+        for _, target in ipairs(targets) do
+          for _, configuration in ipairs(configurations) do
+            local config = configuration == "Debug" and "" or ("(%s)"):format(configuration)
+
+            -- TODO: Get available simulator from daemon and targets value should be auto generated based on results
+            local display = ("%s %s"):format(target, config)
+
+            results[#results + 1] = {
+              command = command,
+              target = target,
+              configuration = configuration,
+              value = display,
+              device = nil, -- reserverd later for run command
+            }
+          end
+        end
+
+        return results
+      end)(),
+      entry_maker = function(entry)
+        entry.ordinal = entry.value
+
+        entry.display = function(e)
+          local maker = maker {
+            separator = " ",
+            hl_chars = { ["|"] = "TelescopeResultsNumber" },
+            items = { { width = 40 } },
+          }
+
+          return maker { { e.value, "TelescopeResultsMethod" } }
+        end
+
+        return entry
+      end,
+    },
+    attach_mappings = function(_, _)
+      a.select_default:replace(handle_action)
+      return true
+    end,
+  }):find()
+end
+
+M.actions = function(opts)
+  opts = require("telescope.themes").get_dropdown(opts or {})
+  picker(opts, {
+    sorter = sorter {},
+    prompt_title = "Pick Xbase Action Category",
+    finder = finder {
+      results = {
+        { value = "Watch" },
+        { value = "Build" },
+        { value = "Run" },
+      },
+      entry_maker = function(entry)
+        entry.ordinal = entry.value
+        entry.display = function(e)
+          local maker = maker {
+            separator = " ",
+            hl_chars = { ["|"] = "TelescopeResultsNumber" },
+            items = { { width = 40 } },
+          }
+
+          return maker {
+            { e.value, "TelescopeResultsMethod" },
+          }
+        end
+
+        return entry
+      end,
+    },
+    attach_mappings = function(_, _)
       a.select_default:replace(function(bufnr)
         a.close(bufnr)
         local selected = s.get_selected_entry()
-        if selected.command == "Build" then
-          xcodebase.build(selected)
-        elseif selected.command == "Watch" then
-          watch.start(selected)
-        elseif selected.command == "WatchStop" then
-          watch.stop(selected)
+        if not selected then
+          print "No selection"
+          return
+        end
+
+        if selected.value == "Watch" then
+          M.watch(opts)
+        elseif selected.value == "Build" or selected.value == "Run" then
+          M.build_run(selected.value, opts)
         end
       end)
       return true

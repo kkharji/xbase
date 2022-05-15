@@ -1,11 +1,20 @@
 use super::*;
 use crate::types::BuildConfiguration;
 use std::fmt::Debug;
+use strum::{Display, EnumString};
+use tap::Pipe;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum WatchKind {
+#[derive(Clone, Debug, Serialize, Deserialize, strum::Display)]
+pub enum WatchOps {
     Stop,
     Start,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize, Display, EnumString)]
+pub enum WatchKind {
+    #[default]
+    Build,
+    Run,
 }
 
 /// Stop Watching a project.
@@ -13,7 +22,19 @@ pub enum WatchKind {
 pub struct WatchTarget {
     pub client: Client,
     pub config: BuildConfiguration,
-    pub ops: WatchKind,
+    pub ops: WatchOps,
+    pub kind: WatchKind,
+}
+
+impl WatchTarget {
+    pub fn key(&self) -> String {
+        format!(
+            "{}:{}:{}",
+            self.client.root.display(),
+            self.kind,
+            self.config
+        )
+    }
 }
 
 #[cfg(feature = "daemon")]
@@ -26,6 +47,7 @@ impl Handler for WatchTarget {
             client,
             config,
             ops,
+            ..
         } = &self;
 
         let BuildConfiguration { target, .. } = config;
@@ -38,7 +60,7 @@ impl Handler for WatchTarget {
         }
 
         match ops {
-            WatchKind::Start => {
+            WatchOps::Start => {
                 // NOTE: Get project associate ignore pattern
                 let ignore_patterns = state
                     .projects
@@ -53,7 +75,7 @@ impl Handler for WatchTarget {
                     .add_target_watcher(&self, ignore_patterns)
                     .await;
             }
-            WatchKind::Stop => {
+            WatchOps::Stop => {
                 // NOTE: Remove target watcher
                 state.watcher.remove_target_watcher(&self, client).await;
             }
@@ -71,11 +93,11 @@ impl Handler for WatchTarget {
 impl<'a> Requester<'a, WatchTarget> for WatchTarget {
     fn pre(lua: &Lua, msg: &WatchTarget) -> LuaResult<()> {
         match msg.ops {
-            WatchKind::Start => {
+            WatchOps::Start => {
                 lua.print(&format!("{}", msg.config.to_string()));
             }
-            WatchKind::Stop => {
-                lua.print(&format!("Stopping watching service .."));
+            WatchOps::Stop => {
+                lua.print(&format!("Stop watching with `{}`", msg.config.to_string()));
             }
         }
 
@@ -86,17 +108,28 @@ impl<'a> Requester<'a, WatchTarget> for WatchTarget {
 #[cfg(feature = "mlua")]
 impl<'a> FromLua<'a> for WatchTarget {
     fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
+
         if let LuaValue::Table(table) = lua_value {
             let ops = if table.get::<_, String>("ops")? == "Start" {
-                WatchKind::Start
+                WatchOps::Start
             } else {
-                WatchKind::Stop
+                WatchOps::Stop
             };
 
+            let kind = table
+                .get::<_, String>("kind")?
+                .pipe(|s| WatchKind::from_str(&s).to_lua_err())
+                .unwrap_or_default();
+
+            let client = table.get("client")?;
+            let config = table.get("config")?;
+
             Ok(Self {
-                client: table.get("client")?,
-                config: table.get("config")?,
+                client,
+                config,
                 ops,
+                kind,
             })
         } else {
             Err(LuaError::external("Fail to deserialize Watch"))

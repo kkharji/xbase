@@ -1,8 +1,8 @@
 use super::{WatchArguments, WatchError};
 use crate::constants::DAEMON_STATE;
-use crate::daemon::WatchTarget;
+use crate::daemon::{WatchKind, WatchTarget};
 use crate::nvim::WatchLogger;
-use crate::types::{BuildConfiguration, Client, WatchType};
+use crate::types::{BuildConfiguration, Client};
 use crate::xcode;
 use anyhow::Result;
 use notify::{event::ModifyKind, Event, EventKind};
@@ -25,11 +25,16 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
 
     let info = info.lock().await;
 
-    let WatchTarget { client, config, .. } = info
+    let WatchTarget {
+        client,
+        config,
+        kind,
+        ..
+    } = info
         .try_into_target()
         .map_err(|e| WatchError::Stop(format!("Expected target got {:?}", e)))?;
 
-    let BuildConfiguration { watch_type, .. } = config;
+    let BuildConfiguration { .. } = config;
 
     let Client { pid, root } = client;
 
@@ -43,18 +48,17 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
         .get(&pid)
         .ok_or_else(|| WatchError::Stop("Fail to find nvim instance with given pid".to_string()))?;
 
-    let stream = match watch_type {
-        WatchType::Build => xcode::stream(&root, &["build"], &config)
+    let stream = match kind {
+        WatchKind::Build => xcode::stream(&root, &["build"], &config)
             .await
             .map_err(WatchError::r#continue)?,
 
-        WatchType::Run => {
+        WatchKind::Run => {
             nvim.log_error("Watch", "Run is not supported yet! .. aborting")
                 .await
                 .map_err(WatchError::stop)?;
 
             // NOTE: Update state before exiting
-
             state
                 .sync_client_state()
                 .await

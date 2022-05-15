@@ -1,7 +1,7 @@
 use crate::daemon::WatchTarget;
 use crate::watcher::WatchHandler;
 
-use crate::types::{BuildConfiguration, Client, Root};
+use crate::types::{Client, Root};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -35,7 +35,7 @@ impl WatchStore {
 
 impl WatchStore {
     pub async fn add_target_watcher(&mut self, request: &WatchTarget, ignore_pattern: Vec<String>) {
-        let key = target_key(&request.config, &request.client);
+        let key = request.key();
         let handler = WatchHandler::new_target_watcher(request.clone(), ignore_pattern);
 
         tracing::info!(
@@ -48,7 +48,7 @@ impl WatchStore {
     }
 
     pub async fn remove_target_watcher(&mut self, request: &WatchTarget, client: &Client) {
-        let key = target_key(&request.config, &request.client);
+        let key = request.key();
 
         if let Some(handle) = self.targets.get(&key) {
             handle.inner().abort();
@@ -72,8 +72,4 @@ impl WatchStore {
 
         self.targets.retain(|key, _| !key.contains(&root));
     }
-}
-
-fn target_key(config: &BuildConfiguration, client: &Client) -> String {
-    format!("{}:{config}", client.root.display())
 }

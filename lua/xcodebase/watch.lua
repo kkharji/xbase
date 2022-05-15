@@ -2,20 +2,20 @@ local lib = require "libxcodebase"
 local config = require("xcodebase.config").values
 local M = {}
 
-M.is_watching = function(command)
+M.is_watching = function(config, command)
   local root = vim.loop.cwd()
   local targets = vim.g.xcodebase.watcher.targets
-  local key = string.format("%s:xcodebuild -configuration %s", root, command.configuration)
+  local key = string.format("%s:%s:xcodebuild -configuration %s", root, command, config.configuration)
 
-  if command.sysroot then
-    key = key .. " -sysroot " .. command.sysroot
+  if config.sysroot then
+    key = key .. " -sysroot " .. config.sysroot
   end
 
-  if command.scheme then
-    key = key .. " -scheme " .. command.scheme
+  if config.scheme then
+    key = key .. " -scheme " .. config.scheme
   end
 
-  key = key .. " -target " .. command.target
+  key = key .. " -target " .. config.target
 
   return targets[key] ~= nil
 end
