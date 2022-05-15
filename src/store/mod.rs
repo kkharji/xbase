@@ -13,3 +13,8 @@ mod watcher;
 
 #[cfg(feature = "daemon")]
 pub use watcher::WatchStore;
+
+#[cfg(feature = "daemon")]
+mod devices;
+#[cfg(feature = "daemon")]
+pub use devices::*;

@@ -19,6 +19,7 @@ fn libxbase(l: &Lua) -> LuaResult<LuaTable> {
         ("register", fun!(Register, l)),
         ("drop", fun!(Drop, l)),
         ("build", fun!(Build, l)),
+        ("run", fun!(Run, l)),
         ("watch_target", fun!(WatchTarget, l)),
     ])
 }

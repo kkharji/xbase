@@ -32,6 +32,8 @@ pub struct State {
     /// Managed watchers
     #[cfg(feature = "daemon")]
     pub watcher: crate::store::WatchStore,
+    #[cfg(feature = "daemon")]
+    pub devices: crate::store::SimDevices,
 }
 
 #[cfg(feature = "server")]

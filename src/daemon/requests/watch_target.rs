@@ -76,7 +76,7 @@ impl Handler for WatchTarget {
             }
             WatchOps::Stop => {
                 // NOTE: Remove target watcher
-                state.watcher.remove_target_watcher(&self, client).await;
+                state.watcher.remove_target_watcher(&self).await;
             }
         }
 

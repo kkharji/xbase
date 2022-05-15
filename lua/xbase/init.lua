@@ -44,6 +44,10 @@ M.build = function(opts)
   lib.build(opts)
 end
 
+M.run = function(opts)
+  lib.run(opts)
+end
+
 M.watch = function(opts)
   lib.watch_target(opts)
 end

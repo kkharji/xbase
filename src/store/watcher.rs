@@ -47,7 +47,7 @@ impl WatchStore {
         self.targets.insert(key, handler);
     }
 
-    pub async fn remove_target_watcher(&mut self, request: &WatchTarget, client: &Client) {
+    pub async fn remove_target_watcher(&mut self, request: &WatchTarget) {
         let key = request.key();
 
         if let Some(handle) = self.targets.get(&key) {
@@ -57,7 +57,7 @@ impl WatchStore {
         tracing::info!(
             "RemoveTargetWatcher(\"{}\", {})",
             request.config.target,
-            client.abbrev_root()
+            request.client.abbrev_root()
         );
 
         self.targets.remove(&key);

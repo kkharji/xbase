@@ -24,15 +24,16 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
     } = req;
 
     let info = info.lock().await;
+    let request = info
+        .try_into_target()
+        .map_err(|e| WatchError::Stop(format!("Expected target got {:?}", e)))?;
 
     let WatchTarget {
         client,
         config,
         kind,
         ..
-    } = info
-        .try_into_target()
-        .map_err(|e| WatchError::Stop(format!("Expected target got {:?}", e)))?;
+    } = request;
 
     let BuildConfiguration { .. } = config;
 
@@ -41,7 +42,7 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
     tracing::debug!("Rebuilding for {:#?}", &event);
 
     let state = DAEMON_STATE.clone();
-    let state = state.lock().await;
+    let mut state = state.lock().await;
 
     let nvim = state
         .clients
@@ -59,6 +60,7 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
                 .map_err(WatchError::stop)?;
 
             // NOTE: Update state before exiting
+            state.watcher.remove_target_watcher(request).await;
             state
                 .sync_client_state()
                 .await

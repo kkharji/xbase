@@ -1,6 +1,5 @@
 pub const DAEMON_SOCKET_PATH: &str = "/tmp/xbase-daemon.socket";
-pub const DAEMON_BINARY: &str =
-    "/Users/tami5/repos/neovim/xbase.nvim/target/debug/xbase-daemon";
+pub const DAEMON_BINARY: &str = "/Users/tami5/repos/neovim/xbase.nvim/target/debug/xbase-daemon";
 
 #[cfg(feature = "daemon")]
 pub type DaemonSharedState = std::sync::Arc<tokio::sync::Mutex<crate::state::State>>;
@@ -26,6 +25,8 @@ lazy_static::lazy_static! {
             clients: Default::default(),
             #[cfg(feature = "daemon")]
             watcher: Default::default(),
+            #[cfg(feature = "daemon")]
+            devices: Default::default(),
         }))
 
     };
@@ -49,6 +50,8 @@ lazy_static::lazy_static! {
             clients: Default::default(),
             #[cfg(feature = "daemon")]
             watcher: Default::default(),
+            #[cfg(feature = "daemon")]
+            devices: Default::default(),
         }))
 
     };
