@@ -9,6 +9,7 @@ local maker = require("telescope.pickers.entry_display").create
 local xbase = require "xbase"
 local watch = require "xbase.watch"
 local themes = require "telescope.themes"
+local util = require "xbase.util"
 
 local mappings = function(_, _)
   action_set.select:replace(function(bufnr, direction)
@@ -55,40 +56,27 @@ end
 
 local get_selections = function(picker)
   local commands = picker == "Watch" and { "Build", "Run" } or { picker }
-  local root = vim.loop.cwd()
-  local info = vim.g.xbase.projects[root]
-  if info == nil then
-    error "No info available"
+  local project = vim.g.xbase.projects[vim.loop.cwd()]
+
+  if project == nil then
+    error "No project info found"
   end
 
-  local targets = {}
+  local targets = util.get_targets_runners(project)
 
-  -- TOOD(core): Support custom schemes
-  for name, _ in pairs(info.targets) do
-    targets[#targets + 1] = name
-  end
-
-  -- TOOD(core): Support custom project configurations
+  -- TOOD(core): Support custom project configurations and schemes
   local configurations = { "Debug", "Release" }
-
-  local devices = {}
-
-  if picker == "Run" or picker == "Watch" then
-    -- TODO(nvim): Only include devices that is actually supported by target
-    devices = vim.tbl_map(function(device)
-      return {
-        name = device.info.name,
-        udid = device.info.udid,
-      }
-    end, vim.g.xbase.devices)
-  end
 
   local results = {}
 
   for _, command in ipairs(commands) do
-    for _, target in ipairs(targets) do
+    for _, target_info in ipairs(targets) do
+      local target = target_info.name
+      local devices = target_info.runners
+      local include_devices = #devices ~= 0 and command == "Run"
+
       for _, configuration in ipairs(configurations) do
-        if #devices ~= 0 and command == "Run" then
+        if include_devices then
           for _, device in ipairs(devices) do
             insert_entry(results, picker, command, target, configuration, device)
           end
@@ -129,7 +117,7 @@ local entry_maker = function(entry)
     ti(parts, { entry.kind, "TSNone" })
   end
 
-  ti(items, { width = 9 })
+  ti(items, { width = 12 })
   entry.ordinal = string.format("%s %s", entry.ordinal, target)
   ti(parts, { target, "TSCharacter" })
 

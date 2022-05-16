@@ -40,6 +40,9 @@
 ---@field group string?
 
 ---@class Device
+---@field info DeviceInfo
+
+---@class DeviceInfo
 ---@field availabilityError string?,
 ---@field dataPath string
 ---@field deviceTypeIdentifier string
