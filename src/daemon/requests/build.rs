@@ -3,7 +3,7 @@ use crate::{nvim::BufferDirection, types::BuildConfiguration};
 use std::fmt::Debug;
 
 #[cfg(feature = "daemon")]
-use crate::{constants::DAEMON_STATE, nvim::Logger, xcode::stream_build};
+use crate::{constants::DAEMON_STATE, xcode::stream_build};
 
 /// Build a project.
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ impl Handler for Build {
 
         let direction = self.direction.clone();
 
-        Logger::new(nvim, "Build", &config, direction)
+        nvim.new_logger("build", config, &direction)
             .log_stream(stream_build(&root, &config).await?, true, true)
             .await?;
 

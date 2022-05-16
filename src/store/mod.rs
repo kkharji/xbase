@@ -2,6 +2,11 @@ mod projects;
 
 pub use projects::ProjectStore;
 
+#[cfg(any(feature = "daemon", feature = "lua"))]
+mod devices;
+#[cfg(any(feature = "daemon", feature = "lua"))]
+pub use devices::*;
+
 #[cfg(feature = "daemon")]
 mod clients;
 
@@ -13,8 +18,3 @@ mod watcher;
 
 #[cfg(feature = "daemon")]
 pub use watcher::WatchStore;
-
-#[cfg(feature = "daemon")]
-mod devices;
-#[cfg(feature = "daemon")]
-pub use devices::*;

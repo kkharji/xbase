@@ -9,6 +9,10 @@ mod target_type;
 use super::Root;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+#[cfg(any(feature = "daemon", feature = "lua"))]
+use tap::Pipe;
+
 pub use {
     config::PluginConfig, dependency::*, options::*, package::*, platform::*, target::*,
     target_type::*,
@@ -78,8 +82,30 @@ impl Project {
         self.ignore_patterns = ignore_patterns;
         Ok(())
     }
-}
 
+    pub fn get_target(&self, name: &String, platform: Option<Platform>) -> Result<&ProjectTarget> {
+        match self.targets.get(name) {
+            Some(value) => Ok(value),
+            None => match platform {
+                Some(platform) => {
+                    let key = match platform {
+                        Platform::IOS => "iOS",
+                        Platform::WatchOS => "watchOS",
+                        Platform::TvOS => "tvOS",
+                        Platform::MacOS => "macOS",
+                        Platform::None => "",
+                    }
+                    .pipe(|s| name.replace(s, ""));
+
+                    self.targets
+                        .get(&key)
+                        .ok_or_else(|| anyhow::anyhow!("No target found for {key}"))
+                }
+                None => anyhow::bail!("No Target found with {name} {:#?}", platform),
+            },
+        }
+    }
+}
 #[cfg(feature = "daemon")]
 lazy_static::lazy_static! {
     static ref DEFAULT_IGNORE_PATTERN: Vec<String> = vec![

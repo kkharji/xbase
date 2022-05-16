@@ -48,17 +48,16 @@ impl ClientStore {
     }
 
     pub async fn echo_msg(&self, root: &PathBuf, scope: &str, msg: &str) {
+        let msg = format!("echo '{scope}: {msg}'");
         for client in self.get_clients_by_root(&root).await {
-            client
-                .exec(&format!("echo '{scope}: {msg}'"), false)
-                .await
-                .ok();
+            client.echo_msg(&msg).await.ok();
         }
     }
 
     pub async fn echo_err(&self, root: &PathBuf, scope: &str, msg: &str) {
+        let msg = format!("{scope}: {msg}");
         for client in self.get_clients_by_root(&root).await {
-            client.err_write(&format!("{scope}: {msg}")).await.ok();
+            client.echo_msg(&msg).await.ok();
         }
     }
 

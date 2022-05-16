@@ -60,6 +60,15 @@ impl NvimClient {
         self.exec_lua(update_state_script, vec![]).await?;
         Ok(())
     }
+
+    pub fn new_logger<'a>(
+        &'a self,
+        title: &'a str,
+        config: &'a crate::types::BuildConfiguration,
+        direction: &'a Option<BufferDirection>,
+    ) -> Logger<'a> {
+        Logger::new(self, title, &config, direction.clone())
+    }
 }
 
 #[cfg(feature = "daemon")]
@@ -94,6 +103,14 @@ impl NvimClient {
     }
     pub async fn log_warn(&self, scope: &str, msg: impl ToString) -> Result<()> {
         self.log("warn", scope, msg).await
+    }
+    pub async fn echo_msg(&self, msg: &str) -> Result<()> {
+        self.exec(msg, false).await?;
+        Ok(())
+    }
+
+    pub async fn echo_err(&self, msg: &str) -> Result<()> {
+        Ok(self.err_write(msg).await?)
     }
 }
 

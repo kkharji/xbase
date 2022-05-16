@@ -1,7 +1,6 @@
 use super::{WatchArguments, WatchError};
 use crate::constants::DAEMON_STATE;
 use crate::daemon::{WatchKind, WatchTarget};
-use crate::nvim::Logger;
 use crate::types::{BuildConfiguration, Client};
 use crate::xcode;
 use anyhow::Result;
@@ -70,7 +69,7 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
         }
     };
 
-    Logger::new(nvim, "Build", &config, None)
+    nvim.new_logger("Build", &config, &None)
         .log_stream(stream, false, false)
         .await
         .map_err(WatchError::r#continue)?;

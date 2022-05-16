@@ -11,6 +11,7 @@ pub struct Logger<'a> {
     pub request: &'a BuildConfiguration,
     pub buf: Buffer<NvimConnection>,
     open_cmd: Option<String>,
+    current_line_count: Option<i64>,
 }
 
 impl<'a> Logger<'a> {
@@ -29,14 +30,15 @@ impl<'a> Logger<'a> {
             request,
             buf,
             open_cmd,
+            current_line_count: None,
         }
     }
 
-    pub async fn log(&self, msg: String) -> Result<()> {
-        let Self { buf, .. } = self;
+    pub async fn log(&mut self, msg: String) -> Result<()> {
         let c = self.line_count().await?;
 
-        buf.set_lines(c, c + 1, false, vec![msg]).await?;
+        self.buf.set_lines(c, c + 1, false, vec![msg]).await?;
+        self.current_line_count = Some(c + 1);
 
         Ok(())
     }
@@ -46,26 +48,15 @@ impl<'a> Logger<'a> {
         Ok(())
     }
 
-    pub async fn log_stream<S>(&self, mut stream: S, clear: bool, open: bool) -> Result<()>
+    pub async fn log_stream<S>(&mut self, mut stream: S, clear: bool, open: bool) -> Result<()>
     where
         S: Stream<Item = String> + Unpin,
     {
-        let Self {
-            nvim,
-            title,
-            request,
-            buf,
-            ..
-        } = self;
-
-        let BuildConfiguration { .. } = request;
-
-        nvim.exec("let g:xbase_watch_build_status='running'", false)
-            .await?;
+        self.set_running().await?;
 
         let title = format!(
             "[{}] ------------------------------------------------------",
-            title
+            self.title
         );
 
         // TODO(nvim): close log buffer if it is open for new direction
@@ -76,8 +67,6 @@ impl<'a> Logger<'a> {
             self.clear().await?;
         }
 
-        let mut c = self.line_count().await?;
-
         // TODO(nvim): build log correct height
         let win = if open {
             Some(self.open_win().await?)
@@ -85,43 +74,62 @@ impl<'a> Logger<'a> {
             None
         };
 
-        buf.set_lines(c, c + 1, false, vec![title]).await?;
-
-        c += 1;
+        self.log(title).await?;
 
         let mut success = false;
-
         while let Some(line) = stream.next().await {
-            if line.contains("Succeed") {
-                success = true;
-            }
-            buf.set_lines(c, c + 1, false, vec![line]).await?;
-            c += 1;
+            line.contains("Succeed").then(|| success = true);
+            self.log(line).await?;
             if open {
-                win.as_ref().unwrap().set_cursor((c, 0)).await?;
+                win.as_ref()
+                    .unwrap()
+                    .set_cursor((self.line_count().await?, 0))
+                    .await?;
             }
         }
 
-        if success {
-            nvim.exec("let g:xbase_watch_build_status='success'", false)
-                .await?;
-        } else {
-            nvim.exec("let g:xbase_watch_build_status='failure'", false)
-                .await?;
-            if !open {
-                nvim.exec(&self.open_cmd().await, false).await?;
-                nvim.get_current_win().await?.set_cursor((c, 0)).await?;
-                nvim.exec("call feedkeys('zt')", false).await?;
-            }
-        }
+        self.set_status_end(success, open).await?;
 
         Ok(())
     }
 
-    async fn line_count(&self) -> Result<i64> {
-        Ok(match self.buf.line_count().await? {
-            1 => 0,
-            count => count,
+    pub async fn set_status_end(&mut self, success: bool, open: bool) -> Result<()> {
+        if success {
+            self.nvim
+                .exec("let g:xbase_watch_build_status='success'", false)
+                .await?;
+        } else {
+            self.nvim
+                .exec("let g:xbase_watch_build_status='failure'", false)
+                .await?;
+            if !open {
+                self.nvim.exec(&self.open_cmd().await, false).await?;
+                self.nvim
+                    .get_current_win()
+                    .await?
+                    .set_cursor((self.line_count().await?, 0))
+                    .await?;
+                self.nvim.exec("call feedkeys('zt')", false).await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn set_running(&mut self) -> Result<()> {
+        self.nvim
+            .exec("let g:xbase_watch_build_status='running'", false)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn line_count(&'a self) -> Result<i64> {
+        Ok(if let Some(count) = self.current_line_count {
+            count
+        } else {
+            match self.buf.line_count().await? {
+                1 => 0,
+                count => count,
+            }
         })
     }
 

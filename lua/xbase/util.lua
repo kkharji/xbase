@@ -3,15 +3,17 @@ local M = {}
 local get_runners = function(platform)
   local devices = {}
 
-  for _, device in ipairs(vim.g.xbase.devices) do
-    if device.info.runtime_identifier:match(platform) then
-      table.insert(devices, {
-        name = device.info.name,
-        udid = device.info.udid,
-      })
+  if platform then
+    for _, device in ipairs(vim.g.xbase.devices) do
+      if device.info.runtime_identifier:match(platform) then
+        table.insert(devices, {
+          name = device.info.name,
+          udid = device.info.udid,
+          platform = platform,
+        })
+      end
     end
   end
-
   return devices
 end
 

@@ -18,3 +18,11 @@ impl Default for SimDevices {
         )
     }
 }
+
+impl std::ops::Deref for SimDevices {
+    type Target = Vec<Device>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
