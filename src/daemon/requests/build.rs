@@ -22,7 +22,7 @@ impl Handler for Build {
 
         tracing::debug!("Handling build request {:#?}", self.config);
 
-        let state = DAEMON_STATE.lock().await;
+        let state = DAEMON_STATE.clone().lock_owned().await;
         let nvim = state
             .clients
             .get(pid)
@@ -30,8 +30,8 @@ impl Handler for Build {
 
         let direction = self.direction.clone();
 
-        Logger::new(nvim, "Build", &config)
-            .log_stream(stream_build(&root, &config).await?, direction, true, true)
+        Logger::new(nvim, "Build", &config, direction)
+            .log_stream(stream_build(&root, &config).await?, true, true)
             .await?;
 
         Ok(())
@@ -49,22 +49,15 @@ impl<'a> Requester<'a, Build> for Build {
 #[cfg(feature = "mlua")]
 impl<'a> FromLua<'a> for Build {
     fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
-        use std::str::FromStr;
-        let mut direction = None;
-
         let table = match lua_value {
             LuaValue::Table(table) => table,
             _ => return Err(LuaError::external("Fail to deserialize Build")),
         };
 
-        if let Some(str) = table.get::<_, Option<String>>("direction")? {
-            direction = BufferDirection::from_str(&str).ok();
-        }
-
         Ok(Self {
             client: table.get("client")?,
             config: table.get("config")?,
-            direction,
+            direction: table.get("direction").ok(),
         })
     }
 }

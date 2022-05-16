@@ -70,8 +70,8 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
         }
     };
 
-    Logger::new(nvim, "Build", &config)
-        .log_stream(stream, None, false, false)
+    Logger::new(nvim, "Build", &config, None)
+        .log_stream(stream, false, false)
         .await
         .map_err(WatchError::r#continue)?;
 

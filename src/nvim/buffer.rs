@@ -47,3 +47,22 @@ impl BufferDirection {
             .context("Convert to string to direction")
     }
 }
+
+#[cfg(feature = "lua")]
+use mlua::prelude::*;
+
+#[cfg(feature = "lua")]
+impl<'a> FromLua<'a> for BufferDirection {
+    fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
+        use tap::Pipe;
+
+        match lua_value {
+            LuaValue::String(value) => value,
+            _ => return Err(LuaError::external("Fail to deserialize Build")),
+        }
+        .to_string_lossy()
+        .pipe(|s| Self::from_str(&s))
+        .to_lua_err()
+    }
+}
