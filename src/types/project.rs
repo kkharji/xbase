@@ -1,80 +1,92 @@
+mod config;
+mod dependency;
+mod options;
+mod package;
+mod platform;
+mod target;
+mod target_type;
+
 use super::Root;
-#[cfg(feature = "daemon")]
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+pub use {
+    config::PluginConfig, dependency::*, options::*, package::*, platform::*, target::*,
+    target_type::*,
+};
+
+#[cfg(feature = "daemon")]
+use anyhow::Result;
 
 /// Represent XcodeGen Project
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Project {
     /// Project Name or rather xproj generated file name.
     pub name: String,
+
     /// The list of targets in the project mapped by name
-    pub targets: HashMap<String, Target>,
-    /// xbase local configuration
+    pub targets: HashMap<String, ProjectTarget>,
+
     #[serde(rename(deserialize = "xbase"), default)]
-    pub xcode_base: LocalConfig,
-    /// Root directory
+    /// xbase local configuration
+    pub xbase: PluginConfig,
+
     #[serde(skip)]
+    /// Root directory
     pub root: Root,
+
+    #[serde(default)]
     /// Connected Clients
-    #[serde(default)]
     pub clients: Vec<i32>,
-    /// Ignore Patterns
+
     #[serde(default)]
+    /// Ignore Patterns
     pub ignore_patterns: Vec<String>,
-}
 
-/// Represent Xcode Target
-// TODO: serialize from string or vector
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Target {
-    pub r#type: String,
-    pub platform: String,
-    pub sources: Vec<PathBuf>,
-}
+    #[serde(default)]
+    /// Options to override default behaviour
+    pub options: ProjectOptions,
 
-#[derive(Debug, Default, Deserialize, Serialize)]
-pub struct LocalConfig {
-    pub ignore: Vec<String>,
+    #[serde(default)]
+    /// Packages
+    pub packages: HashMap<String, ProjectPackage>,
 }
 
 #[cfg(feature = "daemon")]
 impl Project {
-    pub async fn new(root: &PathBuf) -> Result<Self> {
+    pub async fn new(root: &std::path::PathBuf) -> Result<Self> {
         let path = root.join("project.yml");
         if !path.exists() {
             anyhow::bail!("project.yaml doesn't exist in '{:?}'", root)
         }
 
-        let project = tokio::fs::read_to_string(path).await?;
-        let mut project = serde_yaml::from_str::<Project>(&project)?;
+        let content = tokio::fs::read_to_string(path).await?;
+        let mut project = serde_yaml::from_str::<Project>(&content)?;
 
-        let ignore_patterns: Vec<String> = vec![
+        // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
+        project.ignore_patterns.extend(project.xbase.ignore.clone());
+        project
+            .ignore_patterns
+            .extend(DEFAULT_IGNORE_PATTERN.clone().into_iter());
+
+        Ok(project)
+    }
+
+    pub async fn update(&mut self) -> Result<()> {
+        let ignore_patterns = self.ignore_patterns.clone();
+        *self = Self::new(&self.root).await?;
+        self.ignore_patterns = ignore_patterns;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "daemon")]
+lazy_static::lazy_static! {
+    static ref DEFAULT_IGNORE_PATTERN: Vec<String> = vec![
             "**/.git/**".into(),
             "**/*.xcodeproj/**".into(),
             "**/.*".into(),
             "**/build/**".into(),
             "**/buildServer.json".into(),
         ];
-
-        // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
-        project
-            .ignore_patterns
-            .extend(project.xcode_base.ignore.clone());
-
-        project.ignore_patterns.extend(ignore_patterns);
-
-        Ok(project)
-    }
-
-    pub async fn update(&mut self) -> Result<()> {
-        let new_project = Self::new(&self.root).await?;
-        self.name = new_project.name;
-        self.targets = new_project.targets;
-        self.xcode_base = new_project.xcode_base;
-
-        Ok(())
-    }
 }

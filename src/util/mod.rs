@@ -3,6 +3,8 @@
 pub mod fs;
 #[cfg(feature = "lua")]
 pub mod mlua;
+#[cfg(feature = "serial")]
+pub mod serde;
 #[cfg(feature = "logging")]
 pub mod tracing;
 
