@@ -3,8 +3,12 @@ local config = require "xbase.config"
 local lib = require "libxbase"
 
 vim.g.xbase = {
+  ---@type Project[]
   projects = vim.empty_dict(),
+  ---@type table<string, boolean>
   watch = vim.empty_dict(),
+  ---@type Device[]
+  devices = vim.empty_dict(),
 }
 
 ---Check whether the vim instance should be registered to xbase server.
