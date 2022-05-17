@@ -14,10 +14,10 @@ docgen:
 	nvim --headless --noplugin -u scripts/minimal_init.vim -c "luafile ./scripts/gendocs" -c 'qa'
 
 watchlua:
-	cargo watch -x 'build -p libxbase' -w 'Cargo.toml' -w 'src' -w 'lua/xbase/Cargo.toml' -w 'lua/xbase/lib.rs'
+	cargo watch -x 'build -p libxbase' -w 'Cargo.toml' -w 'src' -w 'lua/xbase/Cargo.toml' -w 'lua/xbase/lib.rs' -c
 
 watchdaemon:
-	RUST_LOG="xbase=debug" cargo watch -x 'run --bin xbase-daemon --features=daemon' -w 'src' -w 'Cargo.toml'
+	RUST_LOG="xbase=debug" cargo watch -x 'run --bin xbase-daemon --features=daemon' -w 'src' -w 'Cargo.toml' -c
 
 watchserver:
-	RUST_LOG="trace" cargo watch -x 'build --bin xbase-server --features=server' -w 'src' -w 'Cargo.toml'
+	RUST_LOG="trace" cargo watch -x 'build --bin xbase-server --features=server' -w 'src' -w 'Cargo.toml' -c
