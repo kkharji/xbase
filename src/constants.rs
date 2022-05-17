@@ -1,4 +1,5 @@
 pub const DAEMON_SOCKET_PATH: &str = "/tmp/xbase-daemon.socket";
+pub const DAEMON_PID_PATH: &str = "/tmp/xbase-daemon-pid";
 pub const DAEMON_BINARY: &str = "/Users/tami5/repos/neovim/xbase.nvim/target/debug/xbase-daemon";
 
 #[cfg(feature = "daemon")]

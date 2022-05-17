@@ -13,6 +13,6 @@ impl WatchError {
     }
 
     pub fn r#continue(err: anyhow::Error) -> WatchError {
-        Self::Continue(format!("WatchStop: {err}"))
+        Self::Continue(format!("WatchContinue: {err}"))
     }
 }

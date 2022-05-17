@@ -2,7 +2,6 @@ use super::{WatchArguments, WatchError};
 use crate::constants::DAEMON_STATE;
 use crate::daemon::{WatchKind, WatchTarget};
 use crate::types::{BuildConfiguration, Client};
-use crate::xcode;
 use anyhow::Result;
 use notify::{event::ModifyKind, Event, EventKind};
 use std::time::{Duration, SystemTime};
@@ -48,10 +47,15 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
         .get(&pid)
         .ok_or_else(|| WatchError::Stop("Fail to find nvim instance with given pid".to_string()))?;
 
-    let stream = match kind {
-        WatchKind::Build => xcode::stream_build(&root, &config)
-            .await
-            .map_err(WatchError::r#continue)?,
+    match kind {
+        WatchKind::Build => {
+            let ref args = config.as_args();
+
+            nvim.new_logger("Build", &config.target, &None)
+                .log_build_stream(root, args, false, false)
+                .await
+                .map_err(WatchError::r#continue)?;
+        }
 
         WatchKind::Run => {
             nvim.log_error("Watch", "Run is not supported yet! .. aborting")
@@ -68,11 +72,6 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
             return Err(WatchError::Stop("Run not supported yet!".into()));
         }
     };
-
-    nvim.new_logger("Build", &config, &None)
-        .log_stream(stream, false, false)
-        .await
-        .map_err(WatchError::r#continue)?;
 
     let mut debounce = debounce.lock().await;
 
