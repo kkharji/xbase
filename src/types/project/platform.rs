@@ -14,6 +14,17 @@ pub enum Platform {
 }
 
 impl Platform {
+    pub fn sdk_simulator_args(&self) -> Vec<String> {
+        match self {
+            Platform::IOS => vec!["-sdk".into(), "iphonesimulator".into()],
+            Platform::WatchOS => vec!["-sdk".into(), "watchsimulator".into()],
+            Platform::TvOS => vec!["-sdk".into(), "appletvsimulator".into()],
+            Platform::MacOS => vec!["-sdk".into(), "macosx".into()],
+            Platform::None => vec![],
+        }
+        // -sdk driverkit -sdk iphoneos -sdk macosx -sdk appletvos -sdk watchos
+    }
+
     #[must_use]
     pub fn is_ios(&self) -> bool {
         matches!(self, Self::IOS)

@@ -10,6 +10,7 @@ local get_runners = function(platform)
           name = device.info.name,
           udid = device.info.udid,
           platform = platform,
+          is_on = device.info.state ~= "Shutdown",
         })
       end
     end

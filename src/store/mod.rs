@@ -2,10 +2,10 @@ mod projects;
 
 pub use projects::ProjectStore;
 
-#[cfg(any(feature = "daemon", feature = "lua"))]
-mod devices;
-#[cfg(any(feature = "daemon", feature = "lua"))]
-pub use devices::*;
+#[cfg(feature = "daemon")]
+mod simdevices;
+#[cfg(feature = "daemon")]
+pub use simdevices::*;
 
 #[cfg(feature = "daemon")]
 mod clients;

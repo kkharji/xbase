@@ -6,12 +6,14 @@ let s:cpo_save = &cpo
 set cpo&vim
 
 
-syn match   Operations   "\(Executing\|Compiling\|Processing\|Emitting\|Compiling\|Copying\|Validating\|Signing\|Linking\)"
+syn match   Operations   "\(Executing\|Compiling\|Generating\|Processing\|Emitting\|Compiling\|Copying\|Validating\|Signing\|Linking\)"
 syn match   Entitlement  "Entitlement"
 syn match   Package      "Packaging"
 syn region  Scope        display oneline start='^\[' end='\]'
-syn region  LogSuccess   display oneline start='^\[Succeed\]$' end='$'
 syn match   LogError     "^\(\[Error\]\)"
+syn match   LogWarn      "^\(\[Warning\]\)"
+syn match   LogSuccess   "^\(\[Succeed\]\)"
+syn match   LogLaunched   "^\(\[Launched\]\)"
 syn match   Target       "`\(\w.*\)`"
 syn match   FilePath     "`\(\/.*\)`" 
 syn region  Sep          display oneline start='-' end='-$'
@@ -25,6 +27,8 @@ hi def link Sep           Comment
 hi def link FilePath      String
 hi def link Target        Label
 hi def link LogError      Error
+hi def link LogWarn       WarningMsg
+hi def link LogLaunched   healthSuccess
 
 syn match HideAa "\`" conceal
 

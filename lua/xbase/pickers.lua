@@ -86,6 +86,15 @@ local get_selections = function(picker)
       end
     end
   end
+  if picker == "Run" or picker == "Watch" then
+    table.sort(results, function(a, b)
+      if a.device and b.device then
+        return a.device.is_on and not b.device.is_on
+      else
+        return
+      end
+    end)
+  end
 
   return results
 end
