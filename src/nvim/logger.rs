@@ -58,6 +58,8 @@ impl<'a> Logger<'a> {
     }
 
     pub async fn log(&mut self, msg: String, win: &Option<NvimWindow>) -> Result<()> {
+        tracing::debug!("{msg}");
+
         let mut c = self.get_line_count().await?;
         let lines = msg
             .split("\n")

@@ -1,4 +1,3 @@
-use anyhow::anyhow as err;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use simctl::list::DeviceState;
@@ -6,6 +5,7 @@ use simctl::Device;
 use std::hash::Hash;
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
+use tap::Pipe;
 
 use crate::nvim::Logger;
 use crate::nvim::NvimWindow;
@@ -60,12 +60,14 @@ impl SimDevice {
         win: &Option<NvimWindow>,
     ) -> Result<()> {
         if let DeviceState::Shutdown = &self.state {
-            self.boot().map_err(|e| err!("{:#?}", e))?;
-            self.state = DeviceState::Booted;
+            logger
+                .log(format!("[Booting] ({})", self.name), win)
+                .await?;
 
-            let msg = format!("[Booting] \"{}\"", self.name);
-            tracing::info!("{msg}");
-            logger.log(msg, win).await?;
+            self.boot()
+                .pipe(|res| self.handle_error(res, logger, win))
+                .await?;
+            self.state = DeviceState::Booted;
         }
 
         Ok(())
@@ -78,11 +80,12 @@ impl SimDevice {
         logger: &mut Logger<'a>,
         win: &Option<NvimWindow>,
     ) -> Result<()> {
-        self.install(path_to_app).map_err(|e| err!("{:#?}", e))?;
-        let msg = format!("[Installed] \"{}\" {app_id}", self.name);
-        tracing::info!("{msg}");
-        logger.log(msg, win).await?;
-        Ok(())
+        self.install(path_to_app)
+            .pipe(|res| self.handle_error(res, logger, win))
+            .await?;
+        logger
+            .log(format!("[Installing] ({}) {app_id}", self.name), win)
+            .await
     }
 
     pub async fn try_launch<'a>(
@@ -92,16 +95,19 @@ impl SimDevice {
         win: &Option<NvimWindow>,
     ) -> Result<()> {
         if !self.is_running {
-            tracing::info!("[Launching] \"{}\" {app_id}", self.name);
+            logger
+                .log(format!("[Launching] ({}) {app_id}", self.name), win)
+                .await?;
+
             self.launch(app_id)
                 .stdout(&"/tmp/wordle_log")
                 .stderr(&"/tmp/wordle_log")
                 .exec()
-                .map_err(|e| err!("{:#?}", e))?;
+                .pipe(|res| self.handle_error(res, logger, win))
+                .await?;
 
             self.is_running = true;
 
-            tracing::info!("[Launched]");
             logger
                 .log(string_as_section("[Launched]".into()), win)
                 .await?;
@@ -109,4 +115,29 @@ impl SimDevice {
 
         Ok(())
     }
+
+    async fn handle_error<'a, T>(
+        &mut self,
+        res: simctl::Result<T>,
+        logger: &mut Logger<'a>,
+        win: &Option<NvimWindow>,
+    ) -> Result<()> {
+        if let Err(e) = to_anyhow_error(res) {
+            logger.log(e.to_string(), win).await?;
+            logger.set_status_end(false, true).await?;
+            self.is_running = false;
+        }
+        Ok(())
+    }
+}
+
+fn to_anyhow_error<T>(v: simctl::Result<T>) -> Result<T> {
+    v.map_err(|e| match e {
+        simctl::Error::Output { stderr, .. } => {
+            anyhow::anyhow!("External Command Failure: {stderr}")
+        }
+        simctl::Error::Io(err) => anyhow::Error::new(err),
+        simctl::Error::Json(err) => anyhow::Error::new(err),
+        simctl::Error::Utf8(err) => anyhow::Error::new(err),
+    })
 }

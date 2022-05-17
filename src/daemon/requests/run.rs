@@ -5,7 +5,10 @@ use crate::{
 };
 
 #[cfg(feature = "daemon")]
-use {crate::constants::DAEMON_STATE, crate::types::SimDevice, anyhow::anyhow as err};
+use {
+    crate::constants::DAEMON_STATE, crate::types::SimDevice, anyhow::anyhow as err,
+    xcodebuild::runner::build_settings,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceLookup {
@@ -27,15 +30,11 @@ pub struct Run {
 #[async_trait::async_trait]
 impl Handler for Run {
     async fn handle(self) -> Result<()> {
-        tracing::info!("⚙️ Running command: {:#?}", self);
+        tracing::info!("⚙️ Running command: {}", self.config.to_string());
+        tracing::trace!("{:#?}", self);
 
-        let Self {
-            client,
-            config,
-            device,
-            ..
-        } = self;
-        let Client { pid, root } = client;
+        let Self { config, device, .. } = self;
+        let Client { pid, root } = self.client;
 
         let direction = self.direction.clone();
         let state = DAEMON_STATE.clone().lock_owned().await;
@@ -58,12 +57,13 @@ impl Handler for Run {
             args
         };
 
-        let build_settings = xcodebuild::runner::build_settings(&root, &args).await?;
+        let build_settings = build_settings(&root, &args).await?;
         let ref app_id = build_settings.product_bundle_identifier;
 
         // FIX(run): When running with release path_to_app is incorrect
         //
-        // Err: application bundle was not found at the provided path.\nProvide a valid path to the desired application bundle.
+        // Err: application bundle was not found at the provided path.\nProvide a valid path to the
+        // desired application bundle.
         //
         // Path doesn't point to local directory build
         let ref path_to_app = build_settings.metal_library_output_dir;
