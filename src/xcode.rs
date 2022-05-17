@@ -22,12 +22,14 @@ where
         use xcodebuild::parser::Step::*;
         while let Some(step) = stream.next().await {
             let line = match step {
-                Exit(_) => { continue; }
-                BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
+                Exit(v) => {
                     format! {
-                        "{} ----------------------------------------------------",
-                        step.to_string().trim().to_string()
+                        "[{}] ----------------------------------------------------",
+                        if v == "0" { "Succeed" } else { "Failed" }
                     }
+                }
+                BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
+                    continue;
                 }
                 step => step.to_string().trim().to_string(),
             };
