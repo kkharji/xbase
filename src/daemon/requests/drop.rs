@@ -13,9 +13,6 @@ pub struct Drop {
 impl Handler for Drop {
     async fn handle(self) -> anyhow::Result<()> {
         use crate::constants::DAEMON_STATE;
-
-        tracing::debug!("{:#?}", self);
-
         let Self {
             client,
             remove_client,
@@ -25,7 +22,7 @@ impl Handler for Drop {
         let mut state = state.lock().await;
 
         if state.clients.contains_key(&client.pid) {
-            tracing::info!("Drop({:?})", client.pid);
+            tracing::info!("Drop({}: {})", client.pid, client.abbrev_root());
 
             // NOTE: Should only be Some if no more client depend on it
             if let Some(project) = state.projects.remove(&client).await? {
