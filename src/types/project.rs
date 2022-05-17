@@ -69,17 +69,31 @@ impl Project {
 
         // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
         project.ignore_patterns.extend(project.xbase.ignore.clone());
-        project
-            .ignore_patterns
-            .extend(DEFAULT_IGNORE_PATTERN.clone().into_iter());
+        project.ignore_patterns.extend(vec![
+            "**/.git/**".into(),
+            "**/*.xcodeproj/**".into(),
+            "**/.*".into(),
+            "**/build/**".into(),
+            "**/buildServer.json".into(),
+        ]);
 
         Ok(project)
     }
 
     pub async fn update(&mut self) -> Result<()> {
-        let ignore_patterns = self.ignore_patterns.clone();
-        *self = Self::new(&self.root).await?;
-        self.ignore_patterns = ignore_patterns;
+        let Self { root, clients, .. } = self;
+        let (clients, root) = (clients.clone(), root.clone());
+
+        *self = Self::new(&root).await?;
+
+        self.root = root;
+        self.clients = clients;
+        tracing::info!(
+            "Updated '{}' internal state. path: {:?}",
+            self.name,
+            self.root
+        );
+
         Ok(())
     }
 
@@ -105,14 +119,4 @@ impl Project {
             },
         }
     }
-}
-#[cfg(feature = "daemon")]
-lazy_static::lazy_static! {
-    static ref DEFAULT_IGNORE_PATTERN: Vec<String> = vec![
-            "**/.git/**".into(),
-            "**/*.xcodeproj/**".into(),
-            "**/.*".into(),
-            "**/build/**".into(),
-            "**/buildServer.json".into(),
-        ];
 }
