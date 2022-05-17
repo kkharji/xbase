@@ -50,7 +50,7 @@ pub fn is_valid(root: &PathBuf) -> bool {
     get_config_path(root).exists()
 }
 
-pub async fn regenerate(path: PathBuf, root: &PathBuf) -> Result<bool> {
+pub async fn regenerate(path: &PathBuf, root: &PathBuf) -> Result<bool> {
     if !root.join("project.yml").exists() {
         anyhow::bail!("Project.yml is not found");
     }

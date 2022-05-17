@@ -57,7 +57,7 @@ impl ClientStore {
     pub async fn echo_err(&self, root: &PathBuf, scope: &str, msg: &str) {
         let msg = format!("{scope}: {msg}");
         for client in self.get_clients_by_root(&root).await {
-            client.echo_msg(&msg).await.ok();
+            client.echo_err(&msg).await.ok();
         }
     }
 

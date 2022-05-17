@@ -17,6 +17,8 @@ use anyhow::Result;
 
 #[cfg(feature = "daemon")]
 type NvimConnection = Compat<tokio::io::WriteHalf<parity_tokio_ipc::Connection>>;
+#[cfg(feature = "daemon")]
+pub type NvimWindow = nvim_rs::Window<NvimConnection>;
 
 #[derive(Deserialize, Serialize)]
 pub struct NvimClient {
@@ -40,13 +42,14 @@ impl NvimClient {
         let (nvim, _) = connect(address, Dummy::new()).await?;
         let buf = nvim.create_buf(false, true).await?;
         let log_bufnr = buf.get_number().await?;
+        let script = format!("let g:xbase_log_bufnr={log_bufnr}");
 
-        buf.set_name("[xbase Logs]").await?;
-        buf.set_option("filetype", "xcodebuildlog".into()).await?;
-
-        // NOTE: store log bufnr somewhere in vim state
-        nvim.exec(&format!("let g:xbase_log_bufnr={log_bufnr}"), false)
-            .await?;
+        let (a, b, c) = tokio::join!(
+            buf.set_name("[xbase Logs]"),
+            buf.set_option("filetype", "xcodebuildlog".into()),
+            nvim.exec(&script, false)
+        );
+        _ = (a?, b?, c?);
 
         Ok(NvimClient {
             pid: *pid,
@@ -63,11 +66,16 @@ impl NvimClient {
 
     pub fn new_logger<'a>(
         &'a self,
-        title: &'a str,
-        config: &'a crate::types::BuildConfiguration,
+        ops: &str,
+        target: &str,
         direction: &'a Option<BufferDirection>,
     ) -> Logger<'a> {
-        Logger::new(self, title, &config, direction.clone())
+        use crate::util::string_as_section;
+        Logger::new(
+            self,
+            string_as_section(format!("[{ops}: {target}]")),
+            direction.clone(),
+        )
     }
 }
 
@@ -84,11 +92,9 @@ impl NvimClient {
 
         Ok(())
     }
-
     fn inner(&self) -> &nvim_rs::Neovim<NvimConnection> {
         self.conn.as_ref().unwrap()
     }
-
     pub async fn log_info(&self, scope: &str, msg: impl ToString) -> Result<()> {
         self.log("info", scope, msg).await
     }
@@ -108,9 +114,8 @@ impl NvimClient {
         self.exec(msg, false).await?;
         Ok(())
     }
-
     pub async fn echo_err(&self, msg: &str) -> Result<()> {
-        Ok(self.err_write(msg).await?)
+        Ok(self.err_writeln(msg).await?)
     }
 }
 

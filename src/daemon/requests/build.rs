@@ -3,7 +3,7 @@ use crate::{nvim::BufferDirection, types::BuildConfiguration};
 use std::fmt::Debug;
 
 #[cfg(feature = "daemon")]
-use crate::{constants::DAEMON_STATE, xcode::stream_build};
+use crate::constants::DAEMON_STATE;
 
 /// Build a project.
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +20,7 @@ impl Handler for Build {
         let Self { client, config, .. } = &self;
         let Client { pid, root } = client;
 
-        tracing::debug!("Handling build request {:#?}", self.config);
+        tracing::debug!("Handling build request {:#?}", config);
 
         let state = DAEMON_STATE.clone().lock_owned().await;
         let nvim = state
@@ -30,9 +30,15 @@ impl Handler for Build {
 
         let direction = self.direction.clone();
 
-        nvim.new_logger("build", config, &direction)
-            .log_stream(stream_build(&root, &config).await?, true, true)
+        let (success, _) = nvim
+            .new_logger("build", &config.target, &direction)
+            .log_build_stream(&root, &config.as_args(), true, true)
             .await?;
+
+        if !success {
+            nvim.echo_err(&format!("Failed: {} ", config.to_string()))
+                .await?;
+        };
 
         Ok(())
     }
