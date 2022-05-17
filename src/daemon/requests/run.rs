@@ -6,8 +6,8 @@ use crate::{
 
 #[cfg(feature = "daemon")]
 use {
-    crate::constants::DAEMON_STATE, crate::types::SimDevice, crate::Error,
-    xcodebuild::runner::build_settings,
+    crate::constants::DAEMON_STATE, crate::types::SimDevice, crate::xcode::append_build_root,
+    crate::Error, xcodebuild::runner::build_settings,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,7 +51,8 @@ impl Handler for Run {
             if let Some(platform) = platform {
                 args.extend(platform.sdk_simulator_args())
             }
-            args
+
+            append_build_root(&root, args)?
         };
 
         let build_settings = build_settings(&root, &args).await?;
@@ -65,10 +66,10 @@ impl Handler for Run {
         // Path doesn't point to local directory build
         let ref path_to_app = build_settings.metal_library_output_dir;
 
-        tracing::debug!("{app_id}: {:?}", path_to_app);
+        tracing::warn!("{app_id}: {:?}", path_to_app);
         let (success, ref win) = nvim
             .new_logger("Build", &config.target, &direction)
-            .log_build_stream(&root, &args, false, true)
+            .log_build_stream(&root, &args, true, true)
             .await?;
 
         if !success {

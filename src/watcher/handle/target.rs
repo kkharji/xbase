@@ -2,6 +2,7 @@ use super::{WatchArguments, WatchError};
 use crate::constants::DAEMON_STATE;
 use crate::daemon::{WatchKind, WatchTarget};
 use crate::types::{BuildConfiguration, Client};
+use crate::xcode::append_build_root;
 use anyhow::Result;
 use notify::{event::ModifyKind, Event, EventKind};
 use std::time::{Duration, SystemTime};
@@ -46,7 +47,8 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
 
     match kind {
         WatchKind::Build => {
-            let ref args = config.as_args();
+            let ref args = append_build_root(root, config.as_args())
+                .map_err(|e| WatchError::stop(e.into()))?;
 
             nvim.new_logger("Build", &config.target, &None)
                 .log_build_stream(root, args, false, false)

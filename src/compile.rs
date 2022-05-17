@@ -139,8 +139,8 @@ pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
 
     let mut file = tokio::fs::File::create(path).await?;
     let config = serde_json::json! ({
-        "name": "xbase Server",
-        // FIXME: Point to user xcode-build-server
+        "name": "Xbase",
+        // FIXME: Point to user xbase-server
         "argv": ["/Users/tami5/repos/neovim/xbase.nvim/target/debug/xbase-server"],
         "version": "0.1",
         "bspVersion": "0.2",

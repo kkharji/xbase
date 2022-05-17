@@ -1,3 +1,6 @@
+#[cfg(feature = "daemon")]
+use crate::util::fs::get_dirname_dir_root;
+
 use super::Root;
 use serde::{Deserialize, Serialize};
 
@@ -7,13 +10,10 @@ pub struct Client {
     pub root: Root,
 }
 
+#[cfg(feature = "daemon")]
 impl Client {
     pub fn abbrev_root(&self) -> String {
-        self.root
-            .strip_prefix(self.root.ancestors().nth(2).unwrap())
-            .unwrap()
-            .display()
-            .to_string()
+        get_dirname_dir_root(&self.root).unwrap_or_default()
     }
 }
 

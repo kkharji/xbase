@@ -9,7 +9,9 @@ use tap::Pipe;
 
 pub use extensions::*;
 
-static SERVER_NAME: &str = "xbase-build-server";
+use crate::util::fs::get_build_cache_dir;
+
+static SERVER_NAME: &str = "Xbase";
 static SERVER_VERSION: &str = "0.1";
 
 /// SourceKit-lsp Build Server
@@ -224,20 +226,4 @@ fn get_compile_filepath(params: &InitializeBuild) -> Option<PathBuf> {
         .path()
         .pipe(PathBuf::from)
         .pipe(|path| path.is_file().then(|| path))
-}
-
-/// Try to get build cache_dir
-fn get_build_cache_dir(root_path: &PathBuf) -> Result<String> {
-    let path = || {
-        let parent = root_path.parent()?.file_name()?.to_str()?;
-        let name = root_path.file_name()?.to_str()?;
-        Some(
-            dirs::cache_dir()?
-                .join("xbase-build-server")
-                .join(format!("{parent}-{name}"))
-                .to_string_lossy()
-                .to_string(),
-        )
-    };
-    path().ok_or_else(|| anyhow::anyhow!("Fail to generate build_cache directory"))
 }

@@ -1,5 +1,4 @@
 //! General utilities
-#[cfg(any(feature = "server", feature = "daemon"))]
 pub mod fs;
 #[cfg(feature = "lua")]
 pub mod mlua;

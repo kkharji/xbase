@@ -120,7 +120,7 @@ async fn generate_compiled_commands<'a>(
         return Err(err);
     }
 
-    tracing::info!("Updated `{project_name}/.compile` ");
+    tracing::info!("Updated `{project_name}/.compile`");
 
     Ok(())
 }

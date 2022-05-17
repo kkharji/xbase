@@ -134,6 +134,7 @@ impl<'a> Logger<'a> {
     }
 
     pub async fn open_win(&self) -> Result<Window<NvimConnection>> {
+        // TOOD(nvim): Only open logger buffer if it's not already opened
         let open_cmd = self.open_cmd().await;
 
         self.nvim.exec(&open_cmd, false).await?;
