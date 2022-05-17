@@ -18,3 +18,14 @@ pub fn proc_exists(pid: &i32, cb: impl FnOnce()) -> bool {
         true
     }
 }
+
+#[cfg(feature = "daemon")]
+pub async fn proc_kill(pid_str: &String) -> anyhow::Result<bool> {
+    Ok(tokio::process::Command::new("kill")
+        .arg("-9")
+        .arg(pid_str)
+        .output()
+        .await?
+        .status
+        .success())
+}

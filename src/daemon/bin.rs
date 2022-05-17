@@ -1,15 +1,15 @@
+use anyhow::Result;
+use tap::Pipe;
+use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
-use xbase::constants::*;
-use xbase::daemon::*;
-use xbase::util::tracing::install_tracing;
-
 use tracing::*;
+use xbase::util::{proc_kill, tracing::install_tracing};
+use xbase::{constants::*, daemon::*};
+
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    if std::fs::metadata(DAEMON_SOCKET_PATH).is_ok() {
-        std::fs::remove_file(DAEMON_SOCKET_PATH).ok();
-    }
+async fn main() -> Result<()> {
+    ensure_single_instance().await?;
 
     let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
@@ -52,4 +52,19 @@ async fn main() -> anyhow::Result<()> {
             anyhow::bail!("Fail to accept a connection")
         };
     }
+}
+
+async fn ensure_single_instance() -> Result<()> {
+    if metadata(DAEMON_SOCKET_PATH).await.ok().is_some() {
+        remove_file(DAEMON_SOCKET_PATH).await.ok();
+        if metadata(DAEMON_PID_PATH).await.ok().is_some() {
+            read_to_string(DAEMON_PID_PATH)
+                .await?
+                .pipe_ref(proc_kill)
+                .await?;
+        }
+        remove_file(DAEMON_PID_PATH).await.ok();
+    }
+    write(DAEMON_PID_PATH, std::process::id().to_string()).await?;
+    Ok(())
 }
