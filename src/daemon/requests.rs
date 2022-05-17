@@ -25,7 +25,7 @@ use super::Requester;
 use crate::daemon::Handler;
 
 #[cfg(feature = "daemon")]
-use anyhow::Result;
+use crate::Result;
 
 #[cfg(feature = "daemon")]
 use async_trait::async_trait;

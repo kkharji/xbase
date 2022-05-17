@@ -1,4 +1,5 @@
-use anyhow::Result;
+use crate::error::Error;
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use simctl::list::DeviceState;
 use simctl::Device;
@@ -122,22 +123,13 @@ impl SimDevice {
         logger: &mut Logger<'a>,
         win: &Option<NvimWindow>,
     ) -> Result<()> {
-        if let Err(e) = to_anyhow_error(res) {
-            logger.log(e.to_string(), win).await?;
+        if let Err(e) = res {
+            let err = Error::from(e);
+            logger.log(err.to_string(), win).await?;
             logger.set_status_end(false, true).await?;
             self.is_running = false;
+            return Err(err);
         }
         Ok(())
     }
-}
-
-fn to_anyhow_error<T>(v: simctl::Result<T>) -> Result<T> {
-    v.map_err(|e| match e {
-        simctl::Error::Output { stderr, .. } => {
-            anyhow::anyhow!("External Command Failure: {stderr}")
-        }
-        simctl::Error::Io(err) => anyhow::Error::new(err),
-        simctl::Error::Json(err) => anyhow::Error::new(err),
-        simctl::Error::Utf8(err) => anyhow::Error::new(err),
-    })
 }

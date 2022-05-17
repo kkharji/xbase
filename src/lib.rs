@@ -20,11 +20,20 @@ mod nvim;
 #[cfg(feature = "daemon")]
 mod xcode;
 
+#[cfg(feature = "daemon")]
+pub mod watcher;
+
 pub mod state;
 
 pub mod constants;
 
 pub mod store;
 
-#[cfg(feature = "daemon")]
-pub mod watcher;
+#[cfg(any(feature = "daemon", feature = "server"))]
+mod error;
+
+#[cfg(any(feature = "daemon", feature = "server"))]
+pub use error::{CompileError, Error, LoopError, WatchError};
+
+#[cfg(any(feature = "daemon", feature = "server"))]
+pub type Result<T> = std::result::Result<T, Error>;

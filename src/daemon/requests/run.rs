@@ -6,7 +6,7 @@ use crate::{
 
 #[cfg(feature = "daemon")]
 use {
-    crate::constants::DAEMON_STATE, crate::types::SimDevice, anyhow::anyhow as err,
+    crate::constants::DAEMON_STATE, crate::types::SimDevice, crate::Error,
     xcodebuild::runner::build_settings,
 };
 
@@ -44,10 +44,7 @@ impl Handler for Run {
             None
         };
 
-        let nvim = state
-            .clients
-            .get(&pid)
-            .ok_or_else(|| err!("no client found with {}", pid))?;
+        let nvim = state.clients.get(&pid)?;
 
         let args = {
             let mut args = config.as_args();
@@ -77,7 +74,7 @@ impl Handler for Run {
         if !success {
             let msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(&msg).await?;
-            anyhow::bail!("{msg}");
+            return Err(Error::Build(msg));
         }
 
         let ref mut logger = nvim.new_logger("Run", &config.target, &direction);

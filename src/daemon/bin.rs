@@ -1,10 +1,10 @@
-use anyhow::Result;
 use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
 use tracing::*;
 use xbase::util::{proc_kill, tracing::install_tracing};
+use xbase::Result;
 use xbase::{constants::*, daemon::*};
 
 #[tokio::main]
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
                 // update_watchers(state.clone()).await;
             });
         } else {
-            anyhow::bail!("Fail to accept a connection")
+            tracing::error!("Fail to accept a connection")
         };
     }
 }

@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::{NvimClient, NvimConnection, NvimWindow};
 use crate::nvim::BufferDirection;
-use anyhow::Result;
+use crate::Result;
 use nvim_rs::{Buffer, Window};
 use tokio_stream::StreamExt;
 

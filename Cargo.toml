@@ -74,3 +74,4 @@ strum                 = { version = "0.24.0",  features = ["derive"], optional  
 tokio-stream          = { version = "0.1.8", features = ["io-util"], optional = true  }
 async-stream          = { version = "0.3.3", optional = true }
 simctl                = { path = "../../../sources/simctl/", optional = true }
+thiserror = "1.0.31"

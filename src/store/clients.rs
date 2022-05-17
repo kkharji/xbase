@@ -1,6 +1,6 @@
 use crate::daemon::Register;
 use crate::nvim::NvimClient;
-use anyhow::Result;
+use crate::{LoopError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
@@ -31,6 +31,18 @@ impl ClientStore {
             .await?
             .pipe(|client| self.insert(req.client.pid, client))
             .pipe(|_| Ok(()))
+    }
+
+    pub fn get(&self, pid: &i32) -> Result<&NvimClient> {
+        self.0
+            .get(&pid)
+            .ok_or_else(|| LoopError::NoClient(*pid).into())
+    }
+
+    pub fn get_mut(&mut self, pid: &i32) -> Result<&mut NvimClient> {
+        self.0
+            .get_mut(&pid)
+            .ok_or_else(|| LoopError::NoClient(*pid).into())
     }
 
     pub async fn get_clients_by_root<'a>(&'a self, root: &'a PathBuf) -> Vec<&'a NvimClient> {

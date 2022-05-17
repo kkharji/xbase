@@ -1,5 +1,6 @@
 //! Helper functions to communicate with xcodegen
-use anyhow::{Context, Result};
+use crate::error::{ConversionError, XcodeGenError};
+use crate::Result;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
@@ -22,7 +23,7 @@ fn xcodgen() -> tokio::process::Command {
 
 // Run xcodgen generate
 pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<ExitStatus> {
-    xcodgen()
+    let status = xcodgen()
         .current_dir(root)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -30,8 +31,8 @@ pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<ExitStatus> {
         .arg("-c")
         .spawn()?
         .wait()
-        .await
-        .context("xcodegen generate")
+        .await?;
+    Ok(status)
 }
 
 // NOTE: passing workspace in-case in the future we would allow configurability of project.yml path
@@ -51,9 +52,9 @@ pub fn is_valid(root: &PathBuf) -> bool {
 }
 
 pub async fn regenerate(path: &PathBuf, root: &PathBuf) -> Result<bool> {
-    if !root.join("project.yml").exists() {
-        anyhow::bail!("Project.yml is not found");
-    }
+    config_file(root)?;
+
+    let path_to_filename_err = |path: &PathBuf| ConversionError::PathToFilename(path.into());
 
     let mut retry_count = 0;
     while retry_count < 3 {
@@ -61,7 +62,7 @@ pub async fn regenerate(path: &PathBuf, root: &PathBuf) -> Result<bool> {
             if code.success() {
                 if path
                     .file_name()
-                    .ok_or_else(|| anyhow::anyhow!("Fail to get filename from {:?}", path))?
+                    .ok_or_else(|| ConversionError::PathToFilename(path.into()))?
                     .eq("project.yml")
                 {
                     return Ok(true);
@@ -72,5 +73,20 @@ pub async fn regenerate(path: &PathBuf, root: &PathBuf) -> Result<bool> {
         retry_count += 1
     }
 
-    anyhow::bail!("Fail to update_xcodeproj")
+    let project_name = root
+        .file_name()
+        .ok_or_else(|| path_to_filename_err(root))?
+        .to_str()
+        .ok_or_else(|| path_to_filename_err(root))?
+        .to_string();
+
+    Err(XcodeGenError::XcodeProjUpdate(project_name).into())
+}
+
+pub fn config_file(root: &PathBuf) -> Result<PathBuf> {
+    let config_path = root.join("project.yml");
+    if !config_path.exists() {
+        return Err(XcodeGenError::NoProjectConfig.into());
+    }
+    Ok(config_path)
 }

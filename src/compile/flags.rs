@@ -1,6 +1,7 @@
 use super::CompilationCommand;
+use crate::error::{ConversionError, EnsureOptional};
 use crate::util::fs::{find_header_dirs, find_swift_files, find_swift_module_root, get_files_list};
-use anyhow::Result;
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -30,8 +31,7 @@ impl CompileFlags {
     #[tracing::instrument(skip_all, level = "trace")]
     pub fn from_command(command: &str) -> Result<Self> {
         command
-            .pipe(shell_words::split)
-            .map_err(anyhow::Error::from)?
+            .pipe(shell_words::split)?
             .tap_mut(|flags| {
                 flags.remove(0);
             })
@@ -61,7 +61,7 @@ impl CompileFlags {
                     .flatten()
                     .collect::<HashMap<_, _>>()
                     .get(filepath)
-                    .ok_or_else(|| anyhow::anyhow!("No flags for {:?}", filepath))?
+                    .to_result("CompileFileFlags", filepath)?
                     .clone()
                     .pipe(Result::Ok);
             } else if let Some(ref swiftflags_filepath) = swiftflags_filepath {
@@ -92,7 +92,7 @@ impl CompileFlags {
 
         filepath
             .to_str()
-            .ok_or_else(|| anyhow::anyhow!("Couldn't convert filepath to string {:?}", filepath))?
+            .ok_or_else(|| ConversionError::PathToString(filepath.into()))?
             .pipe(|f| vec![f.into(), "-sdk".into(), SDKPATH.into()])
             .pipe(Self)
             .pipe(Result::Ok)

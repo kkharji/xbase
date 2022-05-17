@@ -42,10 +42,7 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
     let state = DAEMON_STATE.clone();
     let mut state = state.lock().await;
 
-    let nvim = state
-        .clients
-        .get(&pid)
-        .ok_or_else(|| WatchError::Stop("Fail to find nvim instance with given pid".to_string()))?;
+    let nvim = state.clients.get(&pid)?;
 
     match kind {
         WatchKind::Build => {
@@ -53,8 +50,7 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
 
             nvim.new_logger("Build", &config.target, &None)
                 .log_build_stream(root, args, false, false)
-                .await
-                .map_err(WatchError::r#continue)?;
+                .await?
         }
 
         WatchKind::Run => {

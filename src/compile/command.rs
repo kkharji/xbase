@@ -1,5 +1,5 @@
 use crate::util::fs;
-use anyhow::Result;
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

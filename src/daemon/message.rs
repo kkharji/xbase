@@ -12,8 +12,8 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn read(value: String) -> anyhow::Result<Self> {
-        Ok(serde_json::from_str(value.trim())?)
+    pub fn read(value: String) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(value.trim())
     }
 }
 
@@ -30,7 +30,7 @@ pub enum Message {
 
 #[cfg(feature = "daemon")]
 impl Message {
-    pub async fn handle(self) -> anyhow::Result<()> {
+    pub async fn handle(self) -> crate::Result<()> {
         match self {
             Self::Build(c) => Handler::handle(c).await,
             Self::Run(c) => Handler::handle(c).await,
@@ -46,7 +46,7 @@ impl Message {
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 pub trait Handler: std::fmt::Debug + Sized {
-    async fn handle(self) -> anyhow::Result<()> {
+    async fn handle(self) -> crate::Result<()> {
         tracing::error!("Not Implemented! {:#?}", self);
         Ok(())
     }

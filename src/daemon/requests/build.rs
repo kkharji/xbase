@@ -23,11 +23,7 @@ impl Handler for Build {
         tracing::debug!("Handling build request {:#?}", config);
 
         let state = DAEMON_STATE.clone().lock_owned().await;
-        let nvim = state
-            .clients
-            .get(pid)
-            .ok_or_else(|| anyhow::anyhow!("no client found with {}", self.client.pid))?;
-
+        let nvim = state.clients.get(pid)?;
         let direction = self.direction.clone();
 
         let (success, _) = nvim

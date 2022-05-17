@@ -6,7 +6,7 @@
 mod command;
 mod flags;
 
-use anyhow::{Context, Result};
+use crate::Result;
 pub use command::CompilationCommand;
 pub use flags::CompileFlags;
 use serde::{Deserialize, Serialize};
@@ -53,8 +53,8 @@ impl Deref for CompilationDatabase {
 /// ```
 pub fn parse_from_file<P: AsRef<path::Path> + Clone>(path: P) -> Result<CompilationDatabase> {
     std::fs::read_to_string(path)?
-        .pipe_ref(|s| serde_json::from_str(s))
-        .context("Deserialize .compile")
+        .pipe_ref(|s| serde_json::from_str::<CompilationDatabase>(s))?
+        .pipe(Ok)
 }
 
 /// Generate [`CompilationDatabase`] from xcodebuild::parser::Step
@@ -67,6 +67,7 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
     while let Some(step) = steps.next() {
         if let Step::CompileSwiftSources(sources) = step {
             let arguments = shell_words::split(&sources.command)?;
+
             let file = Default::default();
             let output = Default::default();
             let mut name = Default::default();
@@ -106,15 +107,15 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
 
 #[cfg(feature = "daemon")]
 pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
-    use crate::xcode::fresh_build;
+    use crate::{error::CompileError, xcode::fresh_build};
     use tokio_stream::StreamExt;
 
     // TODO(build): Ensure that build successed. check for Exit Code
     let steps = fresh_build(&root).await?.collect::<Vec<Step>>().await;
     let compile_commands = steps.pipe_ref(generate_from_steps).await?;
+
     if compile_commands.is_empty() {
-        let msg = format!("No compile commands generated\n{:#?}", steps);
-        anyhow::bail!("{msg}")
+        return Err(CompileError::NoCompileCommandsGenerated(steps).into());
     }
 
     let json = serde_json::to_vec_pretty(&compile_commands)?;

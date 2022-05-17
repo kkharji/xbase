@@ -19,7 +19,7 @@ impl<'a> Requester<'a, Register> for Register {
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for Register {
-    async fn handle(self) -> anyhow::Result<()> {
+    async fn handle(self) -> Result<()> {
         use crate::constants::DAEMON_STATE;
 
         let Register { client, .. } = &self;
@@ -30,7 +30,7 @@ impl Handler for Register {
         let state = DAEMON_STATE.clone();
         let mut state = state.lock().await;
 
-        if let Some(project) = state.projects.get_mut(root) {
+        if let Ok(project) = state.projects.get_mut(root) {
             // NOTE: Add client pid to project
             project.clients.push(*pid);
         } else {

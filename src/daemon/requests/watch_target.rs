@@ -42,29 +42,17 @@ impl Handler for WatchTarget {
     async fn handle(self) -> Result<()> {
         use crate::constants::DAEMON_STATE;
 
-        let Self {
-            client,
-            config,
-            ops,
-            ..
-        } = &self;
-
-        let BuildConfiguration { target, .. } = config;
+        let Self { client, ops, .. } = &self;
 
         let state = DAEMON_STATE.clone();
         let mut state = state.lock().await;
-
-        if target.is_empty() {
-            anyhow::bail!("No target specified!")
-        }
 
         match ops {
             WatchOps::Start => {
                 // NOTE: Get project associate ignore pattern
                 let ignore_patterns = state
                     .projects
-                    .get_mut(&client.root)
-                    .ok_or_else(|| anyhow::anyhow!("No project for {:#?}", config))?
+                    .get_mut(&client.root)?
                     .ignore_patterns
                     .clone();
 

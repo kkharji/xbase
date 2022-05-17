@@ -43,6 +43,19 @@ impl Platform {
     }
 }
 
+impl ToString for Platform {
+    fn to_string(&self) -> String {
+        match self {
+            Platform::IOS => "iOS",
+            Platform::WatchOS => "watchOS",
+            Platform::TvOS => "tvOS",
+            Platform::MacOS => "macOS",
+            Platform::None => "",
+        }
+        .into()
+    }
+}
+
 #[cfg(feature = "lua")]
 use mlua::prelude::*;
 

@@ -1,6 +1,8 @@
-use super::*;
+use super::{Platform, ProjectDependency, ProjectTargetType};
 use crate::util::serde::value_or_vec;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use tap::Pipe;
 
 /// Represent XCode Target

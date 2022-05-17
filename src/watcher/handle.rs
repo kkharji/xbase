@@ -1,4 +1,4 @@
-use super::error::WatchError;
+use crate::error::WatchError;
 use crate::{daemon::WatchTarget, types::Client};
 use anyhow::Result;
 use std::path::{Path, PathBuf};

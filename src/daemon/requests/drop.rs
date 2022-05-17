@@ -11,7 +11,7 @@ pub struct Drop {
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for Drop {
-    async fn handle(self) -> anyhow::Result<()> {
+    async fn handle(self) -> Result<()> {
         use crate::constants::DAEMON_STATE;
         let Self {
             client,

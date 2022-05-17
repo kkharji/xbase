@@ -1,5 +1,5 @@
 use super::{is_seen, WatchArguments, WatchError};
-use crate::compile;
+use crate::{compile, Error};
 use crate::{constants::DAEMON_STATE, types::Client};
 use notify::event::{DataChange, ModifyKind};
 use notify::{Event, EventKind};
@@ -7,7 +7,7 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
 // TODO(structure): rename or move to compile
-const START_MSG: &'static str = "⚙ auto compiling ..";
+const START_MSG: &'static str = "⚙ recompiling project ..";
 
 const SUCC_MESSAGE: &'static str = "✅ compiled";
 
@@ -46,7 +46,7 @@ pub async fn create(args: WatchArguments) -> Result<(), WatchError> {
 
     if let Err(e) = generate_compiled_commands(&state, root, &project_name).await {
         *debounce = std::time::SystemTime::now();
-        return Err(e);
+        return Err(e.into());
     }
 
     echo_messsage_to_clients(&state, root, &project_name, SUCC_MESSAGE).await;
@@ -71,13 +71,7 @@ async fn try_updating_project_state<'a>(
     };
 
     if generated {
-        state
-            .projects
-            .get_mut(root)
-            .ok_or_else(|| WatchError::Stop(format!("'{:?}' isn't registred project", root)))?
-            .update()
-            .await
-            .map_err(WatchError::r#continue)?;
+        state.projects.get_mut(root)?.update().await?
     }
 
     Ok(())
@@ -103,7 +97,7 @@ async fn generate_compiled_commands<'a>(
     state: &'a tokio::sync::MutexGuard<'a, crate::state::State>,
     root: &PathBuf,
     project_name: &String,
-) -> Result<(), WatchError> {
+) -> Result<(), Error> {
     if let Err(err) = compile::update_compilation_file(&root).await {
         echo_error_to_clients(
             state,
@@ -123,8 +117,10 @@ async fn generate_compiled_commands<'a>(
         //         logger.set_status_end(false, true).await.ok();
         //     }
         // }
-        return Err(WatchError::r#continue(err));
+        return Err(err);
     }
+
+    tracing::info!("Updated `{project_name}/.compile` ");
 
     Ok(())
 }

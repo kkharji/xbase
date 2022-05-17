@@ -1,5 +1,8 @@
 #[cfg(feature = "server")]
-use crate::compile::{CompilationCommand, CompilationDatabase, CompileFlags};
+use {
+    crate::compile::{CompilationCommand, CompilationDatabase, CompileFlags},
+    crate::error::EnsureOptional,
+};
 
 #[cfg(feature = "server")]
 use std::collections::HashMap;
@@ -8,7 +11,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 #[cfg(any(feature = "server", feature = "daemon"))]
-use anyhow::Result;
+use crate::Result;
 
 #[cfg(any(feature = "server", feature = "daemon"))]
 use std::path::PathBuf;
@@ -47,7 +50,7 @@ impl State {
                 .pipe(|cmds| self.compile_commands.insert(compile_filepath.into(), cmds))
                 .pipe(|_| self.compile_commands.get(compile_filepath))
         }
-        .ok_or_else(|| anyhow::anyhow!("No CompilationDatabase found for {:?}", compile_filepath))
+        .to_result("CompilationDatabase", compile_filepath)
     }
 
     /// Get [`CompileFlags`] for a file
@@ -73,7 +76,7 @@ impl State {
                 .pipe(|flags| self.file_flags.insert(filepath.to_path_buf(), flags))
                 .pipe(|_| self.file_flags.get(filepath))
         }
-        .ok_or_else(|| anyhow::anyhow!("Couldn't find file flags for {:?}", filepath))
+        .to_result("CompileFileFlags", filepath)
     }
 
     /// Clear [`BuildServerState`]

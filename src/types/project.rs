@@ -19,7 +19,7 @@ pub use {
 };
 
 #[cfg(feature = "daemon")]
-use anyhow::Result;
+use crate::{error::EnsureOptional, xcodegen, Result};
 
 /// Represent XcodeGen Project
 #[derive(Debug, Deserialize, Serialize)]
@@ -59,10 +59,7 @@ pub struct Project {
 #[cfg(feature = "daemon")]
 impl Project {
     pub async fn new(root: &std::path::PathBuf) -> Result<Self> {
-        let path = root.join("project.yml");
-        if !path.exists() {
-            anyhow::bail!("project.yaml doesn't exist in '{:?}'", root)
-        }
+        let path = xcodegen::config_file(root)?;
 
         let content = tokio::fs::read_to_string(path).await?;
         let mut project = serde_yaml::from_str::<Project>(&content)?;
@@ -102,20 +99,10 @@ impl Project {
             Some(value) => Ok(value),
             None => match platform {
                 Some(platform) => {
-                    let key = match platform {
-                        Platform::IOS => "iOS",
-                        Platform::WatchOS => "watchOS",
-                        Platform::TvOS => "tvOS",
-                        Platform::MacOS => "macOS",
-                        Platform::None => "",
-                    }
-                    .pipe(|s| name.replace(s, ""));
-
-                    self.targets
-                        .get(&key)
-                        .ok_or_else(|| anyhow::anyhow!("No target found for {key}"))
+                    let key = platform.to_string().pipe(|s| name.replace(&s, ""));
+                    self.targets.get(&key).to_result("target", key)
                 }
-                None => anyhow::bail!("No Target found with {name} {:#?}", platform),
+                None => Err(anyhow::anyhow!("No Target found with {name} {:#?}", platform).into()),
             },
         }
     }

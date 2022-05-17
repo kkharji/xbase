@@ -13,7 +13,7 @@ pub use logger::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "daemon")]
-use anyhow::Result;
+use crate::Result;
 
 #[cfg(feature = "daemon")]
 type NvimConnection = Compat<tokio::io::WriteHalf<parity_tokio_ipc::Connection>>;
