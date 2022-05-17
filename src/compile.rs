@@ -109,15 +109,16 @@ pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
     use crate::xcode::fresh_build;
     use tokio_stream::StreamExt;
 
-    let steps = fresh_build(&root).await?.collect::<Vec<Step>>().await;
     // TODO(build): Ensure that build successed. check for Exit Code
-    let json = generate_from_steps(&steps)
-        .await?
-        .pipe(|cmd| serde_json::to_vec_pretty(&cmd.0))?;
+    let steps = fresh_build(&root).await?.collect::<Vec<Step>>().await;
+    let compile_commands = steps.pipe_ref(generate_from_steps).await?;
+    if compile_commands.is_empty() {
+        let msg = format!("No compile commands generated\n{:#?}", steps);
+        anyhow::bail!("{msg}")
+    }
 
-    tokio::fs::write(root.join(".compile"), json)
-        .await
-        .context("Write CompileCommands")?;
+    let json = serde_json::to_vec_pretty(&compile_commands)?;
+    tokio::fs::write(root.join(".compile"), &json).await?;
 
     Ok(())
 }
