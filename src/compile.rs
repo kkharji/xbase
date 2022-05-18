@@ -66,6 +66,23 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
 
     while let Some(step) = steps.next() {
         if let Step::CompileSwiftSources(sources) = step {
+            // HACK: Commands with files key break source kit
+            // unknown argument: '-frontend'
+            // unknown argument: '-primary-file'
+            // unknown argument: '-primary-file'
+            // unknown argument: '-primary-file'
+            // unknown argument: '-emit-dependencies-path'
+            // unknown argument: '-emit-reference-dependencies-path'
+            // unknown argument: '-enable-objc-interop'
+            // unknown argument: '-new-driver-path'
+            // unknown argument: '-serialize-debugging-options'
+            // unknown argument: '-enable-anonymous-context-mangled-names'
+            // unknown argument: '-target-sdk-version'
+            // option '-serialize-diagnostics-path' is not supported by 'swiftc'; did you mean to use 'swift'?
+            if sources.command.contains("swift-frontend") {
+                continue;
+            }
+
             let arguments = shell_words::split(&sources.command)?;
 
             let file = Default::default();
@@ -74,6 +91,7 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
             let mut files = Vec::default();
             let mut file_lists = Vec::default();
             let mut index_store_path = None;
+
             for i in 0..arguments.len() {
                 let val = &arguments[i];
                 if val == "-module-name" {
@@ -89,6 +107,7 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
             if let Some(ref index_store_path) = index_store_path {
                 _index_store_path.push(index_store_path.clone());
             }
+
             commands.push(CompilationCommand {
                 name,
                 file,
