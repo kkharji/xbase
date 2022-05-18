@@ -250,7 +250,7 @@ async fn should_skip_event<'a>(
     };
 
     if !(last_run > 1) {
-        tracing::debug!("{:?}, paths: {:?}", event.kind, &event.paths);
+        tracing::debug!("Skipping {:?}, paths: {:?}", event.kind, &event.paths);
         tracing::trace!("pass_threshold: {last_run}, {:?}", event);
         return (Some(path), true);
     }

@@ -20,8 +20,11 @@ pub async fn create(args: WatchArguments) -> Result<(), WatchError> {
     let Client { root, .. } = info.try_into_project()?;
 
     if should_skip_compile(&event, &path, args.last_seen).await {
+        tracing::debug!("Skipping {:?}", &event.paths);
         return Ok(());
     }
+
+    tracing::trace!("[NewEvent] {:#?}", &event);
 
     let ref name = root.file_name().unwrap().to_string_lossy().to_string();
     let ref mut state = DAEMON_STATE.clone().lock_owned().await;
@@ -42,53 +45,44 @@ pub async fn create(args: WatchArguments) -> Result<(), WatchError> {
 }
 
 async fn should_skip_compile(event: &Event, path: &PathBuf, last_seen: Arc<Mutex<String>>) -> bool {
-    tracing::trace!("[NewEvent] {:#?}", &event);
-
-    let skip = match &event.kind {
+    match &event.kind {
         EventKind::Create(_) => {
             tokio::time::sleep(Duration::new(1, 0)).await;
             tracing::debug!("[FileCreated]: {:?}", path);
-            false
         }
 
         EventKind::Remove(_) => {
             tokio::time::sleep(Duration::new(1, 0)).await;
             tracing::debug!("[FileRemoved]: {:?}", path);
-            false
         }
 
         EventKind::Modify(m) => match m {
             ModifyKind::Data(e) => match e {
                 DataChange::Content => {
                     if !path.display().to_string().contains("project.yml") {
-                        true;
+                        return true;
                     }
                     tokio::time::sleep(Duration::new(1, 0)).await;
                     tracing::debug!("[XcodeGenConfigUpdate]");
                     // HACK: Not sure why, but this is needed because xcodegen break.
-                    false
                 }
-                _ => true,
+                _ => return true,
             },
 
             ModifyKind::Name(_) => {
                 let path_string = path.to_string_lossy();
                 // HACK: only account for new path and skip duplications
                 if !path.exists() || is_seen(last_seen.clone(), &path_string).await {
-                    true;
+                    return true;
                 }
                 tokio::time::sleep(Duration::new(1, 0)).await;
                 tracing::debug!("[FileRenamed]: {:?}", path);
-                false
             }
-            _ => true,
+            _ => return true,
         },
 
-        _ => true,
+        _ => return true,
     };
 
-    if skip {
-        tracing::trace!("Skipping {:#?}", &event);
-    }
-    skip
+    false
 }
