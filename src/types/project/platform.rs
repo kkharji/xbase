@@ -1,15 +1,23 @@
 use super::*;
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Hash, PartialEq, Eq)]
+use strum::{Display, EnumString};
+#[derive(
+    Clone, Debug, Default, Deserialize, Serialize, Hash, PartialEq, Eq, Display, EnumString,
+)]
 pub enum Platform {
     #[serde(rename = "iOS")]
+    #[strum(serialize = "iOS")]
     IOS,
     #[serde(rename = "watchOS")]
+    #[strum(serialize = "watchOS")]
     WatchOS,
     #[serde(rename = "tvOS")]
+    #[strum(serialize = "tvOS")]
     TvOS,
+    #[strum(serialize = "macOS")]
     #[serde(rename = "macOS")]
     MacOS,
     #[default]
+    #[strum(serialize = "")]
     None,
 }
 
@@ -40,19 +48,6 @@ impl Platform {
     #[must_use]
     pub fn is_mac_os(&self) -> bool {
         matches!(self, Self::MacOS)
-    }
-}
-
-impl ToString for Platform {
-    fn to_string(&self) -> String {
-        match self {
-            Platform::IOS => "iOS",
-            Platform::WatchOS => "watchOS",
-            Platform::TvOS => "tvOS",
-            Platform::MacOS => "macOS",
-            Platform::None => "",
-        }
-        .into()
     }
 }
 

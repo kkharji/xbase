@@ -13,7 +13,10 @@ syn region  Scope        display oneline start='^\[' end='\]'
 syn match   LogError     "^\(\[Error\]\)"
 syn match   LogWarn      "^\(\[Warning\]\)"
 syn match   LogSuccess   "^\(\[Succeed\]\)"
-syn match   LogLaunched   "^\(\[Launched\]\)"
+syn match   LogDone      "^\(\[Done\]\)"
+syn match   LogLaunched  "^\(\[Launched\]\)"
+syn match   LogOutput    "^\(\[Output\]\)"
+syn match   LogOutput    "^\(\[Exit\]\)"
 syn match   Target       "`\(\w.*\)`"
 syn match   FilePath     "`\(\/.*\)`" 
 syn region  Sep          display oneline start='-' end='-$'
@@ -23,6 +26,7 @@ hi def link LogSuccess    healthSuccess
 hi def link Operations    Function
 hi def link Entitlement   Comment
 hi def link Package       Comment
+hi def link LogOutput     Comment
 hi def link Sep           Comment
 hi def link FilePath      String
 hi def link Target        Label

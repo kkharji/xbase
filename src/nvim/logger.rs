@@ -108,6 +108,7 @@ impl<'a> Logger<'a> {
         let mut success = false;
 
         self.set_running().await?;
+        self.log_title().await?;
 
         while let Some(line) = stream.next().await {
             line.contains("Succeed").then(|| success = true);
@@ -120,7 +121,7 @@ impl<'a> Logger<'a> {
         Ok((success, win))
     }
 
-    async fn log_title(&mut self) -> Result<()> {
+    pub async fn log_title(&mut self) -> Result<()> {
         self.log(self.title.clone(), &None).await?;
         Ok(())
     }
@@ -146,7 +147,6 @@ impl<'a> Logger<'a> {
     }
 
     pub async fn set_running(&mut self) -> Result<()> {
-        self.log_title().await?;
         self.nvim
             .exec("let g:xbase_watch_build_status='running'", false)
             .await?;

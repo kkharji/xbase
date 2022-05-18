@@ -6,8 +6,10 @@ use crate::{
 
 #[cfg(feature = "daemon")]
 use {
-    crate::constants::DAEMON_STATE, crate::types::SimDevice, crate::xcode::append_build_root,
-    crate::Error, xcodebuild::runner::build_settings,
+    crate::{constants::DAEMON_STATE, types::SimDevice, xcode::append_build_root, Error},
+    std::str::FromStr,
+    tokio_stream::StreamExt,
+    xcodebuild::runner,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,25 +50,18 @@ impl Handler for Run {
 
         let args = {
             let mut args = config.as_args();
-            if let Some(platform) = platform {
+            if let Some(ref platform) = platform {
                 args.extend(platform.sdk_simulator_args())
             }
 
             append_build_root(&root, args)?
         };
 
-        let build_settings = build_settings(&root, &args).await?;
-        let ref app_id = build_settings.product_bundle_identifier;
+        tracing::debug!("args: {:?}", args);
 
-        // FIX(run): When running with release path_to_app is incorrect
-        //
-        // Err: application bundle was not found at the provided path.\nProvide a valid path to the
-        // desired application bundle.
-        //
-        // Path doesn't point to local directory build
-        let ref path_to_app = build_settings.metal_library_output_dir;
+        let settings = runner::build_settings(&root, &args).await?;
+        let platform = platform.unwrap_or(Platform::from_str(&settings.platform_display_name)?);
 
-        tracing::warn!("{app_id}: {:?}", path_to_app);
         let (success, ref win) = nvim
             .new_logger("Build", &config.target, &direction)
             .log_build_stream(&root, &args, true, true)
@@ -78,27 +73,78 @@ impl Handler for Run {
             return Err(Error::Build(msg));
         }
 
-        let ref mut logger = nvim.new_logger("Run", &config.target, &direction);
+        let mut logger = nvim.new_logger("Run", &config.target, &direction);
 
-        logger.set_running().await?;
+        if platform.is_mac_os() {
+            let program = settings.path_to_output_binary()?;
+            tracing::debug!("Running binary {program:?}");
 
-        if let Some(mut device) = get_device(&state, device) {
-            device.try_boot(logger, win).await?;
-            device.try_install(path_to_app, app_id, logger, win).await?;
-            device.try_launch(app_id, logger, win).await?;
-
-            logger.set_status_end(true, true).await?;
-
+            logger.log_title().await?;
             tokio::spawn(async move {
+                let mut stream = runner::run(program).await?;
+
+                use xcodebuild::runner::ProcessUpdate::*;
+                // NOTE: This is required so when neovim exist this should also exit
+                while let Some(update) = stream.next().await {
+                    let state = DAEMON_STATE.clone();
+                    let state = state.lock().await;
+
+                    let nvim = state.clients.get(&pid)?;
+                    let mut logger = nvim.new_logger("Run", &config.target, &direction);
+                    let ref win = Some(logger.open_win().await?);
+
+                    // NOTE: NSLog get directed to error by default which is odd
+                    match update {
+                        Stdout(msg) => {
+                            logger.log(format!("[Output] {msg}"), win).await?;
+                        }
+                        Error(msg) | Stderr(msg) => {
+                            logger.log(format!("[Error]  {msg}"), win).await?;
+                        }
+                        Exit(ref code) => {
+                            logger.log(format!("[Exit]   {code}"), win).await?;
+                            logger.set_status_end(code == "0", win.is_none()).await?;
+                        }
+                    }
+                }
+                anyhow::Ok(())
+            });
+            return Ok(());
+        } else if let Some(mut device) = get_device(&state, device) {
+            let path_to_app = settings.metal_library_output_dir;
+            let app_id = settings.product_bundle_identifier;
+
+            tracing::debug!("{app_id}: {:?}", path_to_app);
+
+            logger.log_title().await?;
+            tokio::spawn(async move {
+                // NOTE: This is required so when neovim exist this should also exit
+                let state = DAEMON_STATE.clone().lock_owned().await;
+                let nvim = state.clients.get(&pid)?;
+                let ref mut logger = nvim.new_logger("Run", &config.target, &direction);
+                let ref win = Some(logger.open_win().await?);
+
+                logger.set_running().await?;
+
+                device.try_boot(logger, win).await?;
+                device
+                    .try_install(&path_to_app, &app_id, logger, win)
+                    .await?;
+                device.try_launch(&app_id, logger, win).await?;
+
+                // TODO: Remove and repalce with app logs
+                logger.set_status_end(true, win.is_none()).await?;
+
                 let mut state = DAEMON_STATE.clone().lock_owned().await;
                 state.devices.insert(device);
                 state.sync_client_state().await
             });
-        } else {
-            // TODO: check if macOS is the platform and run it
+            return Ok(());
         }
 
-        Ok(())
+        let msg = format!("Unable to run `{}` under `{platform}`", config.target);
+        logger.log(msg.clone(), win).await?;
+        Err(Error::Run(msg))
     }
 }
 
