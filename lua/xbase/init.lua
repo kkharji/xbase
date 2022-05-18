@@ -1,6 +1,4 @@
 local M = {}
-local config = require "xbase.config"
-local lib = require "libxbase"
 
 vim.g.xbase = {
   ---@type Project[]
@@ -25,8 +23,8 @@ end
 
 --- Register current neovim client
 M.register = function()
-  local _ = lib.ensure()
-  lib.register { address = vim.env.NVIM_LISTEN_ADDRESS }
+  local _ = require("libxbase").ensure()
+  require("libxbase").register { address = vim.env.NVIM_LISTEN_ADDRESS }
 end
 
 ---Tries to register vim instance as client for xbase server.
@@ -41,19 +39,19 @@ M.try_register = function(root, opts)
 end
 
 M.drop = function(remove_client)
-  lib.drop { remove_client = remove_client }
+  require("libxbase").drop { remove_client = remove_client }
 end
 
 M.build = function(opts)
-  lib.build(opts)
+  require("libxbase").build(opts)
 end
 
 M.run = function(opts)
-  lib.run(opts)
+  require("libxbase").run(opts)
 end
 
 M.watch = function(opts)
-  lib.watch_target(opts)
+  require("libxbase").watch_target(opts)
 end
 
 ---Setup xbase for current instance.
@@ -61,22 +59,24 @@ end
 ---@param opts xbaseOptions
 ---@overload fun()
 M.setup = function(opts)
-  local root = vim.loop.cwd()
-  opts = opts or {}
-  -- Mutate xbase configuration
-  config.set(opts)
-  -- Try to register current vim instance
-  -- NOTE: Should this register again on cwd change?
-  M.try_register(root, opts)
+  vim.schedule(function()
+    opts = opts or {}
+    local root = vim.loop.cwd()
+    -- Mutate xbase configuration
+    require("xbase.config").set(opts)
+    -- Try to register current vim instance
+    -- NOTE: Should this register again on cwd change?
+    M.try_register(root, opts)
 
-  vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
-    pattern = { "*.m", "*.swift", "*.c" },
-    callback = function()
-      vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
-    end,
-  })
-  -- so that on a new buffer it would work
-  vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
+    vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+      pattern = { "*.m", "*.swift", "*.c" },
+      callback = function()
+        vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
+      end,
+    })
+    -- so that on a new buffer it would work
+    vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
+  end)
 end
 
 return M
