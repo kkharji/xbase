@@ -178,3 +178,91 @@ pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(feature = "daemon")]
+pub async fn ensure_server_support<'a>(
+    state: &'a mut tokio::sync::OwnedMutexGuard<crate::state::State>,
+    name: &String,
+    root: &std::path::PathBuf,
+    path: Option<&std::path::PathBuf>,
+) -> Result<bool> {
+    use crate::{error::XcodeGenError, xcodegen};
+    use tokio::fs::metadata;
+    let compile_exists = metadata(root.join(".compile")).await.is_ok();
+
+    if ensure_server_config(&root).await.is_err() {
+        "fail to ensure build server configuration!"
+            .pipe(|msg| state.clients.echo_err(&root, &name, msg))
+            .await;
+    }
+
+    if let Some(path) = path {
+        let generated = match xcodegen::regenerate(path, &root).await {
+            Ok(generated) => generated,
+            Err(e) => {
+                state.clients.echo_err(&root, &name, &e.to_string()).await;
+                return Err(e);
+            }
+        };
+
+        if generated {
+            state.projects.get_mut(root)?.update().await?
+        }
+    } else if compile_exists {
+        return Ok(false);
+    }
+
+    if xcodegen::is_valid(&root) && path.is_none() {
+        "⚙ generating xcodeproj ..."
+            .pipe(|msg| state.clients.echo_msg(&root, &name, msg))
+            .await;
+
+        if let Some(err) = match xcodegen::generate(&root).await {
+            Ok(status) => {
+                if status.success() {
+                    "setup: ⚙ generate xcodeproj ..."
+                        .pipe(|msg| state.clients.echo_msg(&root, &name, msg))
+                        .await;
+                    None
+                } else {
+                    Some(XcodeGenError::XcodeProjUpdate(name.into()).into())
+                }
+            }
+            Err(e) => Some(e),
+        } {
+            let msg = format!("fail to generate xcodeproj: {err}");
+            state.clients.echo_err(&root, &name, &msg).await;
+        }
+    };
+
+    // TODO(compile): check for .xcodeproj if project.yml is not generated
+    if !compile_exists {
+        "⚙ generating compile database .."
+            .pipe(|msg| state.clients.echo_msg(&root, &name, msg))
+            .await;
+    }
+
+    // The following command won't successed if this file doesn't exists
+    if let Err(err) = update_compilation_file(&root).await {
+        "setup: fail to regenerate compilation database!"
+            .pipe(|msg| state.clients.echo_err(&root, &name, msg))
+            .await;
+
+        use crate::util::proc_exists;
+        for (pid, client) in state.clients.iter() {
+            if proc_exists(pid, || {}) {
+                let mut logger = client.new_logger("Compile Error", name, &None);
+                logger.set_running().await.ok();
+                let ref win = Some(logger.open_win().await?);
+                logger.log(err.to_string(), win).await.ok();
+                logger.set_status_end(false, true).await.ok();
+            }
+        }
+
+        return Err(err);
+    }
+
+    tracing::info!("Updated `{name}/.compile`");
+
+    Ok(true)
+}

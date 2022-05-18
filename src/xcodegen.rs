@@ -35,22 +35,6 @@ pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<ExitStatus> {
     Ok(status)
 }
 
-// NOTE: passing workspace in-case in the future we would allow configurability of project.yml path
-pub fn get_config_path(root: &PathBuf) -> PathBuf {
-    /*
-    TODO: support otherways to identify xcodegen project
-
-    Some would have xcodegen config as json file or
-    have different location to where they store xcodegen project config.
-    */
-    root.join("project.yml")
-}
-
-/// Checks whether current workspace is xcodegen project.
-pub fn is_valid(root: &PathBuf) -> bool {
-    get_config_path(root).exists()
-}
-
 pub async fn regenerate(path: &PathBuf, root: &PathBuf) -> Result<bool> {
     config_file(root)?;
 
@@ -83,7 +67,18 @@ pub async fn regenerate(path: &PathBuf, root: &PathBuf) -> Result<bool> {
     Err(XcodeGenError::XcodeProjUpdate(project_name).into())
 }
 
+/// Checks whether current workspace is xcodegen project.
+pub fn is_valid(root: &PathBuf) -> bool {
+    config_file(root).is_ok()
+}
+
 pub fn config_file(root: &PathBuf) -> Result<PathBuf> {
+    /*
+    TODO: support otherways to identify xcodegen project
+
+    Some would have xcodegen config as json file or
+    have different location to where they store xcodegen project config.
+    */
     let config_path = root.join("project.yml");
     if !config_path.exists() {
         return Err(XcodeGenError::NoProjectConfig.into());

@@ -1,5 +1,5 @@
 use super::{is_seen, WatchArguments, WatchError};
-use crate::{compile, Error};
+use crate::compile;
 use crate::{constants::DAEMON_STATE, types::Client};
 use notify::event::{DataChange, ModifyKind};
 use notify::{Event, EventKind};
@@ -20,168 +20,75 @@ pub async fn create(args: WatchArguments) -> Result<(), WatchError> {
     let Client { root, .. } = info.try_into_project()?;
 
     if should_skip_compile(&event, &path, args.last_seen).await {
-        tracing::trace!("Skipping {:#?}", &event);
         return Ok(());
     }
 
-    tracing::trace!("[NewEvent] {:#?}", &event);
-
-    let state = DAEMON_STATE.clone();
-    let mut state = state.lock().await;
+    let ref name = root.file_name().unwrap().to_string_lossy().to_string();
+    let ref mut state = DAEMON_STATE.clone().lock_owned().await;
     let mut debounce = args.debounce.lock().await;
 
-    let project_name = root.file_name().unwrap().to_string_lossy().to_string();
+    state.clients.echo_msg(&root, name, START_MSG).await;
 
-    echo_messsage_to_clients(&state, root, &project_name, START_MSG).await;
-
-    {
-        let res = try_updating_project_state(&mut state, &path, root, &project_name).await;
-        if res.is_err() {
-            *debounce = std::time::SystemTime::now();
-            res?;
-        }
-    }
-
-    ensure_server_configuration(&state, root, &project_name).await;
-
-    if let Err(e) = generate_compiled_commands(&state, root, &project_name).await {
+    if let Err(e) = compile::ensure_server_support(state, name, root, Some(&path)).await {
         *debounce = std::time::SystemTime::now();
         return Err(e.into());
     }
 
-    echo_messsage_to_clients(&state, root, &project_name, SUCC_MESSAGE).await;
+    state.clients.echo_msg(&root, name, SUCC_MESSAGE).await;
 
     *debounce = std::time::SystemTime::now();
 
     Ok(())
 }
 
-async fn try_updating_project_state<'a>(
-    state: &mut tokio::sync::MutexGuard<'a, crate::state::State>,
-    path: &PathBuf,
-    root: &PathBuf,
-    project_name: &String,
-) -> Result<(), WatchError> {
-    let generated = match crate::xcodegen::regenerate(path, &root).await {
-        Ok(generated) => generated,
-        Err(e) => {
-            echo_error_to_clients(state, root, project_name, &e.to_string()).await;
-            return Ok(());
-        }
-    };
-
-    if generated {
-        state.projects.get_mut(root)?.update().await?
-    }
-
-    Ok(())
-}
-
-async fn ensure_server_configuration<'a>(
-    state: &'a tokio::sync::MutexGuard<'a, crate::state::State>,
-    root: &PathBuf,
-    project_name: &String,
-) {
-    if compile::ensure_server_config(&root).await.is_err() {
-        echo_error_to_clients(
-            state,
-            &root,
-            project_name,
-            "Fail to ensure build server configuration!",
-        )
-        .await;
-    }
-}
-
-async fn generate_compiled_commands<'a>(
-    state: &'a tokio::sync::MutexGuard<'a, crate::state::State>,
-    root: &PathBuf,
-    project_name: &String,
-) -> Result<(), Error> {
-    if let Err(err) = compile::update_compilation_file(&root).await {
-        echo_error_to_clients(
-            state,
-            &root,
-            project_name,
-            "Fail to regenerate compilation database!",
-        )
-        .await;
-
-        // use crate::util::proc_exists;
-        // for (pid, client) in state.clients.iter() {
-        //     if proc_exists(pid, || {}) {
-        //         let mut logger = client.new_logger("Compile Error", project_name, &None);
-        //         logger.set_running().await.ok();
-        //         let ref win = Some(logger.open_win().await.map_err(WatchError::r#continue)?);
-        //         logger.log(err.to_string(), win).await.ok();
-        //         logger.set_status_end(false, true).await.ok();
-        //     }
-        // }
-        return Err(err);
-    }
-
-    tracing::info!("Updated `{project_name}/.compile`");
-
-    Ok(())
-}
-
-async fn echo_messsage_to_clients<'a>(
-    state: &tokio::sync::MutexGuard<'a, crate::state::State>,
-    root: &PathBuf,
-    project_name: &String,
-    msg: &str,
-) {
-    state.clients.echo_msg(&root, project_name, msg).await;
-}
-
-async fn echo_error_to_clients<'a>(
-    state: &tokio::sync::MutexGuard<'a, crate::state::State>,
-    root: &PathBuf,
-    project_name: &String,
-    msg: &str,
-) {
-    state.clients.echo_err(&root, project_name, msg).await;
-}
-
 async fn should_skip_compile(event: &Event, path: &PathBuf, last_seen: Arc<Mutex<String>>) -> bool {
-    match &event.kind {
+    tracing::trace!("[NewEvent] {:#?}", &event);
+
+    let skip = match &event.kind {
         EventKind::Create(_) => {
             tokio::time::sleep(Duration::new(1, 0)).await;
             tracing::debug!("[FileCreated]: {:?}", path);
+            false
         }
 
         EventKind::Remove(_) => {
             tokio::time::sleep(Duration::new(1, 0)).await;
             tracing::debug!("[FileRemoved]: {:?}", path);
+            false
         }
 
         EventKind::Modify(m) => match m {
             ModifyKind::Data(e) => match e {
                 DataChange::Content => {
                     if !path.display().to_string().contains("project.yml") {
-                        return true;
+                        true;
                     }
                     tokio::time::sleep(Duration::new(1, 0)).await;
                     tracing::debug!("[XcodeGenConfigUpdate]");
                     // HACK: Not sure why, but this is needed because xcodegen break.
+                    false
                 }
-                _ => return true,
+                _ => true,
             },
 
             ModifyKind::Name(_) => {
                 let path_string = path.to_string_lossy();
                 // HACK: only account for new path and skip duplications
                 if !path.exists() || is_seen(last_seen.clone(), &path_string).await {
-                    return true;
+                    true;
                 }
                 tokio::time::sleep(Duration::new(1, 0)).await;
                 tracing::debug!("[FileRenamed]: {:?}", path);
+                false
             }
-            _ => return true,
+            _ => true,
         },
 
-        _ => return true,
+        _ => true,
     };
 
-    false
+    if skip {
+        tracing::trace!("Skipping {:#?}", &event);
+    }
+    skip
 }

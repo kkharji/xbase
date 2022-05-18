@@ -1,6 +1,5 @@
-use crate::types::Client;
-
 use super::*;
+use crate::types::Client;
 
 /// Register new client with workspace
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,39 +20,52 @@ impl<'a> Requester<'a, Register> for Register {
 impl Handler for Register {
     async fn handle(self) -> Result<()> {
         use crate::constants::DAEMON_STATE;
+        use tap::Pipe;
 
-        let Register { client, .. } = &self;
-        let Client { root, pid } = &client;
+        // NOTE: This logic should maybe moved to tokio::spawn to speed up initialization.
+        let name = self.client.abbrev_root();
+        tracing::info!("Register({}, {}): ", self.client.pid, name);
 
-        tracing::info!("Register({pid}, {}): ", client.abbrev_root());
+        let mut state = DAEMON_STATE.clone().lock_owned().await;
 
-        let state = DAEMON_STATE.clone();
-        let mut state = state.lock().await;
-
-        if let Ok(project) = state.projects.get_mut(root) {
+        if let Ok(project) = state.projects.get_mut(&self.client.root) {
             // NOTE: Add client pid to project
-            project.clients.push(*pid);
+            project.clients.push(self.client.pid.clone());
         } else {
             // NOTE: Create nvim client
             state.projects.add(&self).await?;
 
-            let project = state.projects.get(root).unwrap();
+            let project = state.projects.get(&self.client.root).unwrap();
             let ignore_patterns = project.ignore_patterns.clone();
 
             // NOTE: Add watcher
             state
                 .watcher
-                .add_project_watcher(client, ignore_patterns)
+                .add_project_watcher(&self.client, ignore_patterns)
                 .await
         }
 
         // NOTE: Create nvim client
         state.clients.add(&self).await?;
 
-        // NOTE: Sink Daemon to nvim vim.g.xbase.state
-        let _update_handle = state.sync_client_state().await?;
+        tokio::spawn(async move {
+            let ref mut state = DAEMON_STATE.clone().lock_owned().await;
 
-        // TODO(register): Ensure buildServer.json and .compile exists in a subprocess
+            // NOTE: Ensure project is ready for xbase build server
+            let generated =
+                crate::compile::ensure_server_support(state, &name, &self.client.root, None)
+                    .await?;
+
+            if generated {
+                "setup: ✅"
+                    .pipe(|msg| state.clients.echo_msg(&self.client.root, &name, msg))
+                    .await;
+            }
+
+            // NOTE: Sink Daemon to nvim vim.g.xbase
+            state.sync_client_state().await?;
+            anyhow::Ok(())
+        });
 
         Ok(())
     }
