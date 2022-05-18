@@ -53,6 +53,8 @@ impl Handler for Register {
         // NOTE: Sink Daemon to nvim vim.g.xbase.state
         let _update_handle = state.sync_client_state().await?;
 
+        // TODO(register): Ensure buildServer.json and .compile exists in a subprocess
+
         Ok(())
     }
 }

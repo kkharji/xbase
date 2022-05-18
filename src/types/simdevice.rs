@@ -60,6 +60,7 @@ impl SimDevice {
         logger: &mut Logger<'a>,
         win: &Option<NvimWindow>,
     ) -> Result<()> {
+        // FIX(run): DeviceState can get out of sync when the user shutdown device manually
         if let DeviceState::Shutdown = &self.state {
             logger
                 .log(format!("[Booting] ({})", self.name), win)

@@ -31,6 +31,7 @@ impl DerefMut for ProjectStore {
     }
 }
 
+// TODO(projects): pressist a list of projects paths and information
 #[cfg(feature = "daemon")]
 impl ProjectStore {
     pub async fn add(&mut self, req: &Register) -> Result<()> {

@@ -126,7 +126,7 @@ local entry_maker = function(entry)
     ti(parts, { entry.kind, "TSNone" })
   end
 
-  ti(items, { width = 12 })
+  ti(items, { width = 20 })
   entry.ordinal = string.format("%s %s", entry.ordinal, target)
   ti(parts, { target, "TSCharacter" })
 

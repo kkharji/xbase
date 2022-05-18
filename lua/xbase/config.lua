@@ -18,6 +18,14 @@ local defaults = {
     failure = { icon = "", color = "#db4b4b" },
     show_progress = false,
   },
+  --- TODO(nvim): Limit devices platform to select from
+  --- NOTE: THIS SHOULD NOT BE THE DEFAULT
+  simctl = {
+    iOS = {
+      "iPhone 13 Pro",
+      "iPad (9th generation)",
+    },
+  },
 }
 
 --- Enahnced version of builtin type function that inclued list type.
