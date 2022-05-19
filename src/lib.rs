@@ -1,3 +1,4 @@
+#![feature(result_flattening)]
 #[cfg(feature = "compilation")]
 pub mod compile;
 

@@ -76,7 +76,10 @@ impl<'a> FromLua<'a> for Register {
     fn from_lua(v: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
         if let LuaValue::Table(table) = v {
             Ok(Self {
-                address: table.get("address")?,
+                address: match table.get("address") {
+                    Ok(v) => v,
+                    Err(_) => return Err(LuaError::external("Unable to get client address!")),
+                },
                 client: table.get("client")?,
             })
         } else {

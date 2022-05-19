@@ -18,12 +18,46 @@ impl Client {
 }
 
 #[cfg(feature = "lua")]
-impl<'a> mlua::FromLua<'a> for Client {
-    fn from_lua(_lua_value: mlua::Value<'a>, lua: &'a mlua::Lua) -> mlua::Result<Self> {
-        use crate::util::mlua::LuaExtension;
+use {crate::util::mlua::LuaExtension, mlua::prelude::*};
+#[cfg(feature = "lua")]
+impl Client {
+    pub fn derive(lua: &Lua, value: Option<LuaValue>) -> LuaResult<Self> {
+        let is_provided = value.is_some();
+        let root = match value {
+            Some(LuaValue::Table(ref table)) => table
+                .get::<_, LuaTable>("client")
+                .map(|t| t.get("root"))
+                .flatten(),
+            Some(LuaValue::String(ref root)) => Ok(root.to_string_lossy().to_string()),
+            _ => lua.cwd(),
+        }
+        .map(std::path::PathBuf::from);
+
         Ok(Self {
             pid: std::process::id() as i32,
-            root: LuaExtension::cwd(lua).map(std::path::PathBuf::from)?,
+            root: match root {
+                Ok(v) => v,
+                Err(_) => {
+                    if is_provided {
+                        let msg = format!(
+                            "Unable to get current working directory from value! {value:?}"
+                        );
+
+                        return Err(LuaError::external(msg));
+                    } else {
+                        return Err(LuaError::external(
+                            "Unable to get current working directory!",
+                        ));
+                    }
+                }
+            },
         })
+    }
+}
+
+#[cfg(feature = "lua")]
+impl<'a> mlua::FromLua<'a> for Client {
+    fn from_lua(value: mlua::Value<'a>, lua: &'a mlua::Lua) -> mlua::Result<Self> {
+        Self::derive(lua, Some(value))
     }
 }
