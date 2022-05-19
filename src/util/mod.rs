@@ -30,12 +30,17 @@ pub async fn proc_kill(pid_str: &String) -> anyhow::Result<bool> {
 }
 
 pub fn string_as_section(content: String) -> String {
+    let empty_string = content.is_empty();
     let mut content = format!("[{content}");
     let len = content.len();
     let rep = 73 - len;
     if rep > 0 {
         let sep = "-".repeat(rep);
-        content.push_str(" ");
+        if !empty_string {
+            content.push_str(" ");
+        } else {
+            content.push_str("-");
+        }
         content.push_str(&sep);
     }
     content.push_str("]");

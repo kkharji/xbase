@@ -33,7 +33,6 @@ pub struct NvimClient {
 impl NvimClient {
     pub async fn new(client: &Client) -> Result<Self> {
         let Client { root, pid, address } = client;
-
         let (nvim, _) = connect(address, Dummy::new()).await?;
         let buf = nvim.create_buf(false, true).await?;
         let log_bufnr = buf.get_number().await?;
@@ -49,7 +48,7 @@ impl NvimClient {
         Ok(NvimClient {
             pid: *pid,
             roots: vec![root.to_path_buf()],
-            conn: Some(nvim),
+            conn: nvim.into(),
             log_bufnr,
         })
     }

@@ -1,9 +1,9 @@
-use std::path::Path;
-
 use super::{NvimClient, NvimConnection, NvimWindow};
 use crate::nvim::BufferDirection;
 use crate::Result;
 use nvim_rs::{Buffer, Window};
+use std::path::Path;
+use tap::Pipe;
 use tokio_stream::StreamExt;
 
 pub struct Logger<'a> {
@@ -135,15 +135,29 @@ impl<'a> Logger<'a> {
     }
 
     pub async fn open_win(&self) -> Result<Window<NvimConnection>> {
-        // TOOD(nvim): Only open logger buffer if it's not already opened
-        let open_cmd = self.open_cmd().await;
+        let (mut window, windows) = (None, self.nvim.list_wins().await?);
 
-        self.nvim.exec(&open_cmd, false).await?;
-        let win = self.nvim.get_current_win().await?;
-        self.nvim.exec("setl nu nornu so=9", false).await?;
-        self.nvim.exec("wincmd w", false).await?;
+        for win in windows.into_iter() {
+            let buf = win.get_buf().await?;
+            if buf.get_number().await? == self.nvim.log_bufnr {
+                window = win.into();
+            }
+        }
 
-        Ok(win)
+        if let Some(win) = window {
+            win
+        } else {
+            let open_cmd = self.open_cmd().await;
+            self.nvim.exec(&open_cmd, false).await?;
+            let win = self.nvim.get_current_win().await?;
+            // NOTE: This doesn't work
+            win.set_option("number", false.into()).await?;
+            win.set_option("relativenumber", false.into()).await?;
+            // self.nvim.exec("setl nu nornu so=9", false).await?;
+            self.nvim.exec("wincmd w", false).await?;
+            win
+        }
+        .pipe(Ok)
     }
 
     pub async fn set_running(&mut self) -> Result<()> {

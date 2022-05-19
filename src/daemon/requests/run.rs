@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     nvim::BufferDirection,
     types::{BuildConfiguration, Platform},
+    util::string_as_section,
 };
 
 #[cfg(feature = "daemon")]
@@ -96,14 +97,21 @@ impl Handler for Run {
                     // NOTE: NSLog get directed to error by default which is odd
                     match update {
                         Stdout(msg) => {
-                            logger.log(format!("[Output] {msg}"), win).await?;
+                            logger.log(msg, win).await?;
                         }
                         Error(msg) | Stderr(msg) => {
                             logger.log(format!("[Error]  {msg}"), win).await?;
                         }
                         Exit(ref code) => {
-                            logger.log(format!("[Exit]   {code}"), win).await?;
-                            logger.set_status_end(code == "0", win.is_none()).await?;
+                            let success = code == "0";
+                            let msg = string_as_section(if success {
+                                "".into()
+                            } else {
+                                format!("Panic {code}")
+                            });
+
+                            logger.log(msg, win).await?;
+                            logger.set_status_end(success, win.is_none()).await?;
                         }
                     }
                 }
