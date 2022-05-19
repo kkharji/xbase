@@ -3,7 +3,6 @@ use crate::nvim::BufferDirection;
 use crate::Result;
 use nvim_rs::{Buffer, Window};
 use std::path::Path;
-use tap::Pipe;
 use tokio_stream::StreamExt;
 
 pub struct Logger<'a> {
@@ -28,7 +27,7 @@ impl<'a> Logger<'a> {
         }
     }
 
-    async fn clear(&self) -> Result<()> {
+    async fn clear_content(&self) -> Result<()> {
         self.buf.set_lines(0, -1, false, vec![]).await?;
         Ok(())
     }
@@ -44,20 +43,7 @@ impl<'a> Logger<'a> {
         })
     }
 
-    async fn get_open_cmd(&self, direction: Option<BufferDirection>) -> String {
-        let direction =
-            BufferDirection::get_window_direction(self.nvim, direction, self.nvim.log_bufnr);
-
-        match direction.await {
-            Ok(open_command) => open_command,
-            Err(e) => {
-                tracing::error!("Unable to convert value to string {e}");
-                BufferDirection::Horizontal.to_nvim_command(self.nvim.log_bufnr)
-            }
-        }
-    }
-
-    pub async fn log(&mut self, msg: String, win: &Option<NvimWindow>) -> Result<()> {
+    pub async fn log(&mut self, msg: String) -> Result<()> {
         tracing::debug!("{msg}");
 
         let mut c = self.get_line_count().await?;
@@ -74,7 +60,7 @@ impl<'a> Logger<'a> {
 
         self.current_line_count = Some(c);
 
-        if let Some(win) = win {
+        if let Some(win) = self.win().await {
             win.set_cursor((c, 0)).await?;
         }
 
@@ -87,7 +73,7 @@ impl<'a> Logger<'a> {
         args: &Vec<String>,
         clear: bool,
         open: bool,
-    ) -> Result<(bool, Option<Window<NvimConnection>>)> {
+    ) -> Result<bool> {
         let mut stream = crate::xcode::stream_build(root, args).await?;
 
         // TODO(nvim): close log buffer if it is open for new direction
@@ -95,15 +81,13 @@ impl<'a> Logger<'a> {
         // Currently the buffer direction will be ignored if the buffer is opened already
 
         if clear {
-            self.clear().await?;
+            self.clear_content().await?;
         }
 
         // TODO(nvim): build log correct height
-        let win = if open {
-            Some(self.open_win().await?)
-        } else {
-            None
-        };
+        if open {
+            self.open_win().await?;
+        }
 
         let mut success = false;
 
@@ -113,51 +97,54 @@ impl<'a> Logger<'a> {
         while let Some(line) = stream.next().await {
             line.contains("Succeed").then(|| success = true);
 
-            self.log(line, &win).await?;
+            self.log(line).await?;
         }
 
-        self.set_status_end(success, open).await?;
+        self.set_status_end(success, true).await?;
 
-        Ok((success, win))
+        Ok(success)
     }
 
     pub async fn log_title(&mut self) -> Result<()> {
-        self.log(self.title.clone(), &None).await?;
+        self.log(self.title.clone()).await?;
         Ok(())
     }
 
-    async fn open_cmd(&self) -> String {
-        let open_cmd = match self.open_cmd.as_ref() {
-            Some(s) => s.clone(),
-            None => self.get_open_cmd(None).await,
-        };
-        open_cmd
-    }
-
-    pub async fn open_win(&self) -> Result<Window<NvimConnection>> {
-        let (mut window, windows) = (None, self.nvim.list_wins().await?);
-
+    /// Get window if it's available
+    pub async fn win(&self) -> Option<NvimWindow> {
+        let windows = self.nvim.list_wins().await.ok()?;
         for win in windows.into_iter() {
-            let buf = win.get_buf().await?;
-            if buf.get_number().await? == self.nvim.log_bufnr {
-                window = win.into();
+            let buf = win.get_buf().await.ok()?;
+            if buf.get_number().await.ok()? == self.nvim.log_bufnr {
+                return Some(win);
             }
         }
+        None
+    }
 
-        if let Some(win) = window {
-            win
-        } else {
-            let open_cmd = self.open_cmd().await;
-            self.nvim.exec(&open_cmd, false).await?;
-            let win = self.nvim.get_current_win().await?;
-            // NOTE: This doesn't work
-            win.set_option("number", false.into()).await?;
-            win.set_option("relativenumber", false.into()).await?;
-            // self.nvim.exec("setl nu nornu so=9", false).await?;
-            self.nvim.exec("wincmd w", false).await?;
-            win
+    /// Open Window
+    pub async fn open_win(&self) -> Result<Window<NvimConnection>> {
+        if let Some(win) = self.win().await {
+            return Ok(win);
         }
-        .pipe(Ok)
+
+        tracing::info!("Openning a new window");
+
+        let open_cmd = match self.open_cmd.as_ref() {
+            Some(s) => s.clone(),
+            None => {
+                BufferDirection::get_window_direction(self.nvim, None, self.nvim.log_bufnr).await?
+            }
+        };
+        self.nvim.exec(&open_cmd, false).await?;
+        let win = self.nvim.get_current_win().await?;
+        // NOTE: This doesn't work
+        win.set_option("number", false.into()).await?;
+        win.set_option("relativenumber", false.into()).await?;
+        // self.nvim.exec("setl nu nornu so=9", false).await?;
+        self.nvim.exec("wincmd w", false).await?;
+
+        Ok(win)
     }
 
     pub async fn set_running(&mut self) -> Result<()> {
@@ -168,6 +155,7 @@ impl<'a> Logger<'a> {
     }
 
     pub async fn set_status_end(&mut self, success: bool, open: bool) -> Result<()> {
+        let win = self.win().await;
         if success {
             self.nvim
                 .exec("let g:xbase_watch_build_status='success'", false)
@@ -176,16 +164,13 @@ impl<'a> Logger<'a> {
             self.nvim
                 .exec("let g:xbase_watch_build_status='failure'", false)
                 .await?;
-            if !open {
-                self.nvim.exec(&self.open_cmd().await, false).await?;
-                self.nvim
-                    .get_current_win()
-                    .await?
-                    .set_cursor((self.get_line_count().await?, 0))
-                    .await?;
-                self.nvim.exec("call feedkeys('zt')", false).await?;
-            }
         }
+
+        if open && win.is_none() {
+            self.open_win().await?;
+            self.nvim.exec("call feedkeys('zt')", false).await?;
+        }
+
         Ok(())
     }
 }

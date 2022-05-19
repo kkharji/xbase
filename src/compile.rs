@@ -253,9 +253,9 @@ pub async fn ensure_server_support<'a>(
             if proc_exists(pid, || {}) {
                 let mut logger = client.new_logger("Compile Error", name, &None);
                 logger.set_running().await.ok();
-                let ref win = Some(logger.open_win().await?);
-                logger.log(err.to_string(), win).await.ok();
-                logger.set_status_end(false, true).await.ok();
+                logger.open_win().await.ok();
+                logger.log(err.to_string()).await.ok();
+                logger.set_status_end(false, false).await.ok();
             }
         }
 

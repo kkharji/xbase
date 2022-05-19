@@ -1,7 +1,7 @@
 #[cfg(feature = "daemon")]
 use super::NvimClient;
 #[cfg(feature = "daemon")]
-use anyhow::{Context, Result};
+use crate::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
@@ -37,14 +37,21 @@ impl BufferDirection {
             return Ok(direction.to_nvim_command(bufnr));
         };
 
-        "return require'xbase.config'.values.default_log_buffer_direction"
+        match "return require'xbase.config'.values.default_log_buffer_direction"
             .pipe(|str| nvim.exec_lua(str, vec![]))
             .await?
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Unable to covnert value to string"))?
-            .pipe(BufferDirection::from_str)
+            .pipe(Self::from_str)
             .map(|d| d.to_nvim_command(bufnr))
-            .context("Convert to string to direction")
+        {
+            Ok(open_command) => open_command,
+            Err(e) => {
+                tracing::error!("Unable to convert value to string {e}");
+                Self::Horizontal.to_nvim_command(bufnr)
+            }
+        }
+        .pipe(Ok)
     }
 }
 

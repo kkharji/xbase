@@ -20,6 +20,7 @@ impl Client {
 
 #[cfg(feature = "lua")]
 use {crate::util::mlua::LuaExtension, mlua::prelude::*, tap::Pipe};
+
 #[cfg(feature = "lua")]
 impl Client {
     /// Derive client from lua value

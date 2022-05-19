@@ -27,7 +27,7 @@ impl Handler for Build {
         let direction = self.direction.clone();
 
         let args = append_build_root(&root, config.as_args())?;
-        let (success, _) = nvim
+        let success = nvim
             .new_logger("Build", &config.target, &direction)
             .log_build_stream(&root, &args, true, true)
             .await?;

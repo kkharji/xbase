@@ -2,12 +2,14 @@ use super::*;
 use crate::{
     nvim::BufferDirection,
     types::{BuildConfiguration, Platform},
-    util::string_as_section,
 };
 
 #[cfg(feature = "daemon")]
 use {
-    crate::{constants::DAEMON_STATE, types::SimDevice, xcode::append_build_root, Error},
+    crate::{
+        constants::DAEMON_STATE, types::SimDevice, util::string_as_section,
+        xcode::append_build_root, Error,
+    },
     std::str::FromStr,
     tokio_stream::StreamExt,
     xcodebuild::runner,
@@ -63,7 +65,7 @@ impl Handler for Run {
         let settings = runner::build_settings(&root, &args).await?;
         let platform = platform.unwrap_or(Platform::from_str(&settings.platform_display_name)?);
 
-        let (success, ref win) = nvim
+        let success = nvim
             .new_logger("Build", &config.target, &direction)
             .log_build_stream(&root, &args, true, true)
             .await?;
@@ -81,6 +83,8 @@ impl Handler for Run {
             tracing::debug!("Running binary {program:?}");
 
             logger.log_title().await?;
+            logger.open_win().await?;
+
             tokio::spawn(async move {
                 let mut stream = runner::run(program).await?;
 
@@ -89,18 +93,16 @@ impl Handler for Run {
                 while let Some(update) = stream.next().await {
                     let state = DAEMON_STATE.clone();
                     let state = state.lock().await;
-
                     let nvim = state.clients.get(&pid)?;
                     let mut logger = nvim.new_logger("Run", &config.target, &direction);
-                    let ref win = Some(logger.open_win().await?);
 
                     // NOTE: NSLog get directed to error by default which is odd
                     match update {
                         Stdout(msg) => {
-                            logger.log(msg, win).await?;
+                            logger.log(msg).await?;
                         }
                         Error(msg) | Stderr(msg) => {
-                            logger.log(format!("[Error]  {msg}"), win).await?;
+                            logger.log(format!("[Error]  {msg}")).await?;
                         }
                         Exit(ref code) => {
                             let success = code == "0";
@@ -110,8 +112,8 @@ impl Handler for Run {
                                 format!("Panic {code}")
                             });
 
-                            logger.log(msg, win).await?;
-                            logger.set_status_end(success, win.is_none()).await?;
+                            logger.log(msg).await?;
+                            logger.set_status_end(success, true).await?;
                         }
                     }
                 }
@@ -125,23 +127,22 @@ impl Handler for Run {
             tracing::debug!("{app_id}: {:?}", path_to_app);
 
             logger.log_title().await?;
+
             tokio::spawn(async move {
                 // NOTE: This is required so when neovim exist this should also exit
                 let state = DAEMON_STATE.clone().lock_owned().await;
                 let nvim = state.clients.get(&pid)?;
                 let ref mut logger = nvim.new_logger("Run", &config.target, &direction);
-                let ref win = Some(logger.open_win().await?);
 
+                logger.open_win().await?;
                 logger.set_running().await?;
 
-                device.try_boot(logger, win).await?;
-                device
-                    .try_install(&path_to_app, &app_id, logger, win)
-                    .await?;
-                device.try_launch(&app_id, logger, win).await?;
+                device.try_boot(logger).await?;
+                device.try_install(&path_to_app, &app_id, logger).await?;
+                device.try_launch(&app_id, logger).await?;
 
                 // TODO: Remove and repalce with app logs
-                logger.set_status_end(true, win.is_none()).await?;
+                logger.set_status_end(true, false).await?;
 
                 let mut state = DAEMON_STATE.clone().lock_owned().await;
                 state.devices.insert(device);
@@ -151,7 +152,7 @@ impl Handler for Run {
         }
 
         let msg = format!("Unable to run `{}` under `{platform}`", config.target);
-        logger.log(msg.clone(), win).await?;
+        logger.log(msg.clone()).await?;
         Err(Error::Run(msg))
     }
 }

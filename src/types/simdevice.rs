@@ -9,7 +9,6 @@ use std::path::PathBuf;
 use tap::Pipe;
 
 use crate::nvim::Logger;
-use crate::nvim::NvimWindow;
 use crate::util::string_as_section;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -55,19 +54,13 @@ impl SimDevice {
         }
     }
 
-    pub async fn try_boot<'a>(
-        &mut self,
-        logger: &mut Logger<'a>,
-        win: &Option<NvimWindow>,
-    ) -> Result<()> {
+    pub async fn try_boot<'a>(&mut self, logger: &mut Logger<'a>) -> Result<()> {
         // FIX(run): DeviceState can get out of sync when the user shutdown device manually
         if let DeviceState::Shutdown = &self.state {
-            logger
-                .log(format!("[Booting] ({})", self.name), win)
-                .await?;
+            logger.log(format!("[Booting] ({})", self.name)).await?;
 
             self.boot()
-                .pipe(|res| self.handle_error(res, logger, win))
+                .pipe(|res| self.handle_error(res, logger))
                 .await?;
             self.state = DeviceState::Booted;
         }
@@ -80,39 +73,31 @@ impl SimDevice {
         path_to_app: &PathBuf,
         app_id: &String,
         logger: &mut Logger<'a>,
-        win: &Option<NvimWindow>,
     ) -> Result<()> {
         self.install(path_to_app)
-            .pipe(|res| self.handle_error(res, logger, win))
+            .pipe(|res| self.handle_error(res, logger))
             .await?;
         logger
-            .log(format!("[Installing] ({}) {app_id}", self.name), win)
+            .log(format!("[Installing] ({}) {app_id}", self.name))
             .await
     }
 
-    pub async fn try_launch<'a>(
-        &mut self,
-        app_id: &String,
-        logger: &mut Logger<'a>,
-        win: &Option<NvimWindow>,
-    ) -> Result<()> {
+    pub async fn try_launch<'a>(&mut self, app_id: &String, logger: &mut Logger<'a>) -> Result<()> {
         if !self.is_running {
             logger
-                .log(format!("[Launching] ({}) {app_id}", self.name), win)
+                .log(format!("[Launching] ({}) {app_id}", self.name))
                 .await?;
 
             self.launch(app_id)
                 .stdout(&"/tmp/wordle_log")
                 .stderr(&"/tmp/wordle_log")
                 .exec()
-                .pipe(|res| self.handle_error(res, logger, win))
+                .pipe(|res| self.handle_error(res, logger))
                 .await?;
 
             self.is_running = true;
 
-            logger
-                .log(string_as_section("Launched".into()), win)
-                .await?;
+            logger.log(string_as_section("Launched".into())).await?;
         }
 
         Ok(())
@@ -122,11 +107,10 @@ impl SimDevice {
         &mut self,
         res: simctl::Result<T>,
         logger: &mut Logger<'a>,
-        win: &Option<NvimWindow>,
     ) -> Result<()> {
         if let Err(e) = res {
             let err = Error::from(e);
-            logger.log(err.to_string(), win).await?;
+            logger.log(err.to_string()).await?;
             logger.set_status_end(false, true).await?;
             self.is_running = false;
             return Err(err);
