@@ -111,7 +111,7 @@ impl SimDevice {
             self.is_running = true;
 
             logger
-                .log(string_as_section("[Launched]".into()), win)
+                .log(string_as_section("Launched".into()), win)
                 .await?;
         }
 

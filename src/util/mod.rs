@@ -29,13 +29,15 @@ pub async fn proc_kill(pid_str: &String) -> anyhow::Result<bool> {
         .success())
 }
 
-pub fn string_as_section(mut content: String) -> String {
+pub fn string_as_section(content: String) -> String {
+    let mut content = format!("[{content}");
     let len = content.len();
     let rep = 73 - len;
     if rep > 0 {
-        let sep = "-".repeat(73 - len);
+        let sep = "-".repeat(rep);
         content.push_str(" ");
         content.push_str(&sep);
     }
+    content.push_str("]");
     content
 }

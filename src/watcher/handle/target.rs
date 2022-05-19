@@ -36,7 +36,7 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
 
     let BuildConfiguration { .. } = config;
 
-    let Client { pid, root } = client;
+    let Client { pid, root, .. } = client;
 
     tracing::debug!("Rebuilding for {:#?}", &event);
 

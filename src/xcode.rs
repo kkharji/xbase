@@ -22,7 +22,7 @@ where
         while let Some(step) = stream.next().await {
             let line = match step {
                 Exit(v) => {
-                    crate::util::string_as_section(if v == "0" { "[Succeed]" } else { "[Failed]" }.to_string())
+                    crate::util::string_as_section(if v == "0" { "Succeed" } else { "Failed" }.to_string())
                 }
                 BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
                     continue;

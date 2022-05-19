@@ -1,6 +1,5 @@
 #[cfg(feature = "daemon")]
 use crate::{
-    daemon::Register,
     error::{EnsureOptional, LoopError},
     types::Client,
     Result,
@@ -34,9 +33,8 @@ impl DerefMut for ProjectStore {
 // TODO(projects): pressist a list of projects paths and information
 #[cfg(feature = "daemon")]
 impl ProjectStore {
-    pub async fn add(&mut self, req: &Register) -> Result<()> {
-        let Register { client, .. } = req;
-        let Client { root, pid } = client;
+    pub async fn add(&mut self, client: &Client) -> Result<()> {
+        let Client { root, pid, .. } = client;
 
         let mut project = Project::new(root).await?;
 
@@ -68,7 +66,7 @@ impl ProjectStore {
     /// if pid exists and it's the only one it will be removed.
     /// if pid removed and there is other pids exists, project will not be removed.
     pub async fn remove(&mut self, client: &Client) -> Result<Option<Project>> {
-        let Client { root, pid } = client;
+        let Client { root, pid, .. } = client;
 
         // Get project with root
         let project = self.0.get_mut(root).to_result("project", root)?;

@@ -22,9 +22,10 @@ M.should_register = function(root, _)
 end
 
 --- Register current neovim client
-M.register = function()
+M.register = function(root)
+  local root = root or vim.loop.cwd()
   local _ = require("libxbase").ensure()
-  require("libxbase").register { address = vim.v.servername }
+  require("libxbase").register(root)
 end
 
 ---Tries to register vim instance as client for xbase server.

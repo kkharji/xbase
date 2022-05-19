@@ -1,5 +1,6 @@
 //! mlua functions and extensions
 use mlua::prelude::*;
+use tap::Pipe;
 
 pub trait LuaExtension {
     fn print(&self, msg: &str);
@@ -9,6 +10,7 @@ pub trait LuaExtension {
     fn warn(&self, msg: &str) -> LuaResult<()>;
     fn info(&self, msg: &str) -> LuaResult<()>;
     fn cwd(&self) -> LuaResult<String>;
+    fn nvim_address(&self) -> LuaResult<String>;
     fn global_state(&self) -> LuaResult<LuaTable>;
 }
 
@@ -63,5 +65,23 @@ impl LuaExtension for Lua {
             .get::<_, LuaTable>("loop")?
             .get::<_, LuaFunction>("cwd")?
             .call::<_, String>(())
+    }
+
+    fn nvim_address(&self) -> LuaResult<String> {
+        let global = self.globals();
+        match global.get::<_, LuaString>("__SERVERNAME") {
+            Ok(v) => v,
+            Err(_) => {
+                let value = global
+                    .get::<_, LuaTable>("vim")
+                    .and_then(|v| v.get::<_, LuaTable>("v"))
+                    .and_then(|v| v.get::<_, LuaString>("servername"))?;
+                global.set("__SERVERNAME", value.clone())?;
+                value
+            }
+        }
+        .to_string_lossy()
+        .to_string()
+        .pipe(Ok)
     }
 }

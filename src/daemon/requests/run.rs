@@ -36,7 +36,7 @@ impl Handler for Run {
         tracing::trace!("{:#?}", self);
 
         let Self { config, device, .. } = self;
-        let Client { pid, root } = self.client;
+        let Client { pid, root, .. } = self.client;
 
         let direction = self.direction.clone();
         let state = DAEMON_STATE.clone().lock_owned().await;

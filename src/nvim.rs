@@ -3,17 +3,16 @@ mod buffer;
 mod logger;
 
 pub use buffer::BufferDirection;
-
-#[cfg(feature = "daemon")]
-use nvim_rs::compat::tokio::Compat;
-
-#[cfg(feature = "daemon")]
-pub use logger::*;
-
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "daemon")]
-use crate::Result;
+use {
+    crate::{types::Client, Result},
+    nvim_rs::{compat::tokio::Compat, create::tokio::new_path as connect, rpc::handler::Dummy},
+};
+
+#[cfg(feature = "daemon")]
+pub use logger::*;
 
 #[cfg(feature = "daemon")]
 type NvimConnection = Compat<tokio::io::WriteHalf<parity_tokio_ipc::Connection>>;
@@ -32,12 +31,8 @@ pub struct NvimClient {
 
 #[cfg(feature = "daemon")]
 impl NvimClient {
-    pub async fn new(req: &crate::daemon::Register) -> Result<Self> {
-        use nvim_rs::create::tokio::new_path as connect;
-        use nvim_rs::rpc::handler::Dummy;
-
-        let crate::daemon::Register { address, client } = req;
-        let crate::types::Client { root, pid } = client;
+    pub async fn new(client: &Client) -> Result<Self> {
+        let Client { root, pid, address } = client;
 
         let (nvim, _) = connect(address, Dummy::new()).await?;
         let buf = nvim.create_buf(false, true).await?;
@@ -73,7 +68,7 @@ impl NvimClient {
         use crate::util::string_as_section;
         Logger::new(
             self,
-            string_as_section(format!("[{ops}: {target}]")),
+            string_as_section(format!("{ops}: {target}")),
             direction.clone(),
         )
     }

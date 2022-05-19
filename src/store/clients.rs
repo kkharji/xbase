@@ -1,5 +1,5 @@
-use crate::daemon::Register;
 use crate::nvim::NvimClient;
+use crate::types::Client;
 use crate::{LoopError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -25,11 +25,11 @@ impl DerefMut for ClientStore {
 }
 
 impl ClientStore {
-    pub async fn add(&mut self, req: &Register) -> Result<()> {
-        tracing::info!("AddClient({})", req.client.pid);
-        NvimClient::new(req)
+    pub async fn add(&mut self, client: &Client) -> Result<()> {
+        tracing::info!("AddClient({})", client.pid);
+        NvimClient::new(client)
             .await?
-            .pipe(|client| self.insert(req.client.pid, client))
+            .pipe(|client| self.insert(client.pid, client))
             .pipe(|_| Ok(()))
     }
 

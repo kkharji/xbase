@@ -18,7 +18,7 @@ pub struct Build {
 impl Handler for Build {
     async fn handle(self) -> Result<()> {
         let Self { client, config, .. } = &self;
-        let Client { pid, root } = client;
+        let Client { pid, root, .. } = client;
 
         tracing::debug!("Handling build request {:#?}", config);
 
@@ -28,7 +28,7 @@ impl Handler for Build {
 
         let args = append_build_root(&root, config.as_args())?;
         let (success, _) = nvim
-            .new_logger("build", &config.target, &direction)
+            .new_logger("Build", &config.target, &direction)
             .log_build_stream(&root, &args, true, true)
             .await?;
 

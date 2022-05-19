@@ -6,33 +6,35 @@ let s:cpo_save = &cpo
 set cpo&vim
 
 
-syn match   Operations   "\(Executing\|Compiling\|Generating\|Processing\|Emitting\|Compiling\|Copying\|Validating\|Signing\|Linking\)"
-syn match   Entitlement  "Entitlement"
-syn match   Package      "Packaging"
-syn region  Scope        display oneline start='^\[' end='\]'
-syn match   LogError     "^\(\[Error\]\)"
-syn match   LogWarn      "^\(\[Warning\]\)"
-syn match   LogSuccess   "^\(\[Succeed\]\)"
-syn match   LogDone      "^\(\[Done\]\)"
-syn match   LogLaunched  "^\(\[Launched\]\)"
-syn match   LogOutput    "^\(\[Output\]\)"
-syn match   LogOutput    "^\(\[Exit\]\)"
-syn match   Target       "`\(\w.*\)`"
-syn match   FilePath     "`\(\/.*\)`" 
-syn region  Sep          display oneline start='-' end='-$'
+syn match   XbaseOperations   "\(Executing\|Compiling\|Generating\|Processing\|Emitting\|Compiling\|Copying\|Validating\|Signing\|Linking\|RegisterLaunchServices\)"
+syn match   XbaseEntitlement  "Entitlement"
+syn region  XbaseScope        display oneline start='^\[' end='\]'
+syn match   XbaseLogError     "^\(\[Error\]\)"
+syn match   XbaseLogWarn      "^\(\[Warning\]\)"
+syn match   XbaseLogSuccess   "^\(\[Succeed\]\)"
+syn match   XbaseLogDone      "^\(\[Done\]\)"
+syn match   XbaseLogPackage   "^\(\[Package\]\)"
+syn match   XbaseLogLaunched  "^\(\[Launched\]\)"
+syn match   XbaseLogOutput    "^\(\[Output\]\)"
+syn match   XbaseLogOutput    "^\(\[Exit\]\)"
+syn match   XbaseRunning    "^\(\[Running\]\)"
+syn match   XbaseTarget       "`\(\w.*\)`"
+syn match   XbaseFilePath     "`\(\/.*\)`" 
+syn region  XbaseSep          display oneline start='-' end='-$'
 
-hi def link Scope         Label
-hi def link LogSuccess    healthSuccess
-hi def link Operations    Function
-hi def link Entitlement   Comment
-hi def link Package       Comment
-hi def link LogOutput     Comment
-hi def link Sep           Comment
-hi def link FilePath      String
-hi def link Target        Label
-hi def link LogError      Error
-hi def link LogWarn       WarningMsg
-hi def link LogLaunched   healthSuccess
+hi def link XbaseScope         Label
+hi def link XbaseLogSuccess    healthSuccess
+hi def link XbaseOperations    Function
+hi def link XbaseEntitlement   Comment
+hi def link XbaseLogOutput     Comment
+hi def link XbaseRunning     Comment
+hi def link XbaseSep           Comment
+hi def link XbaseLogPackage    Comment
+hi def link XbaseFilePath      String
+hi def link XbaseTarget        Label
+hi def link XbaseLogError      Error
+hi def link XbaseLogWarn       WarningMsg
+hi def link XbaseLogLaunched   healthSuccess
 
 syn match HideAa "\`" conceal
 
