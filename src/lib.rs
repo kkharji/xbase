@@ -33,6 +33,9 @@ pub mod store;
 #[cfg(any(feature = "daemon", feature = "server"))]
 mod error;
 
+#[cfg(feature = "daemon")]
+mod runner;
+
 #[cfg(any(feature = "daemon", feature = "server"))]
 pub use error::{CompileError, Error, LoopError, WatchError};
 

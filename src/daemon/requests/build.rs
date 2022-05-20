@@ -3,7 +3,10 @@ use crate::{nvim::BufferDirection, types::BuildConfiguration};
 use std::fmt::Debug;
 
 #[cfg(feature = "daemon")]
-use {crate::constants::DAEMON_STATE, crate::xcode::append_build_root};
+use {
+    crate::constants::DAEMON_STATE,
+    crate::xcode::{append_build_root, build_with_loggger},
+};
 
 /// Build a project.
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,10 +30,8 @@ impl Handler for Build {
         let direction = self.direction.clone();
 
         let args = append_build_root(&root, config.as_args())?;
-        let success = nvim
-            .new_logger("Build", &config.target, &direction)
-            .log_build_stream(&root, &args, true, true)
-            .await?;
+        let ref mut logger = nvim.new_logger("Build", &config.target, &direction);
+        let success = build_with_loggger(logger, &root, &args, true, true).await?;
 
         if !success {
             nvim.echo_err(&format!("Failed: {} ", config.to_string()))

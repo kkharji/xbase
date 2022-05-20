@@ -1,18 +1,7 @@
-use super::*;
-use crate::{
-    nvim::BufferDirection,
-    types::{BuildConfiguration, Platform},
-};
-
-#[cfg(feature = "daemon")]
 use {
-    crate::{
-        constants::DAEMON_STATE, types::SimDevice, util::string_as_section,
-        xcode::append_build_root, Error,
-    },
-    std::str::FromStr,
-    tokio_stream::StreamExt,
-    xcodebuild::runner,
+    super::*,
+    crate::nvim::BufferDirection,
+    crate::types::{BuildConfiguration, Platform},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,145 +21,64 @@ pub struct Run {
 }
 
 #[cfg(feature = "daemon")]
+use {
+    crate::constants::DAEMON_STATE,
+    crate::runner::Runner,
+    crate::xcode::{append_build_root, build_with_loggger},
+    crate::Error,
+    std::str::FromStr,
+    xcodebuild::runner::build_settings,
+};
+
+#[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 impl Handler for Run {
     async fn handle(self) -> Result<()> {
+        let Client { pid, root, .. } = &self.client;
+
         tracing::info!("⚙️ Running command: {}", self.config.to_string());
-        tracing::trace!("{:#?}", self);
 
-        let Self { config, device, .. } = self;
-        let Client { pid, root, .. } = self.client;
-
-        let direction = self.direction.clone();
         let state = DAEMON_STATE.clone().lock_owned().await;
-        let platform = if let Some(d) = device.as_ref() {
+        let direction = self.direction.clone();
+        let platform = if let Some(d) = self.device.as_ref() {
             Some(d.platform.clone())
         } else {
             None
         };
 
         let nvim = state.clients.get(&pid)?;
-
         let args = {
-            let mut args = config.as_args();
+            let mut args = self.config.as_args();
             if let Some(ref platform) = platform {
                 args.extend(platform.sdk_simulator_args())
             }
-
             append_build_root(&root, args)?
         };
 
-        tracing::debug!("args: {:?}", args);
-
-        let settings = runner::build_settings(&root, &args).await?;
+        let ref mut logger = nvim.new_logger("Build", &self.config.target, &direction);
+        let settings = build_settings(&root, &args).await?;
         let platform = platform.unwrap_or(Platform::from_str(&settings.platform_display_name)?);
 
-        let success = nvim
-            .new_logger("Build", &config.target, &direction)
-            .log_build_stream(&root, &args, true, true)
-            .await?;
-
+        let success = build_with_loggger(logger, &root, &args, true, true).await?;
         if !success {
-            let msg = format!("Failed: {} ", config.to_string());
+            let msg = format!("Failed: {} ", self.config.to_string());
             nvim.echo_err(&msg).await?;
             return Err(Error::Build(msg));
         }
 
-        let mut logger = nvim.new_logger("Run", &config.target, &direction);
-
-        if platform.is_mac_os() {
-            let program = settings.path_to_output_binary()?;
-            tracing::debug!("Running binary {program:?}");
-
-            logger.log_title().await?;
-            logger.open_win().await?;
-
-            tokio::spawn(async move {
-                let mut stream = runner::run(program).await?;
-
-                use xcodebuild::runner::ProcessUpdate::*;
-                // NOTE: This is required so when neovim exist this should also exit
-                while let Some(update) = stream.next().await {
-                    let state = DAEMON_STATE.clone();
-                    let state = state.lock().await;
-                    let nvim = state.clients.get(&pid)?;
-                    let mut logger = nvim.new_logger("Run", &config.target, &direction);
-
-                    // NOTE: NSLog get directed to error by default which is odd
-                    match update {
-                        Stdout(msg) => {
-                            logger.log(msg).await?;
-                        }
-                        Error(msg) | Stderr(msg) => {
-                            logger.log(format!("[Error]  {msg}")).await?;
-                        }
-                        Exit(ref code) => {
-                            let success = code == "0";
-                            let msg = string_as_section(if success {
-                                "".into()
-                            } else {
-                                format!("Panic {code}")
-                            });
-
-                            logger.log(msg).await?;
-                            logger.set_status_end(success, true).await?;
-                        }
-                    }
-                }
-                anyhow::Ok(())
-            });
-            return Ok(());
-        } else if let Some(mut device) = get_device(&state, device) {
-            let path_to_app = settings.metal_library_output_dir;
-            let app_id = settings.product_bundle_identifier;
-
-            tracing::debug!("{app_id}: {:?}", path_to_app);
-
-            logger.log_title().await?;
-
-            tokio::spawn(async move {
-                // NOTE: This is required so when neovim exist this should also exit
-                let state = DAEMON_STATE.clone().lock_owned().await;
-                let nvim = state.clients.get(&pid)?;
-                let ref mut logger = nvim.new_logger("Run", &config.target, &direction);
-
-                logger.open_win().await?;
-                logger.set_running().await?;
-
-                device.try_boot(logger).await?;
-                device.try_install(&path_to_app, &app_id, logger).await?;
-                device.try_launch(&app_id, logger).await?;
-
-                // TODO: Remove and repalce with app logs
-                logger.set_status_end(true, false).await?;
-
-                let mut state = DAEMON_STATE.clone().lock_owned().await;
-                state.devices.insert(device);
-                state.sync_client_state().await
-            });
-            return Ok(());
+        Runner {
+            target: self.config.target,
+            platform,
+            client: self.client,
+            state,
+            args,
+            udid: self.device.map(|d| d.udid),
+            direction,
         }
+        .run(settings)
+        .await?;
 
-        let msg = format!("Unable to run `{}` under `{platform}`", config.target);
-        logger.log(msg.clone()).await?;
-        Err(Error::Run(msg))
-    }
-}
-
-// let target = project.get_target(&config.target, ,)?;
-#[cfg(feature = "daemon")]
-fn get_device<'a>(
-    state: &'a tokio::sync::OwnedMutexGuard<crate::state::State>,
-    device: Option<DeviceLookup>,
-) -> Option<SimDevice> {
-    if let Some(device) = device {
-        state
-            .devices
-            .iter()
-            .find(|d| d.name == device.name && d.udid == device.udid)
-            .cloned()
-    } else {
-        None
+        Ok(())
     }
 }
 

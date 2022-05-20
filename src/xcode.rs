@@ -1,11 +1,11 @@
-use anyhow::Result;
+use crate::Result;
 use async_stream::stream;
 use std::path::Path;
 use tap::Pipe;
 use tokio_stream::{Stream, StreamExt};
 use xcodebuild::{parser, runner::spawn};
 
-use crate::util::fs::get_build_cache_dir;
+use crate::{nvim::Logger, util::fs::get_build_cache_dir};
 
 #[cfg(feature = "daemon")]
 pub async fn stream_build<'a, P: 'a>(
@@ -57,7 +57,45 @@ pub async fn fresh_build<'a, P: AsRef<Path> + 'a + std::fmt::Debug>(
     */
     append_build_root(&root, vec!["clean".into(), "build".into()])?
         .pipe(|args| spawn(root, args))
-        .await
+        .await?
+        .pipe(Ok)
+}
+pub async fn build_with_loggger<'a, P: AsRef<Path>>(
+    logger: &mut Logger<'a>,
+    root: P,
+    args: &Vec<String>,
+    clear: bool,
+    open: bool,
+) -> Result<bool> {
+    let mut stream = crate::xcode::stream_build(root, args).await?;
+
+    // TODO(nvim): close log buffer if it is open for new direction
+    //
+    // Currently the buffer direction will be ignored if the buffer is opened already
+
+    if clear {
+        logger.clear_content().await?;
+    }
+
+    // TODO(nvim): build log correct height
+    if open {
+        logger.open_win().await?;
+    }
+
+    let mut success = false;
+
+    logger.set_running().await?;
+    logger.log_title().await?;
+
+    while let Some(line) = stream.next().await {
+        line.contains("Succeed").then(|| success = true);
+
+        logger.log(line).await?;
+    }
+
+    logger.set_status_end(success, true).await?;
+
+    Ok(success)
 }
 
 pub fn append_build_root<P: AsRef<Path> + std::fmt::Debug>(

@@ -2,8 +2,6 @@ use super::{NvimClient, NvimConnection, NvimWindow};
 use crate::nvim::BufferDirection;
 use crate::Result;
 use nvim_rs::{Buffer, Window};
-use std::path::Path;
-use tokio_stream::StreamExt;
 
 pub struct Logger<'a> {
     pub nvim: &'a NvimClient,
@@ -27,7 +25,7 @@ impl<'a> Logger<'a> {
         }
     }
 
-    async fn clear_content(&self) -> Result<()> {
+    pub async fn clear_content(&self) -> Result<()> {
         self.buf.set_lines(0, -1, false, vec![]).await?;
         Ok(())
     }
@@ -65,44 +63,6 @@ impl<'a> Logger<'a> {
         }
 
         Ok(())
-    }
-
-    pub async fn log_build_stream<P: AsRef<Path>>(
-        &mut self,
-        root: P,
-        args: &Vec<String>,
-        clear: bool,
-        open: bool,
-    ) -> Result<bool> {
-        let mut stream = crate::xcode::stream_build(root, args).await?;
-
-        // TODO(nvim): close log buffer if it is open for new direction
-        //
-        // Currently the buffer direction will be ignored if the buffer is opened already
-
-        if clear {
-            self.clear_content().await?;
-        }
-
-        // TODO(nvim): build log correct height
-        if open {
-            self.open_win().await?;
-        }
-
-        let mut success = false;
-
-        self.set_running().await?;
-        self.log_title().await?;
-
-        while let Some(line) = stream.next().await {
-            line.contains("Succeed").then(|| success = true);
-
-            self.log(line).await?;
-        }
-
-        self.set_status_end(success, true).await?;
-
-        Ok(success)
     }
 
     pub async fn log_title(&mut self) -> Result<()> {
