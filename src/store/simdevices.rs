@@ -31,7 +31,7 @@ impl Default for SimDevices {
                 .to_vec()
                 .into_iter()
                 .filter(|d| d.is_available)
-                .map(SimDevice::new)
+                .map(Into::into)
                 .collect(),
         )
     }

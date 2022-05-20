@@ -107,6 +107,7 @@ impl<'a> Logger<'a> {
         Ok(win)
     }
 
+    // TODO(logger): make running different for devices and app
     pub async fn set_running(&mut self) -> Result<()> {
         self.nvim
             .exec("let g:xbase_watch_build_status='running'", false)

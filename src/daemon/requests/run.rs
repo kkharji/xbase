@@ -35,7 +35,6 @@ impl Handler for Run {
     async fn handle(self) -> Result<()> {
         let Client { pid, root, .. } = &self.client;
 
-        tracing::info!("⚙️ Running command: {:?}", self);
         tracing::info!("⚙️ Running command: {}", self.config.to_string());
 
         let state = DAEMON_STATE.clone().lock_owned().await;

@@ -1,3 +1,6 @@
+mod simctl;
+pub use self::simctl::*;
+
 use crate::{
     constants::DAEMON_STATE,
     nvim::BufferDirection,
@@ -85,38 +88,38 @@ impl Runner {
 
 /// Simctl Runner
 impl Runner {
-    pub async fn run_with_simctl(
-        mut self,
-        settings: BuildSettings,
-    ) -> Result<JoinHandle<Result<()>>> {
-        let nvim = self.state.clients.get(&self.client.pid)?;
-        let ref mut logger = nvim.new_logger("Run", &self.target, &self.direction);
+    pub async fn run_with_simctl(self, settings: BuildSettings) -> Result<JoinHandle<Result<()>>> {
+        let Self {
+            client,
+            target,
+            state,
+            udid,
+            direction,
+            ..
+        } = self;
 
+        let ref mut logger = state
+            .clients
+            .get(&client.pid)?
+            .new_logger("Run", &target, &direction);
         let app_id = settings.product_bundle_identifier;
         let path_to_app = settings.metal_library_output_dir;
 
-        tracing::debug!("{app_id}: {:?}", path_to_app);
-
-        logger.log_title().await?;
         logger.set_running().await?;
-
-        let mut device = get_device(&self.state, self.udid)?;
-
-        device.try_boot(logger).await?;
-        device.try_install(&path_to_app, &app_id, logger).await?;
-        device.try_launch(&app_id, logger).await?;
-
-        // TODO(simctl): device might change outside state
-        self.state.devices.insert(device);
+        let _runner = {
+            let device = get_device(&state, udid)?;
+            let runner = SimDeviceRunner::new(device, target.clone(), app_id, path_to_app);
+            runner.boot(logger).await?;
+            runner.install(logger).await?;
+            runner.launch(logger).await?;
+            runner
+        };
 
         // NOTE: This is required so when neovim exist this should also exit
         tokio::spawn(async move {
             let state = DAEMON_STATE.clone().lock_owned().await;
-            let nvim = state.clients.get(&self.client.pid)?;
-            let ref mut logger = nvim.new_logger("Run", &self.target, &self.direction);
-
-            // TODO: Remove and replace with app logs
-            logger.set_status_end(true, false).await?;
+            let nvim = state.clients.get(&client.pid)?;
+            let ref mut _logger = nvim.new_logger("Run", &target, &direction);
 
             state.sync_client_state().await?;
 
