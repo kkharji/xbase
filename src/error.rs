@@ -34,6 +34,8 @@ pub enum Error {
     Run(String),
     #[error("[Error] (WatchError) {0}")]
     Watch(#[from] WatchError),
+    #[error("[Error] (Message) {0}")]
+    Message(String),
 }
 
 #[derive(ThisError, Debug)]
@@ -66,6 +68,12 @@ pub enum WatchError {
     Continue(String),
     #[error("(FailToStart)")]
     FailToStart,
+}
+
+impl From<String> for Error {
+    fn from(s: String) -> Self {
+        Self::Message(s)
+    }
 }
 
 #[cfg(feature = "daemon")]

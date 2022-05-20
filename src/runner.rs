@@ -85,9 +85,12 @@ impl Runner {
 
 /// Simctl Runner
 impl Runner {
-    pub async fn run_with_simctl(self, settings: BuildSettings) -> Result<JoinHandle<Result<()>>> {
+    pub async fn run_with_simctl(
+        mut self,
+        settings: BuildSettings,
+    ) -> Result<JoinHandle<Result<()>>> {
         let nvim = self.state.clients.get(&self.client.pid)?;
-        let mut logger = nvim.new_logger("Run", &self.target, &self.direction);
+        let ref mut logger = nvim.new_logger("Run", &self.target, &self.direction);
 
         let app_id = settings.product_bundle_identifier;
         let path_to_app = settings.metal_library_output_dir;
@@ -95,27 +98,22 @@ impl Runner {
         tracing::debug!("{app_id}: {:?}", path_to_app);
 
         logger.log_title().await?;
-        logger.open_win().await?;
+        logger.set_running().await?;
 
         let mut device = get_device(&self.state, self.udid)?;
 
-        // NOTE: This is required so when neovim exist this should also exit
-        let state = DAEMON_STATE.clone().lock_owned().await;
+        device.try_boot(logger).await?;
+        device.try_install(&path_to_app, &app_id, logger).await?;
+        device.try_launch(&app_id, logger).await?;
 
+        // TODO(simctl): device might change outside state
+        self.state.devices.insert(device);
+
+        // NOTE: This is required so when neovim exist this should also exit
         tokio::spawn(async move {
+            let state = DAEMON_STATE.clone().lock_owned().await;
             let nvim = state.clients.get(&self.client.pid)?;
             let ref mut logger = nvim.new_logger("Run", &self.target, &self.direction);
-
-            logger.set_running().await?;
-
-            device.try_boot(logger).await?;
-            device.try_install(&path_to_app, &app_id, logger).await?;
-            device.try_launch(&app_id, logger).await?;
-
-            let mut state = DAEMON_STATE.clone().lock_owned().await;
-
-            // TODO(simctl): device might change outside state
-            state.devices.insert(device);
 
             // TODO: Remove and replace with app logs
             logger.set_status_end(true, false).await?;

@@ -70,7 +70,7 @@ M.setup = function(opts)
     M.try_register(root, opts)
 
     vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
-      pattern = { "*.m", "*.swift", "*.c" },
+      pattern = { "*.m", "*.swift", "*.c", "*.yml" },
       callback = function()
         vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
       end,

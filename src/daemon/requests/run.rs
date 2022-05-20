@@ -26,7 +26,6 @@ use {
     crate::runner::Runner,
     crate::xcode::{append_build_root, build_with_loggger},
     crate::Error,
-    std::str::FromStr,
     xcodebuild::runner::build_settings,
 };
 
@@ -36,11 +35,13 @@ impl Handler for Run {
     async fn handle(self) -> Result<()> {
         let Client { pid, root, .. } = &self.client;
 
+        tracing::info!("⚙️ Running command: {:?}", self);
         tracing::info!("⚙️ Running command: {}", self.config.to_string());
 
         let state = DAEMON_STATE.clone().lock_owned().await;
         let direction = self.direction.clone();
-        let platform = if let Some(d) = self.device.as_ref() {
+        let platform = if let Some(ref d) = self.device {
+            tracing::info!("{:#?}", d.platform);
             Some(d.platform.clone())
         } else {
             None
@@ -56,8 +57,12 @@ impl Handler for Run {
         };
 
         let ref mut logger = nvim.new_logger("Build", &self.config.target, &direction);
+
         let settings = build_settings(&root, &args).await?;
-        let platform = platform.unwrap_or(Platform::from_str(&settings.platform_display_name)?);
+        let platform = match platform {
+            Some(v) => v,
+            None => Platform::from_display(&settings.platform_display_name)?,
+        };
 
         let success = build_with_loggger(logger, &root, &args, true, true).await?;
         if !success {

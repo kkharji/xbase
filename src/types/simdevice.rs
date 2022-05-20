@@ -56,14 +56,22 @@ impl SimDevice {
 
     pub async fn try_boot<'a>(&mut self, logger: &mut Logger<'a>) -> Result<()> {
         // FIX(run): DeviceState can get out of sync when the user shutdown device manually
-        if let DeviceState::Shutdown = &self.state {
-            logger.log(format!("[Booting] ({})", self.name)).await?;
+        logger
+            .log(string_as_section(format!("Booting:    {}", self.name)))
+            .await?;
 
-            self.boot()
-                .pipe(|res| self.handle_error(res, logger))
-                .await?;
-            self.state = DeviceState::Booted;
-        }
+        if let Err(e) = self.boot() {
+            let err = Error::from(e);
+            let err_msg = err.to_string();
+            if !err_msg.contains("current state Booted") {
+                logger.log(err_msg).await?;
+                logger.set_status_end(false, true).await?;
+                self.is_running = false;
+                return Err(err);
+            }
+        };
+
+        self.state = DeviceState::Booted;
 
         Ok(())
     }
@@ -74,20 +82,20 @@ impl SimDevice {
         app_id: &String,
         logger: &mut Logger<'a>,
     ) -> Result<()> {
+        logger
+            .log(string_as_section(format!("Installing: {app_id}",)))
+            .await?;
         self.install(path_to_app)
             .pipe(|res| self.handle_error(res, logger))
             .await?;
-        logger
-            .log(format!("[Installing] ({}) {app_id}", self.name))
-            .await
+        Ok(())
     }
 
     pub async fn try_launch<'a>(&mut self, app_id: &String, logger: &mut Logger<'a>) -> Result<()> {
+        logger
+            .log(string_as_section(format!("Launching:  {app_id}")))
+            .await?;
         if !self.is_running {
-            logger
-                .log(format!("[Launching] ({}) {app_id}", self.name))
-                .await?;
-
             self.launch(app_id)
                 .stdout(&"/tmp/wordle_log")
                 .stderr(&"/tmp/wordle_log")
@@ -97,7 +105,7 @@ impl SimDevice {
 
             self.is_running = true;
 
-            logger.log(string_as_section("Launched".into())).await?;
+            logger.log(string_as_section("Connected".into())).await?;
         }
 
         Ok(())
