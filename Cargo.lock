@@ -976,6 +976,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "process-stream"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30bd8ad131e0d2c401daa29dcf94cb11184485e13de7f4a0616c859cb1af1426"
+dependencies = [
+ "async-stream",
+ "futures 0.3.21",
+ "tap",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1663,7 +1676,6 @@ dependencies = [
  "async-trait",
  "bsp-server",
  "dirs",
- "futures 0.3.21",
  "lazy_static",
  "libc",
  "libproc",
@@ -1671,6 +1683,7 @@ dependencies = [
  "notify",
  "nvim-rs",
  "parity-tokio-ipc",
+ "process-stream",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1680,7 +1693,6 @@ dependencies = [
  "tap",
  "thiserror",
  "tokio",
- "tokio-stream",
  "tokio-util 0.7.1",
  "tracing",
  "tracing-appender",
@@ -1697,8 +1709,8 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "futures 0.3.21",
  "parity-tokio-ipc",
+ "process-stream",
  "shell-words",
  "tap",
  "thiserror",

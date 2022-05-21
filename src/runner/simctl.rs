@@ -1,7 +1,7 @@
 use crate::{nvim::Logger, types::SimDevice, Error, Result};
-use std::{path::PathBuf, process::Stdio};
+use process_stream::Process;
+use std::path::PathBuf;
 use tap::Pipe;
-use tokio::process::{Child, Command};
 
 /// SimDevice ruuner
 pub struct SimDeviceRunner {
@@ -35,20 +35,19 @@ impl SimDeviceRunner {
         Ok(())
     }
 
-    pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<Child> {
+    pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
         logger.log(self.launching_msg()).await?;
-        let process = Command::new("xcrun")
-            .arg("simctl")
-            .arg("launch")
-            .arg("--terminate-running-process")
-            .arg("--console")
-            .arg(&self.device.udid)
-            .arg(&self.app_id)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .stdin(Stdio::null())
-            .kill_on_drop(true)
-            .spawn()?;
+        let mut process = Process::new("xcrun");
+
+        process.args(&[
+            "simctl",
+            "launch",
+            "--terminate-running-process",
+            "--console",
+        ]);
+        process.arg(&self.device.udid);
+        process.arg(&self.app_id);
+        process.kill_on_drop(true);
 
         logger.log(self.connected_msg()).await?;
         Ok(process)

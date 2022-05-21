@@ -133,15 +133,16 @@ use {
         xcode::fresh_build,
         xcodegen,
     },
+    process_stream::StreamExt,
     std::path::PathBuf,
     tokio::{
         fs::{metadata, File},
         io::AsyncWriteExt,
         sync::OwnedMutexGuard,
     },
-    tokio_stream::StreamExt,
 };
 
+#[cfg(feature = "daemon")]
 pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
     // TODO(build): Ensure that build successed. check for Exit Code
     let steps = fresh_build(&root).await?.collect::<Vec<Step>>().await;

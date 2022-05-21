@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::{nvim::Logger, util::fs::get_build_cache_dir};
 use async_stream::stream;
+use process_stream::{Stream, StreamExt};
 use std::path::Path;
 use tap::Pipe;
-use tokio_stream::{Stream, StreamExt};
 use xcodebuild::{parser, runner::spawn};
 
 #[cfg(feature = "daemon")]
@@ -24,7 +24,7 @@ where
         while let Some(step) = stream.next().await {
             let line = match step {
                 Exit(v) => {
-                    fmt::as_section(if v == "0" { "Succeed" } else { "Failed" }.to_string())
+                    fmt::as_section(if v == 0 { "Succeed" } else { "Failed" }.to_string())
                 }
                 BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
                     continue;
@@ -44,24 +44,12 @@ where
 pub async fn fresh_build<'a, P: AsRef<Path> + 'a + Debug>(
     root: P,
 ) -> Result<impl Stream<Item = parser::Step> + 'a> {
-    /*
-       TODO: Support overriding xcodebuild arguments
-
-       Not sure how important is this, but ideally I'd like to be able to add extra arguments for
-       when generating compiled commands, as well as doing actual builds and runs.
-
-       ```yaml
-       xbase:
-       buildArguments: [];
-       compileArguments: [];
-       runArguments: [];
-       ```
-    */
     append_build_root(&root, vec!["clean".into(), "build".into()])?
         .pipe(|args| spawn(root, args))
         .await?
         .pipe(Ok)
 }
+
 pub async fn build_with_loggger<'a, P: AsRef<Path>>(
     logger: &mut Logger<'a>,
     root: P,

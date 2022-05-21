@@ -7,17 +7,14 @@ use crate::{
     nvim::BufferDirection,
     state::State,
     types::{Client, Platform},
-    util::{
-        fmt,
-        process::{self, Output},
-    },
+    util::fmt,
     Error, Result,
 };
 use {
+    process_stream::{Process, ProcessItem, StreamExt},
     tap::Pipe,
     tokio::{sync::OwnedMutexGuard, task::JoinHandle},
-    tokio_stream::StreamExt,
-    xcodebuild::{parser::BuildSettings, runner},
+    xcodebuild::parser::BuildSettings,
 };
 
 pub struct Runner {
@@ -51,11 +48,11 @@ impl Runner {
 
         tokio::spawn(async move {
             let program = settings.path_to_output_binary()?;
-            let mut stream = runner::run(&program).await?;
+            let mut stream = Process::new(&program).stream()?;
 
             tracing::debug!("Running binary {program:?}");
 
-            use xcodebuild::runner::ProcessUpdate::*;
+            use ProcessItem::*;
             // NOTE: This is required so when neovim exist this should also exit
             while let Some(update) = stream.next().await {
                 let state = DAEMON_STATE.clone();
@@ -65,12 +62,8 @@ impl Runner {
 
                 // NOTE: NSLog get directed to error by default which is odd
                 match update {
-                    Stdout(msg) => {
-                        logger.log(msg).await?;
-                    }
-                    Error(msg) | Stderr(msg) => {
-                        logger.log(format!("[Error]  {msg}")).await?;
-                    }
+                    Output(msg) => logger.log(msg).await?,
+                    Error(msg) => logger.log(format!("[Error] {msg}")).await?,
                     Exit(ref code) => {
                         let success = code == "0";
                         let msg = fmt::as_section(if success {
@@ -78,7 +71,6 @@ impl Runner {
                         } else {
                             format!("Panic {code}")
                         });
-
                         logger.log(msg).await?;
                         logger.set_status_end(success, true).await?;
                     }
@@ -121,42 +113,37 @@ impl Runner {
             runner
         };
 
-        let child = runner.launch(logger).await?;
-        let mut stream = process::stream(child)?;
+        let mut launcher = runner.launch(logger).await?;
+        let mut stream = launcher.stream()?;
         // TODO(daemon): ensure Simulator.app is running
 
         logger.log(fmt::separator()).await?;
 
-        // TODO(nvim): Close ran simctl process on exit.
         tokio::spawn(async move {
             while let Some(output) = stream.next().await {
                 let state = DAEMON_STATE.clone();
                 let state = state.lock().await;
                 let mut logger = match state.clients.get(&client.pid) {
                     Ok(nvim) => nvim.new_unamed_logger(),
-                    Err(e) => {
-                        tracing::error!("SimDevice runner: {e}");
+                    Err(_) => {
+                        tracing::info!("Nvim Instance closed, closing runner ..");
+                        launcher.kill().await;
                         break;
                     }
                 };
 
+                use ProcessItem::*;
                 match output {
-                    Output::Out(msg) => {
+                    Output(msg) => {
                         if !msg.contains("ignoring singular matrix") {
                             logger.log(msg).await?;
                         }
                     }
-                    Output::Err(msg) => {
+                    Error(msg) => {
                         logger.log(format!("[Error] {msg}")).await?;
                     }
-                    Output::Exit(status) => {
-                        if let Ok(Some(code)) = status {
-                            logger.log(format!("[Exit] {code}")).await?;
-                        } else {
-                            logger
-                                .log(format!("[Error] Unable to get exit code"))
-                                .await?;
-                        }
+                    Exit(code) => {
+                        logger.log(format!("[Exit] {code}")).await?;
                         break;
                     }
                 };
