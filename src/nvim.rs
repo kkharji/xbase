@@ -70,6 +70,10 @@ impl NvimClient {
             direction.clone(),
         )
     }
+
+    pub fn new_unamed_logger<'a>(&'a self) -> Logger<'a> {
+        Logger::new(self, "".into(), None)
+    }
 }
 
 #[cfg(feature = "daemon")]

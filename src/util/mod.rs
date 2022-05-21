@@ -10,3 +10,6 @@ pub mod serde;
 pub mod tracing;
 
 pub mod fmt;
+
+#[cfg(feature = "daemon")]
+pub mod process;

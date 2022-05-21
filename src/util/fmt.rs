@@ -15,3 +15,7 @@ pub fn as_section(content: String) -> String {
     content.push_str("]");
     content
 }
+
+pub fn separator() -> String {
+    "-".repeat(73)
+}

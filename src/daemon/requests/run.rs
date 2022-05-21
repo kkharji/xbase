@@ -70,6 +70,11 @@ impl Handler for Run {
             return Err(Error::Build(msg));
         }
 
+        // TODO(daemon): insert handler to state.runners
+        // TODO(nvim): provide mapping to close runners.
+        //
+        // If there is more then one runner then pick, else close from current buffer.
+        // C-c in normal/insert mode should close that process
         Runner {
             target: self.config.target,
             platform,

@@ -1,6 +1,7 @@
 use crate::{nvim::Logger, types::SimDevice, Error, Result};
-use std::path::PathBuf;
+use std::{path::PathBuf, process::Stdio};
 use tap::Pipe;
+use tokio::process::{Child, Command};
 
 /// SimDevice ruuner
 pub struct SimDeviceRunner {
@@ -8,8 +9,6 @@ pub struct SimDeviceRunner {
     target: String,
     app_id: String,
     path_to_app: PathBuf,
-    stdout_path: String,
-    stderr_path: String,
 }
 
 impl SimDeviceRunner {
@@ -36,18 +35,25 @@ impl SimDeviceRunner {
         Ok(())
     }
 
-    pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
+    pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<Child> {
         logger.log(self.launching_msg()).await?;
-        self.device
-            .launch(&self.app_id)
-            .stdout(&self.stdout_path)
-            .stderr(&self.stderr_path)
-            .exec()
-            .pipe(|res| self.ok_or_abort(res, logger))
-            .await?;
+        let process = Command::new("xcrun")
+            .arg("simctl")
+            .arg("launch")
+            .arg("--terminate-running-process")
+            .arg("--console")
+            .arg(&self.device.udid)
+            .arg(&self.app_id)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdin(Stdio::null())
+            .kill_on_drop(true)
+            .spawn()?;
+
         logger.log(self.connected_msg()).await?;
-        Ok(())
+        Ok(process)
     }
+
     async fn ok_or_abort<'a, T>(
         &self,
         res: simctl::Result<T>,
@@ -84,10 +90,6 @@ impl SimDeviceRunner {
 
 impl SimDeviceRunner {
     pub fn new(device: SimDevice, target: String, app_id: String, path_to_app: PathBuf) -> Self {
-        let out_path = |out| format!("/tmp/{}_{out}_{}_runner.log", target, &device.udid).into();
-        let stdout_path = out_path("stdout");
-        let stderr_path = out_path("stderr");
-
         tracing::debug!(
             "SimDeviceRunner: {}: {app_id} [{path_to_app:?}]",
             device.name
@@ -97,8 +99,6 @@ impl SimDeviceRunner {
             target,
             app_id,
             path_to_app,
-            stdout_path,
-            stderr_path,
         }
     }
 }
