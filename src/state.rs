@@ -131,7 +131,7 @@ impl State {
         let mut invalid_pids = vec![];
 
         self.clients.retain(|pid, _| {
-            crate::util::proc_exists(pid, || {
+            crate::util::pid::exists(pid, || {
                 tracing::error!("{pid} no longer valid");
                 invalid_pids.push(*pid);
             })

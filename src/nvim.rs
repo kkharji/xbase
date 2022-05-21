@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "daemon")]
 use {
-    crate::{types::Client, Result},
+    crate::{types::Client, util::fmt, Result},
     nvim_rs::{compat::tokio::Compat, create::tokio::new_path as connect, rpc::handler::Dummy},
 };
 
@@ -64,10 +64,9 @@ impl NvimClient {
         target: &str,
         direction: &'a Option<BufferDirection>,
     ) -> Logger<'a> {
-        use crate::util::string_as_section;
         Logger::new(
             self,
-            string_as_section(format!("{ops}: {target}")),
+            fmt::as_section(format!("{ops}: {target}")),
             direction.clone(),
         )
     }

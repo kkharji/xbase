@@ -3,7 +3,7 @@ use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
 use tracing::*;
-use xbase::util::{proc_kill, tracing::install_tracing};
+use xbase::util::{pid, tracing::install_tracing};
 use xbase::Result;
 use xbase::{constants::*, daemon::*};
 
@@ -60,7 +60,7 @@ async fn ensure_single_instance() -> Result<()> {
         if metadata(DAEMON_PID_PATH).await.ok().is_some() {
             read_to_string(DAEMON_PID_PATH)
                 .await?
-                .pipe_ref(proc_kill)
+                .pipe_ref(pid::kill)
                 .await?;
         }
         remove_file(DAEMON_PID_PATH).await.ok();

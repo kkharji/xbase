@@ -1,11 +1,13 @@
 use crate::Result;
+use crate::{nvim::Logger, util::fs::get_build_cache_dir};
 use async_stream::stream;
 use std::path::Path;
 use tap::Pipe;
 use tokio_stream::{Stream, StreamExt};
 use xcodebuild::{parser, runner::spawn};
 
-use crate::{nvim::Logger, util::fs::get_build_cache_dir};
+#[cfg(feature = "daemon")]
+use {crate::util::fmt, std::fmt::Debug};
 
 #[cfg(feature = "daemon")]
 pub async fn stream_build<'a, P: 'a>(
@@ -22,7 +24,7 @@ where
         while let Some(step) = stream.next().await {
             let line = match step {
                 Exit(v) => {
-                    crate::util::string_as_section(if v == "0" { "Succeed" } else { "Failed" }.to_string())
+                    fmt::as_section(if v == "0" { "Succeed" } else { "Failed" }.to_string())
                 }
                 BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
                     continue;
@@ -39,7 +41,7 @@ where
 }
 
 #[cfg(feature = "daemon")]
-pub async fn fresh_build<'a, P: AsRef<Path> + 'a + std::fmt::Debug>(
+pub async fn fresh_build<'a, P: AsRef<Path> + 'a + Debug>(
     root: P,
 ) -> Result<impl Stream<Item = parser::Step> + 'a> {
     /*
@@ -98,7 +100,7 @@ pub async fn build_with_loggger<'a, P: AsRef<Path>>(
     Ok(success)
 }
 
-pub fn append_build_root<P: AsRef<Path> + std::fmt::Debug>(
+pub fn append_build_root<P: AsRef<Path> + Debug>(
     root: P,
     mut args: Vec<String>,
 ) -> Result<Vec<String>> {

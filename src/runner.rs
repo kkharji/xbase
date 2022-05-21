@@ -6,7 +6,7 @@ use crate::{
     nvim::BufferDirection,
     state::State,
     types::{Client, Platform, SimDevice},
-    util::string_as_section,
+    util::fmt,
     Error, Result,
 };
 use {
@@ -69,7 +69,7 @@ impl Runner {
                     }
                     Exit(ref code) => {
                         let success = code == "0";
-                        let msg = string_as_section(if success {
+                        let msg = fmt::as_section(if success {
                             "".into()
                         } else {
                             format!("Panic {code}")

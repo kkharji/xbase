@@ -125,10 +125,24 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
 }
 
 #[cfg(feature = "daemon")]
-pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
-    use crate::{error::CompileError, xcode::fresh_build};
-    use tokio_stream::StreamExt;
+use {
+    crate::{
+        error::{CompileError, XcodeGenError},
+        state::State,
+        util::pid,
+        xcode::fresh_build,
+        xcodegen,
+    },
+    std::path::PathBuf,
+    tokio::{
+        fs::{metadata, File},
+        io::AsyncWriteExt,
+        sync::OwnedMutexGuard,
+    },
+    tokio_stream::StreamExt,
+};
 
+pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
     // TODO(build): Ensure that build successed. check for Exit Code
     let steps = fresh_build(&root).await?.collect::<Vec<Step>>().await;
     let compile_commands = steps.pipe_ref(generate_from_steps).await?;
@@ -146,9 +160,6 @@ pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
 /// Ensure that buildServer.json exists in root directory.
 #[cfg(feature = "daemon")]
 pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
-    use tokio::fs::File;
-    use tokio::io::AsyncWriteExt;
-
     let path = root.join("buildServer.json");
     if tokio::fs::File::open(&path).await.is_ok() {
         return Ok(());
@@ -181,13 +192,11 @@ pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
 
 #[cfg(feature = "daemon")]
 pub async fn ensure_server_support<'a>(
-    state: &'a mut tokio::sync::OwnedMutexGuard<crate::state::State>,
+    state: &'a mut OwnedMutexGuard<State>,
     name: &String,
-    root: &std::path::PathBuf,
-    path: Option<&std::path::PathBuf>,
+    root: &PathBuf,
+    path: Option<&PathBuf>,
 ) -> Result<bool> {
-    use crate::{error::XcodeGenError, xcodegen};
-    use tokio::fs::metadata;
     let compile_exists = metadata(root.join(".compile")).await.is_ok();
 
     if ensure_server_config(&root).await.is_err() {
@@ -248,14 +257,13 @@ pub async fn ensure_server_support<'a>(
             .pipe(|msg| state.clients.echo_err(&root, &name, msg))
             .await;
 
-        use crate::util::proc_exists;
         for (pid, client) in state.clients.iter() {
-            if proc_exists(pid, || {}) {
+            if pid::exists(pid, || {}) {
                 let mut logger = client.new_logger("Compile Error", name, &None);
                 logger.set_running().await.ok();
                 logger.open_win().await.ok();
                 logger.log(err.to_string()).await.ok();
-                logger.set_status_end(false, false).await.ok();
+                logger.set_status_end(false, true).await.ok();
             }
         }
 
