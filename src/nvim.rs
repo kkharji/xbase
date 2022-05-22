@@ -60,15 +60,10 @@ impl NvimClient {
 
     pub fn new_logger<'a>(
         &'a self,
-        ops: &str,
-        target: &str,
+        title: String,
         direction: &'a Option<BufferDirection>,
     ) -> Logger<'a> {
-        Logger::new(
-            self,
-            fmt::as_section(format!("{ops}: {target}")),
-            direction.clone(),
-        )
+        Logger::new(self, fmt::as_section(title), direction.clone())
     }
 
     pub fn new_unamed_logger<'a>(&'a self) -> Logger<'a> {

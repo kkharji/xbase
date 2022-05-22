@@ -260,7 +260,7 @@ pub async fn ensure_server_support<'a>(
 
         for (pid, client) in state.clients.iter() {
             if pid::exists(pid, || {}) {
-                let mut logger = client.new_logger("Compile Error", name, &None);
+                let mut logger = client.new_logger(format!("Compile:{name}"), &None);
                 logger.set_running().await.ok();
                 logger.open_win().await.ok();
                 logger.log(err.to_string()).await.ok();

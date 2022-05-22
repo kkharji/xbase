@@ -41,7 +41,7 @@ impl Runner {
 impl Runner {
     pub async fn run_as_macos_app(self, settings: BuildSettings) -> Result<JoinHandle<Result<()>>> {
         let nvim = self.state.clients.get(&self.client.pid)?;
-        let ref mut logger = nvim.new_logger("Run", &self.target, &self.direction);
+        let ref mut logger = nvim.new_unamed_logger();
 
         logger.log_title().await?;
         logger.open_win().await?;
@@ -58,7 +58,7 @@ impl Runner {
                 let state = DAEMON_STATE.clone();
                 let state = state.lock().await;
                 let nvim = state.clients.get(&self.client.pid)?;
-                let mut logger = nvim.new_logger("Run", &self.target, &self.direction);
+                let mut logger = nvim.new_unamed_logger();
 
                 // NOTE: NSLog get directed to error by default which is odd
                 match update {

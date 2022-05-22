@@ -30,7 +30,8 @@ impl Handler for Build {
         let direction = self.direction.clone();
 
         let args = append_build_root(&root, config.as_args())?;
-        let ref mut logger = nvim.new_logger("Build", &config.target, &direction);
+
+        let ref mut logger = nvim.new_logger(format!("Build:{}", config.target), &direction);
         let success = build_with_loggger(logger, &root, &args, true, true).await?;
 
         if !success {

@@ -55,7 +55,7 @@ impl Handler for Run {
             append_build_root(&root, args)?
         };
 
-        let ref mut logger = nvim.new_logger("Build", &self.config.target, &direction);
+        let ref mut logger = nvim.new_logger(format!("Run:{}", self.config.target), &direction);
 
         let settings = build_settings(&root, &args).await?;
         let platform = match platform {

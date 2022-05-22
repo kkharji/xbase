@@ -24,7 +24,11 @@ where
         while let Some(step) = stream.next().await {
             let line = match step {
                 Exit(v) => {
-                    fmt::as_section(if v == 0 { "Succeed" } else { "Failed" }.to_string())
+                    if v == 0 {
+                        fmt::separator()
+                    } else {
+                        "[Error] Build Failed".into()
+                    }
                 }
                 BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
                     continue;
@@ -78,7 +82,7 @@ pub async fn build_with_loggger<'a, P: AsRef<Path>>(
     logger.log_title().await?;
 
     while let Some(line) = stream.next().await {
-        line.contains("Succeed").then(|| success = true);
+        line.starts_with("-").then(|| success = true);
 
         logger.log(line).await?;
     }
