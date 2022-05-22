@@ -5,6 +5,7 @@ use std::fmt::Debug;
 #[cfg(feature = "daemon")]
 use {
     crate::constants::DAEMON_STATE,
+    crate::util::serde::value_or_default,
     crate::xcode::{append_build_root, build_with_loggger},
 };
 
@@ -13,7 +14,8 @@ use {
 pub struct Build {
     pub client: Client,
     pub config: BuildConfiguration,
-    pub direction: Option<BufferDirection>,
+    #[cfg_attr(feature = "daemon", serde(deserialize_with = "value_or_default"))]
+    pub direction: BufferDirection,
 }
 
 #[cfg(feature = "daemon")]
@@ -31,7 +33,11 @@ impl Handler for Build {
 
         let args = append_build_root(&root, config.as_args())?;
 
-        let ref mut logger = nvim.new_logger(format!("Build:{}", config.target), &direction);
+        let ref mut logger = nvim.logger();
+
+        logger.set_title(format!("Build:{}", config.target));
+        logger.set_direction(&direction);
+
         let success = build_with_loggger(logger, &root, &args, true, true).await?;
 
         if !success {
@@ -62,7 +68,7 @@ impl<'a> FromLua<'a> for Build {
         Ok(Self {
             client: table.get("client")?,
             config: table.get("config")?,
-            direction: table.get("direction").ok(),
+            direction: table.get("direction").unwrap_or_default(),
         })
     }
 }

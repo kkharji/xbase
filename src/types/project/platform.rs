@@ -12,36 +12,21 @@ pub enum Platform {
     #[serde(rename = "macOS")]
     MacOS,
     #[default]
-    None,
+    Unknown,
 }
 
 impl Platform {
-    pub fn sdk_simulator_args(&self) -> Vec<String> {
-        match self {
-            Platform::IOS => vec!["-sdk".into(), "iphonesimulator".into()],
-            Platform::WatchOS => vec!["-sdk".into(), "watchsimulator".into()],
-            Platform::TvOS => vec!["-sdk".into(), "appletvsimulator".into()],
-            Platform::MacOS => vec!["-sdk".into(), "macosx".into()],
-            Platform::None => vec![],
+    #[cfg(feature = "daemon")]
+    pub fn from_identifer(identifer: &str) -> Self {
+        let name = identifer.replace("com.apple.CoreSimulator.SimRuntime.", "");
+        let platform_str = name.split("-").next().unwrap().to_string();
+        match Self::from_str(&platform_str) {
+            Ok(res) => res,
+            Err(e) => {
+                tracing::error!("Platfrom from str: {e}");
+                Self::Unknown
+            }
         }
-        // -sdk driverkit -sdk iphoneos -sdk macosx -sdk appletvos -sdk watchos
-    }
-
-    #[must_use]
-    pub fn is_ios(&self) -> bool {
-        matches!(self, Self::IOS)
-    }
-    #[must_use]
-    pub fn is_watch_os(&self) -> bool {
-        matches!(self, Self::WatchOS)
-    }
-    #[must_use]
-    pub fn is_tv_os(&self) -> bool {
-        matches!(self, Self::TvOS)
-    }
-    #[must_use]
-    pub fn is_mac_os(&self) -> bool {
-        matches!(self, Self::MacOS)
     }
 
     #[cfg(feature = "daemon")]
@@ -60,6 +45,26 @@ impl Platform {
             display.into()
         };
         Self::from_str(&value).map_err(|s| crate::Error::Message(s))
+    }
+
+    #[must_use]
+    pub fn is_ios(&self) -> bool {
+        matches!(self, Self::IOS)
+    }
+
+    #[must_use]
+    pub fn is_watch_os(&self) -> bool {
+        matches!(self, Self::WatchOS)
+    }
+
+    #[must_use]
+    pub fn is_tv_os(&self) -> bool {
+        matches!(self, Self::TvOS)
+    }
+
+    #[must_use]
+    pub fn is_mac_os(&self) -> bool {
+        matches!(self, Self::MacOS)
     }
 }
 
@@ -88,7 +93,7 @@ impl FromStr for Platform {
             "watchOS" => Ok(Platform::WatchOS),
             "tvOS" => Ok(Platform::TvOS),
             "macOS" => Ok(Platform::MacOS),
-            _ => Err(format!("Platfrom {s}")),
+            _ => Ok(Platform::Unknown),
         }
     }
 }

@@ -1,11 +1,11 @@
-use crate::{nvim::Logger, types::SimDevice, Error, Result};
+use crate::{nvim::Logger, types::Device, Error, Result};
 use process_stream::Process;
 use std::path::PathBuf;
 use tap::Pipe;
 
 /// SimDevice ruuner
 pub struct SimDeviceRunner {
-    device: SimDevice,
+    device: Device,
     target: String,
     app_id: String,
     path_to_app: PathBuf,
@@ -88,7 +88,7 @@ impl SimDeviceRunner {
 }
 
 impl SimDeviceRunner {
-    pub fn new(device: SimDevice, target: String, app_id: String, path_to_app: PathBuf) -> Self {
+    pub fn new(device: Device, target: String, app_id: String, path_to_app: PathBuf) -> Self {
         tracing::debug!(
             "SimDeviceRunner: {}: {app_id} [{path_to_app:?}]",
             device.name

@@ -258,12 +258,16 @@ pub async fn ensure_server_support<'a>(
             .pipe(|msg| state.clients.echo_err(&root, &name, msg))
             .await;
 
-        for (pid, client) in state.clients.iter() {
+        for (pid, nvim) in state.clients.iter() {
             if pid::exists(pid, || {}) {
-                let mut logger = client.new_logger(format!("Compile:{name}"), &None);
+                let mut logger = nvim.logger();
+
+                logger.set_title(format!("Compile:{name}"));
                 logger.set_running().await.ok();
+
                 logger.open_win().await.ok();
                 logger.log(err.to_string()).await.ok();
+
                 logger.set_status_end(false, true).await.ok();
             }
         }

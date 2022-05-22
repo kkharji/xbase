@@ -6,6 +6,15 @@ use std::error::Error;
 use std::fmt;
 use std::marker::PhantomData;
 
+/// Deserialize an optional type to default if none
+pub fn value_or_default<'de, D, T>(d: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Default + Deserialize<'de>,
+{
+    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or_default())
+}
+
 /// Deserialize a vector possibly containing `null`.
 pub fn from_nullable_vector<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
 where

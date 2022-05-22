@@ -50,7 +50,9 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
             let ref args = append_build_root(root, config.as_args())
                 .map_err(|e| WatchError::stop(e.into()))?;
 
-            let ref mut logger = nvim.new_logger(format!("Rebuild:{}", config.target), &None);
+            let ref mut logger = nvim.logger();
+            logger.set_title(format!("Rebuild:{}", config.target));
+
             build_with_loggger(logger, &root, &args, true, true).await?;
         }
 

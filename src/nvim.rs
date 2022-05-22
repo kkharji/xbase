@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "daemon")]
 use {
-    crate::{types::Client, util::fmt, Result},
+    crate::{types::Client, Result},
     nvim_rs::{compat::tokio::Compat, create::tokio::new_path as connect, rpc::handler::Dummy},
 };
 
@@ -56,18 +56,6 @@ impl NvimClient {
     pub async fn sync_state(&self, update_state_script: &str) -> Result<()> {
         self.exec_lua(update_state_script, vec![]).await?;
         Ok(())
-    }
-
-    pub fn new_logger<'a>(
-        &'a self,
-        title: String,
-        direction: &'a Option<BufferDirection>,
-    ) -> Logger<'a> {
-        Logger::new(self, fmt::as_section(title), direction.clone())
-    }
-
-    pub fn new_unamed_logger<'a>(&'a self) -> Logger<'a> {
-        Logger::new(self, "".into(), None)
     }
 }
 

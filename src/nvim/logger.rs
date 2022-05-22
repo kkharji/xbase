@@ -1,6 +1,6 @@
 use super::{NvimClient, NvimConnection, NvimWindow};
-use crate::nvim::BufferDirection;
 use crate::Result;
+use crate::{nvim::BufferDirection, util::fmt};
 use nvim_rs::{Buffer, Window};
 
 pub struct Logger<'a> {
@@ -12,22 +12,22 @@ pub struct Logger<'a> {
 }
 
 impl<'a> Logger<'a> {
-    pub fn new(nvim: &'a NvimClient, title: String, direction: Option<BufferDirection>) -> Self {
-        let buf = Buffer::new(nvim.log_bufnr.into(), nvim.inner().clone());
-        let open_cmd = direction.map(|v| v.to_nvim_command(nvim.log_bufnr));
-
-        Self {
-            nvim,
-            title,
-            buf,
-            open_cmd,
-            current_line_count: None,
-        }
+    /// Set logger title
+    pub fn set_title(&mut self, title: String) -> &mut Self {
+        self.title = fmt::as_section(title);
+        self
     }
 
+    /// Clear logger content
     pub async fn clear_content(&self) -> Result<()> {
         self.buf.set_lines(0, -1, false, vec![]).await?;
         Ok(())
+    }
+
+    /// Set open direction for looger
+    pub fn set_direction(&mut self, direction: &BufferDirection) -> &mut Self {
+        self.open_cmd = Some(direction.to_nvim_command(self.nvim.log_bufnr));
+        self
     }
 
     async fn get_line_count(&'a self) -> Result<i64> {
@@ -83,20 +83,21 @@ impl<'a> Logger<'a> {
     }
 
     /// Open Window
-    pub async fn open_win(&self) -> Result<Window<NvimConnection>> {
+    pub async fn open_win(&mut self) -> Result<Window<NvimConnection>> {
         if let Some(win) = self.win().await {
             return Ok(win);
         }
 
         tracing::info!("Openning a new window");
 
-        let open_cmd = match self.open_cmd.as_ref() {
-            Some(s) => s.clone(),
-            None => {
-                BufferDirection::get_window_direction(self.nvim, None, self.nvim.log_bufnr).await?
-            }
+        if self.open_cmd.is_none() {
+            let v = self.nvim.get_window_direction(None).await?;
+            self.open_cmd = Some(v);
         };
-        self.nvim.exec(&open_cmd, false).await?;
+
+        let open_cmd = self.open_cmd.as_ref().unwrap();
+
+        self.nvim.exec(open_cmd, false).await?;
         let win = self.nvim.get_current_win().await?;
         // NOTE: This doesn't work
         win.set_option("number", false.into()).await?;
@@ -133,5 +134,43 @@ impl<'a> Logger<'a> {
         }
 
         Ok(())
+    }
+}
+
+impl NvimClient {
+    pub fn logger<'a>(&'a self) -> Logger<'a> {
+        Logger {
+            nvim: self,
+            title: Default::default(),
+            buf: Buffer::new(self.log_bufnr.into(), self.inner().clone()),
+            open_cmd: None,
+            current_line_count: None,
+        }
+    }
+
+    async fn get_window_direction(&self, direction: Option<BufferDirection>) -> Result<String> {
+        use std::str::FromStr;
+        use tap::Pipe;
+        let ref bufnr = self.log_bufnr;
+
+        if let Some(direction) = direction {
+            return Ok(direction.to_nvim_command(*bufnr));
+        };
+
+        match "return require'xbase.config'.values.default_log_buffer_direction"
+            .pipe(|str| self.exec_lua(str, vec![]))
+            .await?
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Unable to covnert value to string"))?
+            .pipe(BufferDirection::from_str)
+            .map(|d| d.to_nvim_command(*bufnr))
+        {
+            Ok(open_command) => open_command,
+            Err(e) => {
+                tracing::error!("Unable to convert value to string {e}");
+                BufferDirection::Horizontal.to_nvim_command(*bufnr)
+            }
+        }
+        .pipe(Ok)
     }
 }

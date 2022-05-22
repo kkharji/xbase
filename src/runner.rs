@@ -23,7 +23,7 @@ pub struct Runner {
     pub platform: Platform,
     pub state: OwnedMutexGuard<State>,
     pub udid: Option<String>,
-    pub direction: Option<BufferDirection>,
+    pub direction: BufferDirection,
     pub args: Vec<String>,
 }
 
@@ -41,7 +41,7 @@ impl Runner {
 impl Runner {
     pub async fn run_as_macos_app(self, settings: BuildSettings) -> Result<JoinHandle<Result<()>>> {
         let nvim = self.state.clients.get(&self.client.pid)?;
-        let ref mut logger = nvim.new_unamed_logger();
+        let ref mut logger = nvim.logger();
 
         logger.log_title().await?;
         logger.open_win().await?;
@@ -58,7 +58,7 @@ impl Runner {
                 let state = DAEMON_STATE.clone();
                 let state = state.lock().await;
                 let nvim = state.clients.get(&self.client.pid)?;
-                let mut logger = nvim.new_unamed_logger();
+                let mut logger = nvim.logger();
 
                 // NOTE: NSLog get directed to error by default which is odd
                 match update {
@@ -67,9 +67,9 @@ impl Runner {
                     Exit(ref code) => {
                         let success = code == "0";
                         let msg = fmt::as_section(if success {
-                            "".into()
+                            format!("[Exit] {code}")
                         } else {
-                            format!("Panic {code}")
+                            format!("[Error] Exit {code}")
                         });
                         logger.log(msg).await?;
                         logger.set_status_end(success, true).await?;
@@ -93,7 +93,7 @@ impl Runner {
             ..
         } = self;
 
-        let ref mut logger = state.clients.get(&client.pid)?.new_unamed_logger();
+        let ref mut logger = state.clients.get(&client.pid)?.logger();
         let app_id = settings.product_bundle_identifier;
         let path_to_app = settings.metal_library_output_dir;
 
@@ -101,7 +101,7 @@ impl Runner {
 
         let runner = {
             let device = if let Some(udid) = udid {
-                state.devices.iter().find(|d| d.udid == udid).cloned()
+                state.devices.get(&udid).cloned()
             } else {
                 None
             }
@@ -145,7 +145,7 @@ impl Runner {
                 let state = DAEMON_STATE.clone();
                 let state = state.lock().await;
                 let mut logger = match state.clients.get(&client.pid) {
-                    Ok(nvim) => nvim.new_unamed_logger(),
+                    Ok(nvim) => nvim.logger(),
                     Err(_) => {
                         tracing::info!("Nvim Instance closed, closing runner ..");
                         launcher.kill().await;
@@ -163,6 +163,7 @@ impl Runner {
                     Error(msg) => {
                         logger.log(format!("[Error] {msg}")).await?;
                     }
+                    // TODO: this should be skipped when user re-run the app
                     Exit(code) => {
                         logger.log(format!("[Exit] {code}")).await?;
                         break;

@@ -1,14 +1,15 @@
 mod build;
 mod client;
 mod project;
-#[cfg(feature = "daemon")]
-mod simdevice;
 
 pub use build::*;
 pub use client::*;
 pub use project::*;
 
 #[cfg(feature = "daemon")]
-pub use simdevice::*;
+mod device;
+
+#[cfg(feature = "daemon")]
+pub use device::*;
 
 pub type Root = std::path::PathBuf;

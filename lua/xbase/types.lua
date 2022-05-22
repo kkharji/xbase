@@ -41,6 +41,7 @@
 
 ---@class Device
 ---@field info DeviceInfo
+---@field platform Platform
 
 ---@class DeviceInfo
 ---@field availabilityError string?,
