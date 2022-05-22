@@ -7,7 +7,7 @@ use crate::{
     nvim::BufferDirection,
     state::State,
     types::{Client, Platform},
-    util::fmt,
+    util::{fmt, pid},
     Error, Result,
 };
 use {
@@ -114,10 +114,31 @@ impl Runner {
         };
 
         let mut launcher = runner.launch(logger).await?;
-        let mut stream = launcher.stream()?;
-        // TODO(daemon): ensure Simulator.app is running
+
+        match pid::get_by_name("Simulator") {
+            Err(Error::NotFound(_, _)) => {
+                let msg = format!("[Simulator] Launching");
+                tracing::info!("{msg}");
+                logger.log(msg).await?;
+                tokio::process::Command::new("open")
+                    .args(&["-a", "Simulator"])
+                    .spawn()?
+                    .wait()
+                    .await?;
+                let msg = format!("[Simulator] Connected");
+                logger.log(msg).await?;
+            }
+            Err(err) => {
+                let msg = err.to_string();
+                tracing::error!("{msg}");
+                logger.log(msg).await?;
+            }
+            _ => {}
+        };
 
         logger.log(fmt::separator()).await?;
+
+        let mut stream = launcher.stream()?;
 
         tokio::spawn(async move {
             while let Some(output) = stream.next().await {
