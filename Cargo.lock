@@ -1675,6 +1675,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "bsp-server",
+ "crossbeam-channel",
  "dirs",
  "lazy_static",
  "libc",

@@ -1,6 +1,6 @@
-use anyhow::Result;
 use bsp_server::{Connection, Message, Request};
 use tracing::Level;
+use xbase::Result;
 use xbase::{
     server::{BuildServer, BuildTargetOutputPathsRequest, OptionsChangedRequest, OptionsRequest},
     util::tracing::install_tracing,

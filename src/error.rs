@@ -36,6 +36,15 @@ pub enum Error {
     Watch(#[from] WatchError),
     #[error("[Error] (Message) {0}")]
     Message(String),
+    #[error("[Error] (send) {0}")]
+    #[cfg(feature = "server")]
+    Channel(#[from] crossbeam_channel::SendError<bsp_server::Message>),
+    #[cfg(feature = "server")]
+    #[error("[Error] (BSP) {0}")]
+    BspServer(#[from] bsp_server::ProtocolError),
+    #[cfg(feature = "server")]
+    #[error("[Error] (Lock) {0}")]
+    Lock(String),
 }
 
 #[derive(ThisError, Debug)]

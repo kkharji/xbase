@@ -19,7 +19,17 @@ daemon      = [
   "simctl", 
   "process-stream" 
   ]
-server      = [ "serial", "logging", "dirs", "bsp-server", "url", "wax", "shell-words", "compilation" ]
+server      = [ 
+  "serial",
+  "logging",
+  "dirs",
+  "bsp-server",
+  "url",
+  "wax",
+  "shell-words",
+  "compilation", 
+  "crossbeam-channel" 
+  ]
 lua         = [ "mlua", "serial", "simctl" ]
 serial      = [ "serde", "serde_json", "serde_yaml" ]
 compilation = [ "serial", "lazy_static", "shell-words", "xcode" ]
@@ -87,3 +97,4 @@ parity-tokio-ipc      = { version = "0.9.0", optional = true }
 simctl                = { path = "../../../sources/simctl/", optional = true }
 thiserror = "1.0.31"
 libc = "0.2.126"
+crossbeam-channel = { version = "0.5.4", optional = true }

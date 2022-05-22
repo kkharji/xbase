@@ -1,7 +1,8 @@
 //! Module for communicating with SourceKit Build Server Protocol.
 mod extensions;
 
-use anyhow::{Context, Result};
+use crate::{Error, Result};
+use anyhow::Context;
 use bsp_server::{types::*, Connection, Message, Request, RequestId, Response};
 use serde_json::{json, Value};
 use std::{fs::read_to_string, path::PathBuf};
@@ -71,8 +72,8 @@ impl BuildServer {
         let notification: Message =
             OptionsChangedNotification::new(params.uri, flags, root).try_into()?;
 
-        conn.send(notification)
-            .context("notify registration for changes")
+        conn.send(notification)?;
+        Ok(())
     }
 
     /// List of compiler options necessary to compile a file.
@@ -90,8 +91,9 @@ impl BuildServer {
         let flags = self.file_flags(filepath)?;
         let response = OptionsResponse::new(flags, root).as_response(id);
 
-        conn.send(response)
-            .context("Respond to textDocument/sourceKitOptions")
+        conn.send(response)?;
+
+        Ok(())
     }
 
     /// Process Workspace BuildTarget request
@@ -100,8 +102,8 @@ impl BuildServer {
         tracing::debug!("Processing");
         let response = WorkspaceBuildTargetsResult::new(vec![]);
 
-        conn.send((id, response))
-            .context("Respond to workspace/buildTargets")
+        conn.send((id, response))?;
+        Ok(())
     }
 
     /// Process BuildTarget output paths
@@ -114,8 +116,9 @@ impl BuildServer {
     ) -> Result<()> {
         tracing::debug!("Processing");
         let response = BuildTargetOutputPathsResponse::new(vec![]).as_response(id);
-        conn.send(response)
-            .context("Respond to buildTarget/outputPaths")
+        conn.send(response)?;
+
+        Ok(())
     }
 
     /// Process BuildTarget Sources Request
@@ -128,8 +131,8 @@ impl BuildServer {
     ) -> Result<()> {
         tracing::debug!("Processing");
         let response = BuildTargetSourcesResult::new(vec![]);
-        conn.send((id, response))
-            .context("Respond to buildTarget/outputPaths")
+        conn.send((id, response))?;
+        Ok(())
     }
 
     /// Return Default response for unhandled requests.
@@ -146,8 +149,8 @@ impl BuildServer {
             id.clone(),
             123,
             format!("unhandled method {method}"),
-        ))
-        .context("Fail to respond")
+        ))?;
+        Ok(())
     }
 
     /// Handle Shutdown Request
@@ -171,8 +174,9 @@ impl BuildServer {
                 .to_vec()
                 .pipe(Result::Ok),
             Err(err) => {
-                tracing::error!("fail to get file flags {err}");
-                anyhow::bail!("fail to get file flags {err}")
+                let msg = format!("fail to get file flags {err}");
+                tracing::error!("{}", msg);
+                return Err(Error::Lock(msg));
             }
         }
     }
