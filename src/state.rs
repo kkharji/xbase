@@ -95,7 +95,7 @@ impl State {
     #[allow(dead_code)]
     async fn get_client_projects<'a>(
         &'a self,
-        client: &'a crate::types::Client,
+        client: &'a crate::client::Client,
     ) -> Result<Vec<(&'a PathBuf, &'a crate::types::Project)>> {
         self.projects
             .iter()

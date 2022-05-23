@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "daemon")]
 use {
-    crate::{types::Client, Result},
+    crate::{client::Client, Result},
     nvim_rs::{compat::tokio::Compat, create::tokio::new_path as connect, rpc::handler::Dummy},
 };
 

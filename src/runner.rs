@@ -1,19 +1,22 @@
 mod simctl;
 
+use tokio::sync::MutexGuard;
+
 pub use self::simctl::*;
 
 use crate::{
+    client::Client,
     constants::DAEMON_STATE,
     nvim::BufferDirection,
     state::State,
-    types::{Client, Platform},
+    types::Platform,
     util::{fmt, pid},
     Error, Result,
 };
 use {
     process_stream::{Process, ProcessItem, StreamExt},
     tap::Pipe,
-    tokio::{sync::OwnedMutexGuard, task::JoinHandle},
+    tokio::task::JoinHandle,
     xcodebuild::parser::BuildSettings,
 };
 
@@ -21,26 +24,33 @@ pub struct Runner {
     pub client: Client,
     pub target: String,
     pub platform: Platform,
-    pub state: OwnedMutexGuard<State>,
     pub udid: Option<String>,
     pub direction: BufferDirection,
     pub args: Vec<String>,
 }
 
 impl Runner {
-    pub async fn run(self, settings: BuildSettings) -> Result<JoinHandle<Result<()>>> {
+    pub async fn run<'a>(
+        self,
+        state: &'a MutexGuard<'_, State>,
+        settings: BuildSettings,
+    ) -> Result<JoinHandle<Result<()>>> {
         if self.platform.is_mac_os() {
-            return self.run_as_macos_app(settings).await;
+            return self.run_as_macos_app(state, settings).await;
         } else {
-            return self.run_with_simctl(settings).await;
+            return self.run_with_simctl(state, settings).await;
         }
     }
 }
 
 /// MacOS Runner
 impl Runner {
-    pub async fn run_as_macos_app(self, settings: BuildSettings) -> Result<JoinHandle<Result<()>>> {
-        let nvim = self.state.clients.get(&self.client.pid)?;
+    pub async fn run_as_macos_app<'a>(
+        self,
+        state: &'a MutexGuard<'_, State>,
+        settings: BuildSettings,
+    ) -> Result<JoinHandle<Result<()>>> {
+        let nvim = self.client.nvim(state)?;
         let ref mut logger = nvim.logger();
 
         logger.log_title().await?;
@@ -84,11 +94,14 @@ impl Runner {
 
 /// Simctl Runner
 impl Runner {
-    pub async fn run_with_simctl(self, settings: BuildSettings) -> Result<JoinHandle<Result<()>>> {
+    pub async fn run_with_simctl<'a>(
+        self,
+        state: &'a MutexGuard<'_, State>,
+        settings: BuildSettings,
+    ) -> Result<JoinHandle<Result<()>>> {
         let Self {
             client,
             target,
-            state,
             udid,
             ..
         } = self;

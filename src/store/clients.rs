@@ -1,5 +1,5 @@
+use crate::client::Client;
 use crate::nvim::NvimClient;
-use crate::types::Client;
 use crate::{LoopError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -3,51 +3,26 @@ use super::*;
 /// Register new client with workspace
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Register {
-    pub client: crate::types::Client,
+    pub client: Client,
 }
 
 #[cfg(feature = "daemon")]
-use {
-    crate::{compile::ensure_server_support, constants::DAEMON_STATE},
-    tap::Pipe,
-};
+use crate::constants::DAEMON_STATE;
 
 #[cfg(feature = "daemon")]
 #[async_trait]
 impl Handler for Register {
     async fn handle(self) -> Result<()> {
         let Self { client } = &self;
-        let Client { pid, root, .. } = &client;
-        let name = client.abbrev_root();
-        let ref mut state = DAEMON_STATE.clone().lock_owned().await;
+        let Client { root, .. } = &client;
+        let state = DAEMON_STATE.clone();
+        let ref mut state = state.lock().await;
 
-        tracing::info!("Register({pid}, {name}): ");
-
-        // NOTE: Create nvim client
-        state.clients.add(client).await?;
-
-        if let Ok(project) = state.projects.get_mut(root) {
-            // NOTE: Add client pid to project
-            project.clients.push(*pid);
-        } else {
-            // NOTE: Create nvim client
-            state.projects.add(client).await?;
-
-            let project = state.projects.get(root).unwrap();
-            let ignore_patterns = project.ignore_patterns.clone();
-
-            // NOTE: Add watcher
-            state
-                .watcher
-                .add_project_watcher(client, ignore_patterns)
-                .await
-        }
-
-        // NOTE: Ensure project is ready for xbase build server
-        if ensure_server_support(state, &name, &self.client.root, None).await? {
-            "setup: ✅"
-                .pipe(|msg| state.clients.echo_msg(&self.client.root, &name, msg))
-                .await;
+        client.register_self(state).await?;
+        client.register_project(state).await?;
+        if client.ensure_server_support(state, None).await? {
+            let ref name = client.abbrev_root();
+            state.clients.echo_msg(root, name, "setup: ✅").await;
         }
 
         // NOTE: Sink Daemon to nvim vim.g.xbase

@@ -1,7 +1,7 @@
 #[cfg(feature = "daemon")]
 use crate::{
+    client::Client,
     error::{EnsureOptional, LoopError},
-    types::Client,
     Result,
 };
 

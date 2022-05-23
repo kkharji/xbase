@@ -1,7 +1,8 @@
 use super::{WatchArguments, WatchError};
+use crate::client::Client;
 use crate::constants::DAEMON_STATE;
 use crate::daemon::{WatchKind, WatchTarget};
-use crate::types::{BuildConfiguration, Client};
+use crate::types::BuildConfiguration;
 use crate::xcode::{append_build_root, build_with_loggger};
 use anyhow::Result;
 use notify::{event::ModifyKind, Event, EventKind};

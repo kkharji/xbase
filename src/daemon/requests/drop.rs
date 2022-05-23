@@ -19,24 +19,20 @@ impl Handler for Drop {
         } = self;
 
         let state = DAEMON_STATE.clone();
-        let mut state = state.lock().await;
+        let ref mut state = state.lock().await;
 
-        if state.clients.contains_key(&client.pid) {
+        if client.is_registered(state) {
             tracing::info!("Drop({}: {})", client.pid, client.abbrev_root());
             // NOTE: Should only be Some if no more client depend on it
             if let Some(project) = state.projects.remove(&client).await? {
                 // NOTE: Remove project watchers
-                state.watcher.remove_project_watcher(&client).await;
+                client.remove_watcher(state).await;
                 // NOTE: Remove target watchers associsated with root
-                state
-                    .watcher
-                    .remove_target_watcher_for_root(&project.root)
-                    .await;
+                project.remove_target_watchers(state).await;
             }
             // NOTE: Try removing client with given pid
             if remove_client {
-                tracing::debug!("RemoveClient({})", client.pid);
-                state.clients.remove(&client.pid);
+                client.remove_self(state);
             }
             // NOTE: Sink state to all client vim.g.xbase.state
             state.sync_client_state().await?;

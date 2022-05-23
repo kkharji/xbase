@@ -3,10 +3,8 @@ mod runners;
 
 pub use projects::ProjectStore;
 
-#[cfg(feature = "daemon")]
-mod simdevices;
-#[cfg(feature = "daemon")]
-pub use simdevices::*;
+mod devices;
+pub use devices::*;
 
 #[cfg(feature = "daemon")]
 mod clients;

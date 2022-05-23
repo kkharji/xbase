@@ -30,7 +30,7 @@ use crate::Result;
 #[cfg(feature = "daemon")]
 use async_trait::async_trait;
 
-use crate::types::Client;
+use crate::client::Client;
 
 use serde::{Deserialize, Serialize};
 

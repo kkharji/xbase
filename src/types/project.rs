@@ -19,7 +19,10 @@ pub use {
 };
 
 #[cfg(feature = "daemon")]
-use crate::{error::EnsureOptional, xcodegen, Result};
+use {
+    crate::{error::EnsureOptional, state::State, xcodegen, Result},
+    tokio::sync::MutexGuard,
+};
 
 /// Represent XcodeGen Project
 #[derive(Debug, Deserialize, Serialize)]
@@ -105,5 +108,12 @@ impl Project {
                 None => Err(anyhow::anyhow!("No Target found with {name} {:#?}", platform).into()),
             },
         }
+    }
+
+    pub async fn remove_target_watchers<'a>(&self, state: &'a mut MutexGuard<'_, State>) {
+        state
+            .watcher
+            .remove_target_watcher_for_root(&self.root)
+            .await;
     }
 }

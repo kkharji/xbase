@@ -1,7 +1,8 @@
 use crate::daemon::WatchTarget;
 use crate::watcher::WatchHandler;
 
-use crate::types::{Client, Root};
+use crate::client::Client;
+use crate::types::Root;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

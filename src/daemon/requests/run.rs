@@ -29,16 +29,15 @@ pub struct Run {
 #[async_trait::async_trait]
 impl Handler for Run {
     async fn handle(self) -> Result<()> {
-        let Client { pid, root, .. } = &self.client;
-        tracing::info!("{:#?}", self);
+        let Client { root, .. } = &self.client;
 
         tracing::info!("⚙️ Running command: {}", self.config.to_string());
 
-        let state = DAEMON_STATE.clone().lock_owned().await;
+        let state = DAEMON_STATE.clone();
+        let ref state = state.lock().await;
         let device = state.devices.from_lookup(self.device);
-        tracing::info!("{:#?}", device);
 
-        let nvim = state.clients.get(&pid)?;
+        let nvim = self.client.nvim(state)?;
         let args = {
             let mut args = self.config.as_args();
             if let Some(ref device) = device {
@@ -74,12 +73,11 @@ impl Handler for Run {
             target: self.config.target,
             platform,
             client: self.client,
-            state,
             args,
             udid: device.map(|d| d.udid.clone()),
             direction: self.direction,
         }
-        .run(settings)
+        .run(state, settings)
         .await?;
 
         Ok(())

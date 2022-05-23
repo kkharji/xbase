@@ -23,12 +23,14 @@ pub struct Build {
 impl Handler for Build {
     async fn handle(self) -> Result<()> {
         let Self { client, config, .. } = &self;
-        let Client { pid, root, .. } = client;
+        let Client { root, .. } = client;
 
         tracing::debug!("Handling build request {:#?}", config);
 
-        let state = DAEMON_STATE.clone().lock_owned().await;
-        let nvim = state.clients.get(pid)?;
+        let state = DAEMON_STATE.clone();
+        let ref state = state.lock().await;
+
+        let nvim = client.nvim(state)?;
         let direction = self.direction.clone();
 
         let args = append_build_root(&root, config.as_args())?;
@@ -41,8 +43,8 @@ impl Handler for Build {
         let success = build_with_loggger(logger, &root, &args, true, true).await?;
 
         if !success {
-            nvim.echo_err(&format!("Failed: {} ", config.to_string()))
-                .await?;
+            let ref msg = format!("Failed: {} ", config.to_string());
+            nvim.echo_err(msg).await?;
         };
 
         Ok(())

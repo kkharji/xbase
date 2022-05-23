@@ -1,9 +1,7 @@
 mod build;
-mod client;
 mod project;
 
 pub use build::*;
-pub use client::*;
 pub use project::*;
 
 #[cfg(feature = "daemon")]

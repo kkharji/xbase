@@ -16,6 +16,9 @@ pub mod types;
 
 pub mod util;
 
+#[cfg(any(feature = "daemon", feature = "lua"))]
+mod client;
+#[cfg(any(feature = "daemon", feature = "lua"))]
 mod nvim;
 
 #[cfg(feature = "daemon")]

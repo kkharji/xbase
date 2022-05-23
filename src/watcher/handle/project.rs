@@ -1,6 +1,5 @@
 use super::{is_seen, WatchArguments, WatchError};
-use crate::compile;
-use crate::{constants::DAEMON_STATE, types::Client};
+use crate::constants::DAEMON_STATE;
 use notify::event::{DataChange, ModifyKind};
 use notify::{Event, EventKind};
 use std::{path::PathBuf, sync::Arc, time::Duration};
@@ -17,7 +16,7 @@ pub async fn create(args: WatchArguments) -> Result<(), WatchError> {
     } = args;
 
     let info = info.lock_owned().await;
-    let Client { root, .. } = info.try_into_project()?;
+    let client = info.try_into_project()?;
 
     if should_skip_compile(&event, &path, args.last_seen).await {
         tracing::debug!("Skipping {:?}", &event.paths);
@@ -26,18 +25,28 @@ pub async fn create(args: WatchArguments) -> Result<(), WatchError> {
 
     tracing::trace!("[NewEvent] {:#?}", &event);
 
-    let ref name = root.file_name().unwrap().to_string_lossy().to_string();
-    let ref mut state = DAEMON_STATE.clone().lock_owned().await;
+    let ref name = client
+        .root
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+
+    let state = DAEMON_STATE.clone();
+    let ref mut state = state.lock().await;
     let mut debounce = args.debounce.lock().await;
 
-    state.clients.echo_msg(&root, name, START_MSG).await;
+    state.clients.echo_msg(&client.root, name, START_MSG).await;
 
-    if let Err(e) = compile::ensure_server_support(state, name, root, Some(&path)).await {
+    if let Err(e) = client.ensure_server_support(state, Some(&path)).await {
         *debounce = std::time::SystemTime::now();
         return Err(e.into());
     }
 
-    state.clients.echo_msg(&root, name, SUCC_MESSAGE).await;
+    state
+        .clients
+        .echo_msg(&client.root, name, SUCC_MESSAGE)
+        .await;
 
     *debounce = std::time::SystemTime::now();
 

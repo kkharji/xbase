@@ -127,6 +127,7 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
 #[cfg(feature = "daemon")]
 use {
     crate::{
+        client::Client,
         error::{CompileError, XcodeGenError},
         state::State,
         util::pid,
@@ -138,7 +139,7 @@ use {
     tokio::{
         fs::{metadata, File},
         io::AsyncWriteExt,
-        sync::OwnedMutexGuard,
+        sync::MutexGuard,
     },
 };
 
@@ -193,16 +194,19 @@ pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
 
 #[cfg(feature = "daemon")]
 pub async fn ensure_server_support<'a>(
-    state: &'a mut OwnedMutexGuard<State>,
-    name: &String,
-    root: &PathBuf,
+    state: &'a mut MutexGuard<'_, State>,
+    client: &Client,
     path: Option<&PathBuf>,
 ) -> Result<bool> {
-    let compile_exists = metadata(root.join(".compile")).await.is_ok();
+    let Client { root, .. } = client;
+    let ref name = client.abbrev_root();
+
+    let compile_path = root.join(".compile");
+    let compile_exists = metadata(compile_path).await.is_ok();
 
     if ensure_server_config(&root).await.is_err() {
         "fail to ensure build server configuration!"
-            .pipe(|msg| state.clients.echo_err(&root, &name, msg))
+            .pipe(|msg| state.clients.echo_err(root, name, msg))
             .await;
     }
 
@@ -210,7 +214,7 @@ pub async fn ensure_server_support<'a>(
         let generated = match xcodegen::regenerate(path, &root).await {
             Ok(generated) => generated,
             Err(e) => {
-                state.clients.echo_err(&root, &name, &e.to_string()).await;
+                state.clients.echo_err(&root, name, &e.to_string()).await;
                 return Err(e);
             }
         };
@@ -224,14 +228,14 @@ pub async fn ensure_server_support<'a>(
 
     if xcodegen::is_valid(&root) && path.is_none() {
         "⚙ generating xcodeproj ..."
-            .pipe(|msg| state.clients.echo_msg(&root, &name, msg))
+            .pipe(|msg| state.clients.echo_msg(root, name, msg))
             .await;
 
         if let Some(err) = match xcodegen::generate(&root).await {
             Ok(status) => {
                 if status.success() {
                     "setup: ⚙ generate xcodeproj ..."
-                        .pipe(|msg| state.clients.echo_msg(&root, &name, msg))
+                        .pipe(|msg| state.clients.echo_msg(root, name, msg))
                         .await;
                     None
                 } else {
@@ -240,19 +244,20 @@ pub async fn ensure_server_support<'a>(
             }
             Err(e) => Some(e),
         } {
-            let msg = format!("fail to generate xcodeproj: {err}");
-            state.clients.echo_err(&root, &name, &msg).await;
+            let ref msg = format!("fail to generate xcodeproj: {err}");
+            state.clients.echo_err(root, name, msg).await;
         }
     };
 
     // TODO(compile): check for .xcodeproj if project.yml is not generated
     if !compile_exists {
         "⚙ generating compile database .."
-            .pipe(|msg| state.clients.echo_msg(&root, &name, msg))
+            .pipe(|msg| state.clients.echo_msg(root, name, msg))
             .await;
     }
 
     // The following command won't successed if this file doesn't exists
+
     if let Err(err) = update_compilation_file(&root).await {
         "setup: fail to regenerate compilation database!"
             .pipe(|msg| state.clients.echo_err(&root, &name, msg))

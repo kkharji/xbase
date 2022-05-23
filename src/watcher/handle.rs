@@ -1,5 +1,5 @@
 use crate::error::WatchError;
-use crate::{daemon::WatchTarget, types::Client};
+use crate::{client::Client, daemon::WatchTarget};
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
