@@ -5,18 +5,12 @@ use {
 
 #[cfg(feature = "daemon")]
 use {
-    crate::constants::DAEMON_STATE,
-    crate::runner::Runner,
-    crate::types::Platform,
-    crate::util::serde::value_or_default,
-    crate::xcode::{append_build_root, build_with_loggger},
-    crate::Error,
-    xcodebuild::runner::build_settings,
+    crate::constants::DAEMON_STATE, crate::run::RunService, crate::util::serde::value_or_default,
 };
 
 /// Run a project.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Run {
+pub struct RunRequest {
     pub client: Client,
     pub config: BuildConfiguration,
     #[cfg_attr(feature = "daemon", serde(deserialize_with = "value_or_default"))]
@@ -27,72 +21,29 @@ pub struct Run {
 
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
-impl Handler for Run {
+impl Handler for RunRequest {
     async fn handle(self) -> Result<()> {
-        let Client { root, .. } = &self.client;
-
-        tracing::info!("⚙️ Running command: {}", self.config.to_string());
+        tracing::info!("⚙️ Running: {}", self.config.to_string());
 
         let state = DAEMON_STATE.clone();
-        let ref state = state.lock().await;
-        let device = state.devices.from_lookup(self.device);
+        let ref mut state = state.lock().await;
 
-        let nvim = self.client.nvim(state)?;
-        let args = {
-            let mut args = self.config.as_args();
-            if let Some(ref device) = device {
-                args.extend(device.special_build_args())
-            }
-            append_build_root(&root, args)?
-        };
+        // TODO: Insert runner into state.runners
+        RunService::new(state, self).await?;
 
-        let ref mut logger = nvim.logger();
-
-        logger.set_title(format!("Run:{}", self.config.target));
-        logger.set_direction(&self.direction);
-
-        let settings = build_settings(&root, &args).await?;
-        let platform = device
-            .as_ref()
-            .map(|d| d.platform.clone())
-            .unwrap_or_else(|| Platform::from_display(&settings.platform_display_name).unwrap());
-
-        let success = build_with_loggger(logger, &root, &args, true, true).await?;
-        if !success {
-            let msg = format!("Failed: {} ", self.config.to_string());
-            nvim.echo_err(&msg).await?;
-            return Err(Error::Build(msg));
-        }
-
-        // TODO(daemon): insert handler to state.runners
-        // TODO(nvim): provide mapping to close runners.
-        //
-        // If there is more then one runner then pick, else close from current buffer.
-        // C-c in normal/insert mode should close that process
-        Runner {
-            target: self.config.target,
-            platform,
-            client: self.client,
-            args,
-            udid: device.map(|d| d.udid.clone()),
-            direction: self.direction,
-        }
-        .run(state, settings)
-        .await?;
-
-        Ok(())
+        todo!();
     }
 }
 
 #[cfg(feature = "lua")]
-impl<'a> Requester<'a, Run> for Run {
-    fn pre(lua: &Lua, msg: &Run) -> LuaResult<()> {
+impl<'a> Requester<'a, RunRequest> for RunRequest {
+    fn pre(lua: &Lua, msg: &RunRequest) -> LuaResult<()> {
         lua.print(&msg.to_string());
         Ok(())
     }
 }
 
-impl ToString for Run {
+impl ToString for RunRequest {
     fn to_string(&self) -> String {
         if let Some(ref name) = self.device.name {
             format!("run [{}] with {}", name, self.config.to_string())
@@ -103,7 +54,7 @@ impl ToString for Run {
 }
 
 #[cfg(feature = "lua")]
-impl<'a> FromLua<'a> for Run {
+impl<'a> FromLua<'a> for RunRequest {
     fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
         let table = match lua_value {
             LuaValue::Table(t) => Ok(t),

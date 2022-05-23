@@ -1,6 +1,9 @@
 use super::*;
 use std::str::FromStr;
 
+#[cfg(feature = "daemon")]
+use xcodebuild::parser::BuildSettings;
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub enum Platform {
     #[serde(rename = "iOS")]
@@ -30,7 +33,8 @@ impl Platform {
     }
 
     #[cfg(feature = "daemon")]
-    pub fn from_display(display: &String) -> Result<Platform> {
+    pub fn get_from_settings(settings: &BuildSettings) -> Result<Platform> {
+        let display = &settings.platform_display_name;
         let value = if display.contains("Simulator") {
             display
                 .split(" ")

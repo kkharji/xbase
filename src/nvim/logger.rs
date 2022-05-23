@@ -41,6 +41,7 @@ impl<'a> Logger<'a> {
         })
     }
 
+    // TODO(logger): append title
     pub async fn log(&mut self, msg: String) -> Result<()> {
         tracing::debug!("{msg}");
 

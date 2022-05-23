@@ -3,7 +3,7 @@ use crate::client::Client;
 use crate::constants::DAEMON_STATE;
 use crate::daemon::{WatchKind, WatchTarget};
 use crate::types::BuildConfiguration;
-use crate::xcode::{append_build_root, build_with_loggger};
+use crate::xcode::build_with_logger;
 use anyhow::Result;
 use notify::{event::ModifyKind, Event, EventKind};
 use std::time::{Duration, SystemTime};
@@ -48,13 +48,14 @@ pub async fn create(req: WatchArguments) -> Result<(), WatchError> {
 
     match kind {
         WatchKind::Build => {
-            let ref args = append_build_root(root, config.as_args())
+            let ref args = config
+                .args(root, &None)
                 .map_err(|e| WatchError::stop(e.into()))?;
 
             let ref mut logger = nvim.logger();
             logger.set_title(format!("Rebuild:{}", config.target));
 
-            build_with_loggger(logger, &root, &args, true, true).await?;
+            build_with_logger(logger, &root, &args, true, true).await?;
         }
 
         WatchKind::Run => {

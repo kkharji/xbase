@@ -4,9 +4,8 @@ use std::fmt::Debug;
 
 #[cfg(feature = "daemon")]
 use {
-    crate::constants::DAEMON_STATE,
-    crate::util::serde::value_or_default,
-    crate::xcode::{append_build_root, build_with_loggger},
+    crate::constants::DAEMON_STATE, crate::util::serde::value_or_default,
+    crate::xcode::build_with_logger,
 };
 
 /// Build a project.
@@ -32,15 +31,14 @@ impl Handler for Build {
 
         let nvim = client.nvim(state)?;
         let direction = self.direction.clone();
-
-        let args = append_build_root(&root, config.as_args())?;
+        let args = config.args(&root, &None)?;
 
         let ref mut logger = nvim.logger();
 
         logger.set_title(format!("Build:{}", config.target));
         logger.set_direction(&direction);
 
-        let success = build_with_loggger(logger, &root, &args, true, true).await?;
+        let success = build_with_logger(logger, root, &args, true, true).await?;
 
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());

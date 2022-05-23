@@ -39,8 +39,15 @@ impl Display for BuildConfiguration {
     }
 }
 
+#[cfg(feature = "daemon")]
 impl BuildConfiguration {
-    pub fn as_args(&self) -> Vec<String> {
+    pub fn args<P: AsRef<std::path::Path> + std::fmt::Debug>(
+        &self,
+        root: P,
+        device: &Option<super::Device>,
+    ) -> crate::Result<Vec<String>> {
+        use crate::xcode::append_build_root;
+
         let mut args = self
             .to_string()
             .split_whitespace()
@@ -49,7 +56,13 @@ impl BuildConfiguration {
 
         args.remove(0);
         args.insert(0, "build".to_string());
-        args
+
+        if let Some(device) = device {
+            args.extend(device.special_build_args())
+        }
+
+        // TODO: Customize root based on target and configuration
+        append_build_root(root, args)
     }
 }
 

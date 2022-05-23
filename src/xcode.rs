@@ -54,7 +54,7 @@ pub async fn fresh_build<'a, P: AsRef<Path> + 'a + Debug>(
         .pipe(Ok)
 }
 
-pub async fn build_with_loggger<'a, P: AsRef<Path>>(
+pub async fn build_with_logger<'a, P: AsRef<Path>>(
     logger: &mut Logger<'a>,
     root: P,
     args: &Vec<String>,

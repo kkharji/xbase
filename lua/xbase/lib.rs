@@ -19,7 +19,7 @@ fn libxbase(l: &Lua) -> LuaResult<LuaTable> {
         ("register", fun!(Register, l)),
         ("drop", fun!(Drop, l)),
         ("build", fun!(Build, l)),
-        ("run", fun!(Run, l)),
+        ("run", fun!(RunRequest, l)),
         ("watch_target", fun!(WatchTarget, l)),
     ])
 }
@@ -34,6 +34,7 @@ pub fn is_running(_: &Lua, _: ()) -> LuaResult<bool> {
 
 /// Ensure that daemon is currently running in background
 pub fn ensure(lua: &Lua, _: ()) -> LuaResult<bool> {
+    // FIXME(dameon): resulting in connection refused
     if is_running(lua, ()).unwrap() {
         Ok(false)
     } else if Command::new(DAEMON_BINARY).spawn().is_ok() {

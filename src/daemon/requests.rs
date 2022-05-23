@@ -45,7 +45,7 @@ macro_rules! convertable {
     };
 }
 convertable!(Build);
-convertable!(Run);
+convertable!(RunRequest);
 convertable!(Register);
 convertable!(RenameFile);
 convertable!(Drop);

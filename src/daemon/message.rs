@@ -21,7 +21,7 @@ impl Request {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Message {
     Build(Build),
-    Run(Run),
+    RunRequest(RunRequest),
     Register(Register),
     Drop(Drop),
     RenameFile(RenameFile),
@@ -33,7 +33,7 @@ impl Message {
     pub async fn handle(self) -> crate::Result<()> {
         match self {
             Self::Build(c) => Handler::handle(c).await,
-            Self::Run(c) => Handler::handle(c).await,
+            Self::RunRequest(c) => Handler::handle(c).await,
             Self::RenameFile(c) => Handler::handle(c).await,
             Self::Register(c) => Handler::handle(c).await,
             Self::Drop(c) => Handler::handle(c).await,
