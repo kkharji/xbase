@@ -9,7 +9,10 @@ use std::{
 };
 use wax::Any;
 
+#[derive(Default)]
 pub enum EventKind {
+    #[default]
+    None,
     FileCreated,
     FolderCreated,
     FolderRemoved,
@@ -19,6 +22,7 @@ pub enum EventKind {
     Other(NotifyEventKind),
 }
 
+#[derive(Default)]
 pub struct Event {
     path: PathBuf,
     file_name: String,
@@ -172,6 +176,7 @@ impl fmt::Display for Event {
                 tracing::trace!("[FsEvent] Other: {:?}", event);
                 "other"
             }
+            _ => "",
         };
         write!(f, "{:?} [{event_name}]", self.file_name)
     }

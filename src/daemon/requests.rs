@@ -3,14 +3,12 @@ mod drop;
 mod register;
 mod rename_file;
 mod run;
-mod watch_target;
 
 pub use build::*;
 pub use drop::*;
 pub use register::*;
 pub use rename_file::*;
 pub use run::*;
-pub use watch_target::*;
 
 #[cfg(feature = "mlua")]
 use crate::util::mlua::LuaExtension;
@@ -44,9 +42,58 @@ macro_rules! convertable {
         }
     };
 }
-convertable!(Build);
+convertable!(BuildRequest);
 convertable!(RunRequest);
 convertable!(Register);
 convertable!(RenameFile);
 convertable!(Drop);
-convertable!(WatchTarget);
+
+#[derive(
+    Default, Clone, Debug, serde::Serialize, serde::Deserialize, strum::Display, strum::EnumString,
+)]
+
+pub enum RequestOps {
+    Watch,
+    Stop,
+    #[default]
+    Once,
+}
+
+impl RequestOps {
+    /// Returns `true` if the request kind is [`Watch`].
+    ///
+    /// [`Watch`]: RequestKind::Watch
+    #[must_use]
+    pub fn is_watch(&self) -> bool {
+        matches!(self, Self::Watch)
+    }
+
+    /// Returns `true` if the request kind is [`WatchStop`].
+    ///
+    /// [`WatchStop`]: RequestKind::WatchStop
+    #[must_use]
+    pub fn is_stop(&self) -> bool {
+        matches!(self, Self::Stop)
+    }
+
+    /// Returns `true` if the request kind is [`Once`].
+    ///
+    /// [`Once`]: RequestKind::Once
+    #[must_use]
+    pub fn is_once(&self) -> bool {
+        matches!(self, Self::Once)
+    }
+}
+
+#[cfg(feature = "lua")]
+impl<'a> FromLua<'a> for RequestOps {
+    fn from_lua(lua_value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
+        if let LuaValue::String(value) = lua_value {
+            let value = value.to_string_lossy();
+            Self::from_str(&*value).to_lua_err()
+        } else {
+            Ok(Self::default())
+        }
+    }
+}

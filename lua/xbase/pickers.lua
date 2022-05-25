@@ -7,7 +7,6 @@ local picker = require("telescope.pickers").new
 local sorter = require("telescope.config").values.generic_sorter
 local maker = require("telescope.pickers.entry_display").create
 local xbase = require "xbase"
-local watch = require "xbase.watch"
 local themes = require "telescope.themes"
 local util = require "xbase.util"
 
@@ -19,8 +18,6 @@ local mappings = function(_, _)
 
     if entry.command == "Build" then
       xbase.build(entry)
-    elseif entry.command == "Watch" then
-      xbase.watch(entry)
     elseif entry.command == "Run" then
       xbase.run(entry)
     end
@@ -40,13 +37,11 @@ local insert_entry = function(acc, picker, command, target, configuration, devic
   end
 
   if picker == "Watch" then
-    item.command = "Watch"
-
-    if watch.is_watching(item.config, command) then
+    if util.is_watching(item.config, command) then
       item.ops = "Stop"
       item.kind = command
     else
-      item.ops = "Start"
+      item.ops = "Watch"
       item.kind = command
     end
   end
