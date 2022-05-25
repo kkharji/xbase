@@ -1,0 +1,118 @@
+use crate::{
+    client::Client,
+    daemon::RunRequest,
+    state::State,
+    watch::{Event, Watchable},
+    xcode::build_with_logger,
+    Error, Result,
+};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio::sync::MutexGuard;
+use xcodebuild::runner::build_settings;
+use {super::handler::RunServiceHandler, super::meduim::RunMedium};
+
+/// Run Service
+pub struct RunService {
+    pub key: String,
+    pub client: Client,
+    pub handler: Arc<Mutex<RunServiceHandler>>,
+    pub medium: RunMedium,
+}
+
+impl std::fmt::Display for RunService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.key)
+    }
+}
+
+impl RunService {
+    pub async fn new(state: &mut MutexGuard<'_, State>, req: RunRequest) -> Result<Self> {
+        let key = req.to_string();
+        let ref target = req.config.target;
+        let ref root = req.client.root;
+        let device = state.devices.from_lookup(req.device);
+        let build_args = req.config.args(root, &device)?;
+        let nvim = req.client.nvim(state)?;
+
+        let ref mut logger = nvim.logger();
+        if !req.ops.is_watch() {
+            logger.open_win().await?;
+            logger.set_running().await?;
+        }
+
+        logger.set_title(format!("Run:{target}"));
+        logger.set_direction(&req.direction);
+
+        let build_settings = build_settings(root, &build_args).await?;
+
+        if !build_with_logger(logger, root, &build_args, false, false).await? {
+            let msg = format!("Failed: {}", req.config);
+            nvim.echo_err(&msg).await?;
+            return Err(Error::Build(msg));
+        }
+
+        let medium = RunMedium::from_device_or_settings(device, build_settings, req.config)?;
+        let process = medium.run(logger).await?;
+        let handler = RunServiceHandler::new(req.client.clone(), process, key.clone())?;
+
+        Ok(Self {
+            client: req.client,
+            handler: Arc::new(Mutex::new(handler)),
+            medium,
+            key,
+        })
+    }
+}
+
+#[async_trait::async_trait]
+impl Watchable for RunService {
+    async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
+        tracing::info!("Running {}", self.client.abbrev_root());
+
+        let (root, config) = (&self.client.root, &self.medium.config());
+        let mut handler = self.handler.clone().lock_owned().await;
+        let mut args = config.args(root, &None)?;
+
+        if let RunMedium::Simulator(ref sim) = self.medium {
+            args.extend(sim.special_build_args())
+        }
+
+        handler.process().kill().await;
+        handler.inner().abort();
+
+        let nvim = self.client.nvim(state)?;
+        let ref mut logger = nvim.logger();
+
+        logger.set_title(format!("Run:{}", config.target));
+
+        if !build_with_logger(logger, root, &args, false, false).await? {
+            let ref msg = format!("Failed: {} ", config.to_string());
+            nvim.echo_err(msg).await?;
+        };
+
+        let process = self.medium.run(logger).await?;
+        *handler = RunServiceHandler::new(self.client.clone(), process, self.key.clone())?;
+
+        Ok(())
+    }
+
+    /// A function that controls whether a a Watchable should restart
+    async fn should_trigger(&self, _state: &MutexGuard<State>, event: &Event) -> bool {
+        event.is_content_update_event()
+            || event.is_rename_event()
+            || event.is_create_event()
+            || event.is_remove_event()
+            || !(event.path().exists() || event.is_seen())
+    }
+
+    /// A function that controls whether a watchable should be droped
+    async fn should_discard(&self, _state: &MutexGuard<State>, _event: &Event) -> bool {
+        false
+    }
+
+    /// Drop watchable for watching a given file system
+    async fn discard(&self, _state: &MutexGuard<State>) -> Result<()> {
+        Ok(())
+    }
+}

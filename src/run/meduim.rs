@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use super::{bin::Bin, simulator::Simulator, Device};
+use super::{bin::Bin, simulator::Simulator};
 use crate::nvim::Logger;
-use crate::types::BuildConfiguration;
+use crate::types::{BuildConfiguration, Device};
 use crate::Result;
 use process_stream::Process;
 use tap::Pipe;
@@ -56,6 +56,13 @@ impl RunMedium {
         match self {
             RunMedium::Simulator(s) => s.config().target.as_str(),
             RunMedium::Bin(b) => b.config().target.as_str(),
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            RunMedium::Simulator(s) => s.name.as_ref(),
+            RunMedium::Bin(_) => "Bin",
         }
     }
 }

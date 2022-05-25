@@ -17,21 +17,46 @@ pub struct RunRequest {
     pub device: DeviceLookup,
     #[cfg_attr(feature = "daemon", serde(deserialize_with = "value_or_default"))]
     pub direction: BufferDirection,
+    #[cfg_attr(feature = "daemon", serde(deserialize_with = "value_or_default"))]
+    pub ops: RequestOps,
 }
 
 #[cfg(feature = "daemon")]
 #[async_trait::async_trait]
 impl Handler for RunRequest {
     async fn handle(self) -> Result<()> {
+        let ref key = self.to_string();
         tracing::info!("⚙️ Running: {}", self.config.to_string());
 
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
-        // TODO: Insert runner into state.runners
-        RunService::new(state, self).await?;
+        if self.ops.is_once() {
+            // TODO(run): might want to keep track of ran services
+            RunService::new(state, self).await?;
+            return Ok(());
+        }
 
-        todo!();
+        let client = self.client.clone();
+        if self.ops.is_watch() {
+            let watcher = client.get_watcher(state)?;
+            if watcher.contains_key(key) {
+                client
+                    .nvim(state)?
+                    .echo_err("Already watching with {key}!!")
+                    .await?;
+            } else {
+                let run_service = RunService::new(state, self).await?;
+                let watcher = client.get_watcher_mut(state)?;
+                watcher.add(run_service)?;
+            }
+        } else {
+            let watcher = client.get_watcher_mut(state)?;
+            watcher.remove(&self.to_string())?;
+        }
+
+        state.sync_client_state().await?;
+        Ok(())
     }
 }
 
@@ -43,13 +68,15 @@ impl<'a> Requester<'a, RunRequest> for RunRequest {
     }
 }
 
-impl ToString for RunRequest {
-    fn to_string(&self) -> String {
-        if let Some(ref name) = self.device.name {
-            format!("run [{}] with {}", name, self.config.to_string())
-        } else {
-            format!("run with {}", self.config.to_string())
-        }
+impl std::fmt::Display for RunRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}:Run:{}:{}",
+            self.client.root.display(),
+            self.device.name.as_ref().unwrap_or(&"Bin".to_string()),
+            self.config
+        )
     }
 }
 
@@ -67,6 +94,7 @@ impl<'a> FromLua<'a> for RunRequest {
             client: table.get("client")?,
             config: table.get("config")?,
             direction: table.get("direction").unwrap_or_default(),
+            ops: table.get("ops").unwrap_or_default(),
             device: device
                 .map(|d| {
                     let name = d.get("name").ok()?;

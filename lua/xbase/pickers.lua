@@ -37,7 +37,7 @@ local insert_entry = function(acc, picker, command, target, configuration, devic
   end
 
   if picker == "Watch" then
-    if util.is_watching(item.config, command) then
+    if util.is_watching(item.config, command, item.device) then
       item.ops = "Stop"
       item.kind = command
     else

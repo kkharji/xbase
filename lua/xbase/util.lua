@@ -1,7 +1,7 @@
 local config = require("xbase.config").values
 local M = {}
 ---@param platform Platform
-local get_runners = function(platform)
+local get_devices = function(platform)
   local devices = {}
 
   if platform then
@@ -30,13 +30,13 @@ M.get_targets_runners = function(project)
       for _, platform in ipairs(target.platform) do
         table.insert(targets, {
           name = string.format("%s_%s", name, platform),
-          runners = get_runners(platform),
+          runners = get_devices(platform),
         })
       end
     else
       table.insert(targets, {
         name = name,
-        runners = get_runners(target.platform[1]),
+        runners = get_devices(target.platform[1]),
       })
     end
   end
@@ -44,10 +44,22 @@ M.get_targets_runners = function(project)
   return targets
 end
 
-M.is_watching = function(config, command)
+M.is_watching = function(config, command, device)
   local root = vim.loop.cwd()
   local watching = vim.g.xbase.watcher[root]
-  local key = string.format("%s:%s:xcodebuild -configuration %s", root, command, config.configuration)
+
+  local base_key = string.format("xcodebuild -configuration %s", config.configuration)
+  local key
+
+  if command == "Run" then
+    if device then
+      key = string.format("%s:%s:%s:%s", root, command, device.name, base_key)
+    else
+      key = string.format("%s:%s:%s:%s", root, command, "Bin", base_key)
+    end
+  else
+    key = string.format("%s:%s:%s", root, command, base_key)
+  end
 
   if config.sysroot then
     key = key .. " -sysroot " .. config.sysroot
@@ -58,6 +70,7 @@ M.is_watching = function(config, command)
   end
 
   key = key .. " -target " .. config.target
+  print(key)
 
   return watching[key] ~= nil
 end
