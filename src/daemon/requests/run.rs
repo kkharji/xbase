@@ -52,7 +52,8 @@ impl Handler for RunRequest {
             }
         } else {
             let watcher = client.get_watcher_mut(state)?;
-            watcher.remove(&self.to_string())?;
+            let listener = watcher.remove(&self.to_string())?;
+            listener.discard(state).await?;
         }
 
         state.sync_client_state().await?;

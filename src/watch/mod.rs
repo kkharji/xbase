@@ -3,6 +3,7 @@ mod serialize;
 
 pub use event::{Event, EventKind};
 
+use crate::error::EnsureOptional;
 use crate::{client::Client, constants::DAEMON_STATE, state::State, Result};
 use async_trait::async_trait;
 use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
@@ -164,10 +165,10 @@ impl WatchService {
         Ok(())
     }
 
-    pub fn remove(&mut self, key: &String) -> Result<()> {
+    pub fn remove(&mut self, key: &String) -> Result<Box<dyn Watchable>> {
         info!("[WatchService] remove `{key}`");
-        self.listeners.remove(key);
-        Ok(())
+        let item = self.listeners.remove(key).to_result("Watchable", key)?;
+        Ok(item)
     }
 }
 

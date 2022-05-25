@@ -113,6 +113,9 @@ impl Watchable for RunService {
 
     /// Drop watchable for watching a given file system
     async fn discard(&self, _state: &MutexGuard<State>) -> Result<()> {
+        let handler = self.handler.clone().lock_owned().await;
+        handler.process().kill().await;
+        handler.inner().abort();
         Ok(())
     }
 }
