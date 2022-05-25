@@ -16,7 +16,7 @@ const SDKPATH: &str = "/Applications/Xcode.app/Contents/Developer/Platforms/MacO
 ///
 /// Primarily used This is used in [`crate::server::BuildServer`] to support completion and code
 /// navigation for workspace files.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, derive_deref_rs::Deref)]
 pub struct CompileFlags(Vec<String>);
 
 impl CompileFlags {
@@ -126,14 +126,6 @@ impl CompileFlags {
         }
 
         Ok(args)
-    }
-}
-
-impl std::ops::Deref for CompileFlags {
-    type Target = Vec<String>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 

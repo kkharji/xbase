@@ -32,8 +32,6 @@ pub enum Error {
     XcodeGen(#[from] XcodeGenError),
     #[error("[Error] (Run) {0}")]
     Run(String),
-    #[error("[Error] (WatchError) {0}")]
-    Watch(#[from] WatchError),
     #[error("[Error] (Message) {0}")]
     Message(String),
     #[error("[Error] (send) {0}")]
@@ -45,6 +43,9 @@ pub enum Error {
     #[cfg(feature = "server")]
     #[error("[Error] (Lock) {0}")]
     Lock(String),
+    #[cfg(feature = "daemon")]
+    #[error("[Error] (Watcher) {0}")]
+    NotifyWatch(#[from] notify::Error),
 }
 
 #[derive(ThisError, Debug)]
@@ -69,41 +70,9 @@ pub enum XcodeGenError {
     XcodeProjUpdate(String),
 }
 
-#[derive(ThisError, Debug)]
-pub enum WatchError {
-    #[error("(Stop) -> {0}")]
-    Stop(String),
-    #[error("(Continue) -> {0}")]
-    Continue(String),
-    #[error("(FailToStart)")]
-    FailToStart,
-}
-
 impl From<String> for Error {
     fn from(s: String) -> Self {
         Self::Message(s)
-    }
-}
-
-#[cfg(feature = "daemon")]
-impl WatchError {
-    pub fn stop(err: Error) -> WatchError {
-        Self::Stop(format!("WatchStop: {err}"))
-    }
-
-    pub fn continue_err(err: Error) -> WatchError {
-        Self::Continue(format!("WatchContinue: {err}"))
-    }
-}
-
-impl From<Error> for WatchError {
-    fn from(e: Error) -> Self {
-        match &e {
-            Error::NotFound(_, _) => WatchError::Stop(e.to_string()),
-            Error::Loop(_) => WatchError::Stop(e.to_string()),
-            Error::IO(e) => WatchError::Stop(e.to_string()),
-            _ => WatchError::Continue(e.to_string()),
-        }
     }
 }
 

@@ -1,4 +1,6 @@
+#![feature(box_syntax)]
 #![feature(result_flattening)]
+
 #[cfg(feature = "compilation")]
 pub mod compile;
 
@@ -24,13 +26,8 @@ mod nvim;
 #[cfg(feature = "daemon")]
 mod xcode;
 
-#[cfg(feature = "daemon")]
-pub mod watcher;
-
-pub mod state;
-
 pub mod constants;
-
+pub mod state;
 pub mod store;
 
 #[cfg(any(feature = "daemon", feature = "server"))]
@@ -38,9 +35,11 @@ mod error;
 
 #[cfg(feature = "daemon")]
 mod run;
+#[cfg(feature = "daemon")]
+mod watch;
 
 #[cfg(any(feature = "daemon", feature = "server"))]
-pub use error::{CompileError, Error, LoopError, WatchError};
+pub use error::{CompileError, Error, LoopError};
 
 #[cfg(any(feature = "daemon", feature = "server"))]
 pub type Result<T> = std::result::Result<T, Error>;

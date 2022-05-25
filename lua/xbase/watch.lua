@@ -4,7 +4,7 @@ local M = {}
 
 M.is_watching = function(config, command)
   local root = vim.loop.cwd()
-  local targets = vim.g.xbase.watcher.targets
+  local watching = vim.g.xbase.watcher[root]
   local key = string.format("%s:%s:xcodebuild -configuration %s", root, command, config.configuration)
 
   if config.sysroot then
@@ -17,7 +17,7 @@ M.is_watching = function(config, command)
 
   key = key .. " -target " .. config.target
 
-  return targets[key] ~= nil
+  return watching[key] ~= nil
 end
 
 M.start = function(opts)

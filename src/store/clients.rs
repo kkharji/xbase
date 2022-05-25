@@ -3,34 +3,24 @@ use crate::nvim::NvimClient;
 use crate::{LoopError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use tap::Pipe;
 
-#[derive(Default, Debug, Deserialize, Serialize)]
+#[derive(Default, Debug, Deserialize, Serialize, derive_deref_rs::Deref)]
 pub struct ClientStore(HashMap<i32, NvimClient>);
-
-impl Deref for ClientStore {
-    type Target = HashMap<i32, NvimClient>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for ClientStore {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
 
 impl ClientStore {
     pub async fn add(&mut self, client: &Client) -> Result<()> {
-        tracing::info!("AddClient({})", client.pid);
+        tracing::info!("[Clients] add({})", client.pid);
         NvimClient::new(client)
             .await?
             .pipe(|client| self.insert(client.pid, client))
             .pipe(|_| Ok(()))
+    }
+
+    pub fn remove(&mut self, client: &Client) {
+        tracing::debug!("[Clients] remove({})", client.pid);
+        self.0.remove(&client.pid);
     }
 
     pub fn get(&self, pid: &i32) -> Result<&NvimClient> {

@@ -22,6 +22,14 @@ impl Client {
         state.clients.get(&self.pid)
     }
 
+    pub async fn echo_msg<'a>(&self, state: &'a MutexGuard<'_, State>, scope: &str, msg: &str) {
+        state.clients.echo_msg(&self.root, scope, msg).await;
+    }
+
+    pub async fn echo_err<'a>(&self, state: &'a MutexGuard<'_, State>, scope: &str, msg: &str) {
+        state.clients.echo_err(&self.root, scope, msg).await;
+    }
+
     /// Check if client is registered in state
     pub fn is_registered<'a>(&self, state: &'a MutexGuard<'_, State>) -> bool {
         state.clients.contains_key(&self.pid)
@@ -29,8 +37,7 @@ impl Client {
 
     /// Remove client from state
     pub fn remove_self<'a>(&self, state: &'a mut MutexGuard<'_, State>) {
-        tracing::debug!("remove({})", self.pid);
-        state.clients.remove(&self.pid);
+        state.clients.remove(self);
     }
 
     /// Remove client from state
@@ -51,18 +58,29 @@ impl Client {
                 .ignore_patterns
                 .clone();
 
-            state
-                .watcher
-                .add_project_watcher(self, ignore_pattern)
-                .await
+            state.watcher.add(self, ignore_pattern).await?;
         }
 
         Ok(())
     }
 
     /// Remove project root watcher
-    pub async fn remove_watcher<'a>(&self, state: &'a mut MutexGuard<'_, State>) {
-        state.watcher.remove_project_watcher(self).await;
+    pub fn remove_watcher<'a>(&self, state: &'a mut MutexGuard<'_, State>) {
+        state.watcher.remove(self)
+    }
+
+    pub fn get_watcher_mut<'a>(
+        &self,
+        state: &'a mut MutexGuard<'_, State>,
+    ) -> Result<&'a mut crate::watch::WatchService> {
+        state.watcher.get_mut(&self.root)
+    }
+
+    pub fn get_watcher<'a>(
+        &self,
+        state: &'a mut MutexGuard<'_, State>,
+    ) -> Result<&'a crate::watch::WatchService> {
+        state.watcher.get(&self.root)
     }
 
     pub async fn ensure_server_support<'a>(

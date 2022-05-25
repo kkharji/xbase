@@ -8,27 +8,12 @@ use crate::{
 use crate::types::{Project, Root};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "daemon")]
 use std::path::PathBuf;
 
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct ProjectStore(pub HashMap<Root, Project>);
-
-impl Deref for ProjectStore {
-    type Target = HashMap<Root, Project>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for ProjectStore {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+#[derive(Default, Debug, Deserialize, Serialize, derive_deref_rs::Deref)]
+pub struct ProjectStore(HashMap<Root, Project>);
 
 // TODO(projects): pressist a list of projects paths and information
 #[cfg(feature = "daemon")]
@@ -41,7 +26,7 @@ impl ProjectStore {
         project.root = root.clone();
         project.clients.push(*pid);
 
-        tracing::info!("AddProject({})", client.abbrev_root());
+        tracing::info!("[Projects] add({})", client.abbrev_root());
 
         self.0.insert(root.to_path_buf(), project);
 
@@ -76,7 +61,7 @@ impl ProjectStore {
 
         // Remove project only when no more client using that data.
         if project.clients.is_empty() {
-            tracing::info!("RemoveProject({})", client.abbrev_root());
+            tracing::info!("[Projects] remove({:?})", client.abbrev_root());
             return Ok(self.0.remove(root));
         }
 

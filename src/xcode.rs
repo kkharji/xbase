@@ -76,18 +76,18 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
         logger.open_win().await?;
     }
 
-    let mut success = false;
+    let mut success = true;
 
     logger.set_running().await?;
     logger.log_title().await?;
 
     while let Some(line) = stream.next().await {
-        line.starts_with("-").then(|| success = true);
+        line.contains("FAILED").then(|| success = false);
 
         logger.log(line).await?;
     }
 
-    logger.set_status_end(success, true).await?;
+    logger.set_status_end(success, open).await?;
 
     Ok(success)
 }

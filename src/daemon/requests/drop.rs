@@ -13,10 +13,7 @@ pub struct Drop {
 impl Handler for Drop {
     async fn handle(self) -> Result<()> {
         use crate::constants::DAEMON_STATE;
-        let Self {
-            client,
-            remove_client,
-        } = self;
+        let Self { client, .. } = self;
 
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
@@ -24,16 +21,16 @@ impl Handler for Drop {
         if client.is_registered(state) {
             tracing::info!("Drop({}: {})", client.pid, client.abbrev_root());
             // NOTE: Should only be Some if no more client depend on it
-            if let Some(project) = state.projects.remove(&client).await? {
+            if let Some(_) = state.projects.remove(&client).await? {
                 // NOTE: Remove project watchers
-                client.remove_watcher(state).await;
-                // NOTE: Remove target watchers associsated with root
-                project.remove_target_watchers(state).await;
+                client.remove_watcher(state);
             }
+
             // NOTE: Try removing client with given pid
-            if remove_client {
+            if self.remove_client {
                 client.remove_self(state);
             }
+
             // NOTE: Sink state to all client vim.g.xbase.state
             state.sync_client_state().await?;
         }

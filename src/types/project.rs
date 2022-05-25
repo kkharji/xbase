@@ -88,11 +88,7 @@ impl Project {
 
         self.root = root;
         self.clients = clients;
-        tracing::info!(
-            "Updated '{}' internal state. path: {:?}",
-            self.name,
-            self.root
-        );
+        tracing::info!("[Projects] update({:?})", self.name);
 
         Ok(())
     }
@@ -110,10 +106,11 @@ impl Project {
         }
     }
 
-    pub async fn remove_target_watchers<'a>(&self, state: &'a mut MutexGuard<'_, State>) {
-        state
-            .watcher
-            .remove_target_watcher_for_root(&self.root)
-            .await;
+    pub async fn remove_target_watchers<'a>(
+        &self,
+        state: &'a mut MutexGuard<'_, State>,
+    ) -> Result<()> {
+        state.watcher.get_mut(&self.root)?.listeners.clear();
+        Ok(())
     }
 }

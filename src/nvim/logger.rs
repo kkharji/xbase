@@ -129,7 +129,7 @@ impl<'a> Logger<'a> {
                 .await?;
         }
 
-        if open && win.is_none() {
+        if open && win.is_none() || !success {
             self.open_win().await?;
             self.nvim.exec("call feedkeys('zt')", false).await?;
         }

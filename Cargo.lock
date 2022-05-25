@@ -234,6 +234,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive-deref-rs"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb44ba65b4c7afe45d03d8e33ecb53a21c57d0ffff196f04aefa15c43671f8a6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "dirs"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1674,7 +1685,9 @@ dependencies = [
  "async-trait",
  "bsp-server",
  "crossbeam-channel",
+ "derive-deref-rs",
  "dirs",
+ "futures 0.3.21",
  "lazy_static",
  "libc",
  "libproc",

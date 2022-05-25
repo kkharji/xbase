@@ -1,76 +1,37 @@
-use crate::daemon::WatchTarget;
-use crate::watcher::WatchHandler;
-
 use crate::client::Client;
-use crate::types::Root;
+use crate::error::EnsureOptional;
+use crate::watch::WatchService;
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Default, Debug, Deserialize, Serialize)]
-pub struct WatchStore {
-    projects: HashMap<Root, WatchHandler>,
-    targets: HashMap<String, WatchHandler>,
-}
+pub struct WatchStore(HashMap<PathBuf, WatchService>);
 
 impl WatchStore {
-    pub async fn add_project_watcher(&mut self, client: &Client, ignore_pattern: Vec<String>) {
-        let root = client.root.clone();
-
-        tracing::info!("AddProjectWatcher(root: {})", client.abbrev_root());
-
-        let handler = WatchHandler::new_project_watcher(client.clone(), ignore_pattern);
-
-        self.projects.insert(root, handler);
+    pub async fn add(&mut self, client: &Client, ignore_pattern: Vec<String>) -> Result<()> {
+        tracing::info!("[Watcher] add(\"{}\")", client.abbrev_root());
+        let handler = WatchService::new(client.to_owned(), ignore_pattern).await?;
+        self.0.insert(client.root.clone(), handler);
+        Ok(())
     }
 
-    pub async fn remove_project_watcher(&mut self, client: &Client) {
-        if let Some(handle) = self.projects.get(&client.root) {
-            handle.inner().abort();
-        };
-        tracing::info!("RemoveProjectWatcher({})", client.abbrev_root());
-
-        self.projects.remove(&client.root);
-    }
-}
-
-impl WatchStore {
-    pub async fn add_target_watcher(&mut self, request: &WatchTarget, ignore_pattern: Vec<String>) {
-        let key = request.key();
-        let handler = WatchHandler::new_target_watcher(request.clone(), ignore_pattern);
-
-        tracing::info!(
-            "AddTargetWatcher(\"{}\", {})",
-            request.config,
-            request.client.abbrev_root()
-        );
-
-        self.targets.insert(key, handler);
-    }
-
-    pub async fn remove_target_watcher(&mut self, request: &WatchTarget) {
-        let key = request.key();
-
-        if let Some(handle) = self.targets.get(&key) {
-            handle.inner().abort();
+    pub fn remove(&mut self, client: &Client) {
+        if let Some(handle) = self.0.get(&client.root) {
+            handle.handler.abort();
         };
 
-        tracing::info!(
-            "RemoveTargetWatcher(\"{}\", {})",
-            request.config.target,
-            request.client.abbrev_root()
-        );
+        tracing::info!("[Watcher] remove(\"{}\")", client.abbrev_root());
 
-        self.targets.remove(&key);
+        self.0.remove(&client.root);
     }
 
-    pub async fn remove_target_watcher_for_root(&mut self, root: &PathBuf) {
-        let root = root.display().to_string();
-        self.targets
-            .iter()
-            .filter(|(key, _)| key.contains(&root))
-            .for_each(|(_, handler)| handler.inner().abort());
+    pub fn get(&self, root: &PathBuf) -> Result<&WatchService> {
+        self.0.get(root).to_result("Watcher", root)
+    }
 
-        self.targets.retain(|key, _| !key.contains(&root));
+    pub fn get_mut(&mut self, root: &PathBuf) -> Result<&mut WatchService> {
+        self.0.get_mut(root).to_result("Watcher", root)
     }
 }

@@ -5,23 +5,17 @@ use crate::{
     Error, Result,
 };
 use process_stream::Process;
-use std::{ops::Deref, path::PathBuf};
+use std::path::PathBuf;
 use tap::Pipe;
 use xcodebuild::parser::BuildSettings;
 
 /// Simulator Device runner
+#[derive(derive_deref_rs::Deref)]
 pub struct Simulator {
+    #[deref]
     device: Device,
     info: BuildSettings,
     config: BuildConfiguration,
-}
-
-impl Deref for Simulator {
-    type Target = Device;
-
-    fn deref(&self) -> &Self::Target {
-        &self.device
-    }
 }
 
 impl Simulator {

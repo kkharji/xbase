@@ -10,7 +10,7 @@ use crate::Result;
 pub use command::CompilationCommand;
 pub use flags::CompileFlags;
 use serde::{Deserialize, Serialize};
-use std::{ops::Deref, path};
+use std::path;
 use tap::Pipe;
 use xcodebuild::parser::Step;
 
@@ -23,7 +23,7 @@ use xcodebuild::parser::Step;
 /// `xcodebuild clean -verbose && xcodebuild build`
 ///
 /// See <https://clang.llvm.org/docs/JSONCompilationDatabase.html>
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, derive_deref_rs::Deref)]
 pub struct CompilationDatabase(pub Vec<CompilationCommand>);
 
 impl IntoIterator for CompilationDatabase {
@@ -33,14 +33,6 @@ impl IntoIterator for CompilationDatabase {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
-    }
-}
-
-impl Deref for CompilationDatabase {
-    type Target = Vec<CompilationCommand>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
@@ -120,7 +112,7 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
             })
         };
     }
-    tracing::debug!("Generated compilation database from logs");
+    tracing::debug!("[Compile] regenerated compilation database");
     Ok(CompilationDatabase(commands))
 }
 
@@ -279,8 +271,6 @@ pub async fn ensure_server_support<'a>(
 
         return Err(err);
     }
-
-    tracing::info!("Updated `{name}/.compile`");
 
     Ok(true)
 }

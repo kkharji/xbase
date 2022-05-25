@@ -1,12 +1,12 @@
 use super::Platform;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
-use std::ops::{Deref, DerefMut};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, derive_deref_rs::Deref)]
 pub struct Device {
     pub platform: Platform,
     #[serde(flatten)]
+    #[deref]
     inner: simctl::Device,
 }
 
@@ -21,19 +21,6 @@ impl PartialEq for Device {
 impl Hash for Device {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.udid.hash(state)
-    }
-}
-
-impl Deref for Device {
-    type Target = simctl::Device;
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl DerefMut for Device {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
     }
 }
 

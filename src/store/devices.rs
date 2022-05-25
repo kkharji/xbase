@@ -1,18 +1,14 @@
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "daemon")]
-use {crate::types::Device, simctl::Simctl, std::collections::HashMap, std::ops::Deref};
+use {crate::types::Device, simctl::Simctl, std::collections::HashMap};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Devices(#[cfg(feature = "daemon")] HashMap<String, Device>);
-
-#[cfg(feature = "daemon")]
-impl Deref for Devices {
-    type Target = HashMap<String, Device>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+#[cfg_attr(feature = "daemon", derive(derive_deref_rs::Deref))]
+pub struct Devices(
+    #[cfg(feature = "daemon")]
+    #[cfg_attr(feature = "daemon", deref)]
+    HashMap<String, Device>,
+);
 
 #[cfg(feature = "daemon")]
 impl Default for Devices {

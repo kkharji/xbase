@@ -14,18 +14,18 @@ use crate::constants::DAEMON_STATE;
 impl Handler for Register {
     async fn handle(self) -> Result<()> {
         let Self { client } = &self;
-        let Client { root, .. } = &client;
+
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
         client.register_self(state).await?;
         client.register_project(state).await?;
+
         if client.ensure_server_support(state, None).await? {
             let ref name = client.abbrev_root();
-            state.clients.echo_msg(root, name, "setup: ✅").await;
+            client.echo_msg(state, name, "setup: ✅").await;
         }
 
-        // NOTE: Sink Daemon to nvim vim.g.xbase
         state.sync_client_state().await?;
 
         Ok(())
