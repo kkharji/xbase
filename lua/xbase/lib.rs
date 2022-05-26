@@ -33,13 +33,13 @@ pub fn is_running(_: &Lua, _: ()) -> LuaResult<bool> {
 
 /// Ensure that daemon is currently running in background
 pub fn ensure(lua: &Lua, _: ()) -> LuaResult<bool> {
-    // FIXME(dameon): resulting in connection refused
     if is_running(lua, ()).unwrap() {
         Ok(false)
-    } else if Command::new(DAEMON_BINARY_PATH).spawn().is_ok() {
+    } else {
+        Command::new(DAEMON_BINARY_PATH).spawn().unwrap();
+        // Give time for the daemon to be started
+        std::thread::sleep(std::time::Duration::new(1, 0));
         lua.info("Spawned Background Server")?;
         Ok(true)
-    } else {
-        panic!("Unable to spawn background server");
     }
 }
