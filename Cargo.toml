@@ -74,7 +74,7 @@ tokio                 = { version = "1.17.0", features = ["full"], optional = tr
 tokio-util            = { version = "0.7.1",  features = ["codec"], optional = true }
 async-trait           = { version = "0.1.52", optional = true }
 async-stream          = { version = "0.3.3", optional = true }
-process-stream        = { path = "../../rust/process-stream/", optional = true }
+process-stream        = { version = "0.2.2", optional = true }
 # Logging Feature
 tracing               = { version = "0.1.32", optional = true }
 tracing-subscriber    = { version = "0.3.9",  features = ["env-filter"], optional = true}
@@ -88,14 +88,15 @@ lazy_static           = { version = "1.4.0",  optional = true }
 shell-words           = { version  = "1.1.0", optional = true }
 # Other
 mlua                  = { version = "0.7.4",  features = ["lua51", "vendored"], optional = true } 
-bsp-server            = { version  = "0.1.2", path = "../../rust/build-server-protocol/bsp-server/", optional = true }
-xcodebuild            = { version  = "0.1.2", path = "../../rust/xcodebuild/", optional = true, features = ["tracing"] }
+bsp-server            = { version  = "0.1.3", optional = true }
+xcodebuild            = { version  = "0.1.5", optional = true, features = ["tracing"] }
+
 # Proc feature: processes, processors, disks, components and networks (sysinfo = "0.23.5")
 libproc               = { version = "0.12.0", optional = true }
 url                   = { version = "2.2.2",  features = ["serde"], optional = true }
 nvim-rs               = { version = "0.4.0", optional = true, features = ["use_tokio"] }
 parity-tokio-ipc      = { version = "0.9.0", optional = true }
-simctl                = { path = "../../../sources/simctl/", optional = true }
+simctl                = { git = "https://github.com/tami5/simctl", optional = true }
 futures               = { version = "0.3.21", optional = true }
 thiserror             = "1.0.31"
 libc                  = "0.2.126"
