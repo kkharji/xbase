@@ -45,24 +45,18 @@ impl<'a> Logger<'a> {
     pub async fn append(&mut self, msg: String) -> Result<()> {
         tracing::debug!("{msg}");
         let win_info = self.win().await;
-
         let mut c = self.get_line_count().await?;
+
         let lines = msg
             .split("\n")
             .map(|s| format!("[{}] {}", self.title, s))
             .collect::<Vec<String>>();
-        let lines_len = lines.len() as i64;
 
-        self.buf
-            .set_lines(c, c + lines_len as i64, false, lines)
-            .await?;
-        c += lines_len;
-
-        self.current_line_count = Some(c);
+        self.set_lines(&mut c, lines).await?;
 
         if let Some((focused, win)) = win_info {
+            // self.nvim.exec("call feedkeys('zt')", false).await?;
             if !focused {
-                // self.nvim.exec("call feedkeys('zt')", false).await?;
                 win.set_cursor((c, 0)).await?;
             } else {
                 let (current, _) = win.get_cursor().await?;
@@ -74,6 +68,14 @@ impl<'a> Logger<'a> {
             }
         }
 
+        self.current_line_count = Some(c);
+
+        Ok(())
+    }
+
+    async fn set_lines(&mut self, c: &mut i64, lines: Vec<String>) -> Result<()> {
+        *c += lines.len() as i64;
+        self.buf.set_lines(*c - 1, *c, false, lines).await?;
         Ok(())
     }
 
@@ -122,11 +124,14 @@ impl<'a> Logger<'a> {
         Ok(win)
     }
 
-    // TODO(logger): make running different for devices and app
-    pub async fn set_running(&mut self) -> Result<()> {
-        self.nvim
-            .exec("let g:xbase_watch_build_status='running'", false)
-            .await?;
+    pub async fn set_running(&mut self, is_device: bool) -> Result<()> {
+        let var = if is_device {
+            "let g:xbase_watch_build_status='device_running'"
+        } else {
+            "let g:xbase_watch_build_status='running'"
+        };
+
+        self.nvim.exec(var, false).await?;
         Ok(())
     }
 

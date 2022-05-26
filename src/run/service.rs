@@ -38,7 +38,7 @@ impl RunService {
         let ref mut logger = nvim.logger();
         if !req.ops.is_watch() {
             logger.open_win().await?;
-            logger.set_running().await?;
+            logger.set_running(false).await?;
         }
 
         logger.set_title(format!("Build:{target}"));
@@ -57,6 +57,8 @@ impl RunService {
         let medium = RunMedium::from_device_or_settings(device, build_settings, req.config)?;
         let process = medium.run(logger).await?;
         let handler = RunServiceHandler::new(target, req.client.clone(), process, key.clone())?;
+
+        logger.set_running(true).await?;
 
         Ok(Self {
             client: req.client,

@@ -83,6 +83,7 @@ local defaults = {
   --- Statusline provider configurations
   statusline = {
     running = { icon = "⚙", color = "#e0af68" },
+    device_running = { icon = "", color = "#4a6edb" },
     success = { icon = "", color = "#1abc9c" },
     failure = { icon = "", color = "#db4b4b" },
     show_progress = false,

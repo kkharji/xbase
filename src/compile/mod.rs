@@ -261,7 +261,7 @@ pub async fn ensure_server_support<'a>(
                 let mut logger = nvim.logger();
 
                 logger.set_title(format!("Compile:{name}"));
-                logger.set_running().await.ok();
+                logger.set_running(false).await.ok();
 
                 logger.open_win().await.ok();
                 logger.append(err.to_string()).await.ok();

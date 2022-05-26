@@ -86,6 +86,9 @@ M.feline_provider = function()
       if status == "running" then
         icon.str = config.running.icon
         icon.hl = { fg = config.running.color }
+      elseif status == "device_running" then
+        icon.str = config.device_running.icon
+        icon.hl = { fg = config.device_running.color }
       elseif status == "success" then
         icon.str = config.success.icon
         icon.hl = { fg = config.success.color }

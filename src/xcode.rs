@@ -76,7 +76,7 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
 
     let mut success = true;
 
-    logger.set_running().await?;
+    logger.set_running(false).await?;
 
     while let Some(line) = stream.next().await {
         line.contains("FAILED").then(|| success = false);
