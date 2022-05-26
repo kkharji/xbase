@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::{client::Client, constants::DAEMON_STATE, Result};
+use crate::{client::Client, constants::DAEMON_STATE, util::fmt, Result};
 use process_stream::{Process, StreamExt};
 use tokio::task::JoinHandle;
 

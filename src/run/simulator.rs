@@ -132,18 +132,18 @@ impl Simulator {
 
 impl Simulator {
     fn booting_msg(&self) -> String {
-        format!("[{}] Booting {}", self.config.target, self.device.name)
+        format!("Booting {}", self.device.name)
     }
 
     fn installing_msg(&self) -> String {
-        format!("[{}] Installing {}", self.config.target, self.app_id())
+        format!("Installing {}", self.app_id())
     }
 
     fn launching_msg(&self) -> String {
-        format!("[{}] Launching {}", self.config.target, self.app_id())
+        format!("Launching {}", self.app_id())
     }
 
     fn connected_msg(&self) -> String {
-        format!("[{}] Connected", self.config.target)
+        format!("Connected")
     }
 }

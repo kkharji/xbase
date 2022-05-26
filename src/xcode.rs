@@ -9,7 +9,7 @@ use tap::Pipe;
 use xcodebuild::{parser, runner::spawn};
 
 #[cfg(feature = "daemon")]
-use {crate::util::fmt, std::fmt::Debug};
+use std::fmt::Debug;
 
 #[cfg(feature = "daemon")]
 pub async fn stream_build<'a, P: 'a>(
@@ -25,12 +25,8 @@ where
         use xcodebuild::parser::Step::*;
         while let Some(step) = stream.next().await {
             let line = match step {
-                Exit(v) => {
-                    if v == 0 {
-                        fmt::separator()
-                    } else {
-                        "[Error] Build Failed".into()
-                    }
+                Exit(v) if v != 0 => {
+                    "[Error] Build Failed".into()
                 }
                 BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
                     continue;

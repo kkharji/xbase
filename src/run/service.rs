@@ -41,7 +41,7 @@ impl RunService {
             logger.set_running().await?;
         }
 
-        logger.set_title(format!("Run:{target}"));
+        logger.set_title(format!("Build:{target}"));
         logger.set_direction(&req.direction);
 
         let build_settings = build_settings(root, &build_args).await?;
@@ -51,6 +51,8 @@ impl RunService {
             nvim.echo_err(&msg).await?;
             return Err(Error::Build(msg));
         }
+
+        logger.set_title(format!("Run:{target}"));
 
         let medium = RunMedium::from_device_or_settings(device, build_settings, req.config)?;
         let process = medium.run(logger).await?;

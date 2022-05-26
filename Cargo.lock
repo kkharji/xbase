@@ -845,9 +845,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.11.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b10983b38c53aebdf33f542c6275b0f58a238129d00c4ae0e6fb59738d783ca"
+checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
 
 [[package]]
 name = "parity-tokio-ipc"
@@ -1710,9 +1710,9 @@ dependencies = [
 
 [[package]]
 name = "xcodebuild"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e4c48d3e25c0c349661dc40fb500937732d17c1b7f8e0649211f092ff738cb7"
+checksum = "4e5c5079b51c9995872363a423f2c546370bd2619c7ad2802d1092048b7b71bc"
 dependencies = [
  "anyhow",
  "async-stream",

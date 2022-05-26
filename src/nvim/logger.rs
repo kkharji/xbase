@@ -1,6 +1,6 @@
 use super::{NvimClient, NvimConnection, NvimWindow};
-use crate::nvim::BufferDirection;
 use crate::Result;
+use crate::{nvim::BufferDirection, util::fmt};
 use nvim_rs::{Buffer, Window};
 
 pub struct Logger<'a> {
@@ -117,6 +117,7 @@ impl<'a> Logger<'a> {
             self.nvim
                 .exec("let g:xbase_watch_build_status='success'", false)
                 .await?;
+            self.append(fmt::separator()).await?;
         } else {
             self.nvim
                 .exec("let g:xbase_watch_build_status='failure'", false)
