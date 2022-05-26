@@ -1,4 +1,5 @@
 local M = {}
+local pid = vim.fn.getpid()
 
 vim.g.xbase = {
   ---@type Project[]
@@ -51,22 +52,50 @@ M.run = function(opts)
   require("libxbase").run(opts)
 end
 
-M.watch = function(opts)
-  require("libxbase").watch_target(opts)
+local function try_map(key, fun)
+  if type(key) == "string" then
+    vim.keymap.set("n", key, fun, { buffer = true })
+  end
+end
+
+M.toggle_log_buffer = function(vsplit)
+  local bufnr = vim.g.xbase.clients[string.format("%s", pid)].log_bufnr
+  local win = vim.fn.win_findbuf(bufnr)[1]
+  if win then
+    vim.api.nvim_win_close(win, false)
+  end
+  print "Opening log buffer"
+  local cmd = vsplit and "vert sbuffer" or "sbuffer"
+  local open = string.format("%s %s", cmd, bufnr)
+  vim.cmd(open)
+
+  local mappings = require("xbase.config").values.mappings
+
+  try_map(mappings.toggle_vsplit_log_buffer, function()
+    vim.cmd "close"
+  end)
+
+  try_map(mappings.toggle_split_log_buffer, function()
+    vim.cmd "close"
+  end)
+
+  vim.keymap.set("n", "q", "close", { buffer = true })
 end
 
 local function bind(config)
-  local function try_map(key, fun)
-    if type(key) == "string" then
-      vim.keymap.set("n", key, require("xbase.pickers")[fun], { buffer = true })
-    end
-  end
+  local pickers = require "xbase.pickers"
 
   if config.mappings.enable then
-    try_map(config.mappings.build_picker, "build")
-    try_map(config.mappings.run_picker, "run")
-    try_map(config.mappings.watch_picker, "watch")
-    try_map(config.mappings.all_picker, "actions")
+    try_map(config.mappings.build_picker, pickers.build)
+    try_map(config.mappings.run_picker, pickers.run)
+    try_map(config.mappings.watch_picker, pickers.watch)
+    try_map(config.mappings.all_picker, pickers.actions)
+    try_map(config.mappings.toggle_split_log_buffer, function()
+      M.toggle_log_buffer(false)
+    end)
+    try_map(config.mappings.toggle_vsplit_log_buffer, function()
+      M.toggle_log_buffer(true)
+    end)
   end
 end
 

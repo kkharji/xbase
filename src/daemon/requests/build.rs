@@ -58,7 +58,7 @@ impl Watchable for BuildRequest {
         let ref mut logger = nvim.logger();
 
         logger.set_title(format!("Rebuild:{}", config.target));
-        let success = build_with_logger(logger, root, &args, true, false).await?;
+        let success = build_with_logger(logger, root, &args, true, self.ops.is_once()).await?;
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(msg).await?;

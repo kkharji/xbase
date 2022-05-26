@@ -94,7 +94,6 @@ local defaults = {
       "iPad (9th generation)",
     },
   },
-  --- Mappings
   mappings = {
     --- Whether xbase mapping should be disabled.
     enable = true,
@@ -106,7 +105,11 @@ local defaults = {
     watch_picker = "<leader>s", --- set to 0 to disable
     --- A list of all the previous pickers
     all_picker = "<leader>ef", --- set to 0 to disable
-  },
+    --- horizontal toggle log buffer
+    toggle_split_log_buffer = "<leader>ls",
+    --- vertical toggle log buffer
+    toggle_vsplit_log_buffer = "<leader>lv",
+  }
 }
 ```
 
