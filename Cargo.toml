@@ -31,7 +31,7 @@ server      = [
   "compilation",
   "crossbeam-channel" 
   ]
-lua         = [ "mlua", "serial", "simctl" ]
+lua         = [ "mlua", "serial", "simctl", "lazy_static" ]
 serial      = [ "serde", "serde_json", "serde_yaml" ]
 compilation = [ "serial", "lazy_static", "shell-words", "xcode" ]
 logging     = [ "tracing", "tracing-appender", "tracing-subscriber" ]

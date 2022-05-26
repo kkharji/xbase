@@ -154,6 +154,8 @@ pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
 /// Ensure that buildServer.json exists in root directory.
 #[cfg(feature = "daemon")]
 pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
+    use crate::constants::SERVER_BINARY_PATH;
+
     let path = root.join("buildServer.json");
     if tokio::fs::File::open(&path).await.is_ok() {
         return Ok(());
@@ -164,8 +166,7 @@ pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
     let mut file = tokio::fs::File::create(path).await?;
     let config = serde_json::json! ({
         "name": "Xbase",
-        // FIXME: Point to user xbase-server
-        "argv": ["/Users/tami5/repos/neovim/xbase.nvim/target/debug/xbase-server"],
+        "argv": [SERVER_BINARY_PATH],
         "version": "0.1",
         "bspVersion": "0.2",
         "languages": [

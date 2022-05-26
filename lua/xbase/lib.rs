@@ -36,7 +36,7 @@ pub fn ensure(lua: &Lua, _: ()) -> LuaResult<bool> {
     // FIXME(dameon): resulting in connection refused
     if is_running(lua, ()).unwrap() {
         Ok(false)
-    } else if Command::new(DAEMON_BINARY).spawn().is_ok() {
+    } else if Command::new(DAEMON_BINARY_PATH).spawn().is_ok() {
         lua.info("Spawned Background Server")?;
         Ok(true)
     } else {
