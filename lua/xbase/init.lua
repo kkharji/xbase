@@ -55,6 +55,21 @@ M.watch = function(opts)
   require("libxbase").watch_target(opts)
 end
 
+local function bind(config)
+  local function try_map(key, fun)
+    if type(key) == "string" then
+      vim.keymap.set("n", key, require("xbase.pickers")[fun], { buffer = true })
+    end
+  end
+
+  if config.mappings.enable then
+    try_map(config.mappings.build_picker, "build")
+    try_map(config.mappings.run_picker, "run")
+    try_map(config.mappings.watch_picker, "watch")
+    try_map(config.mappings.all_picker, "actions")
+  end
+end
+
 ---Setup xbase for current instance.
 ---Should ran once per neovim instance
 ---@param opts xbaseOptions
@@ -64,7 +79,11 @@ M.setup = function(opts)
     opts = opts or {}
     local root = vim.loop.cwd()
     -- Mutate xbase configuration
-    require("xbase.config").set(opts)
+    local config = require "xbase.config"
+
+    config.set(opts)
+
+    local config = config.values
     -- Try to register current vim instance
     -- NOTE: Should this register again on cwd change?
     M.try_register(root, opts)
@@ -72,11 +91,10 @@ M.setup = function(opts)
     vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
       pattern = { "*.m", "*.swift", "*.c", "*.yml" },
       callback = function()
-        vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
+        bind(config)
       end,
     })
-    -- so that on a new buffer it would work
-    vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
+    bind(config)
   end)
 end
 

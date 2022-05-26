@@ -19,12 +19,24 @@ local defaults = {
     show_progress = false,
   },
   --- TODO(nvim): Limit devices platform to select from
-  --- NOTE: THIS SHOULD NOT BE THE DEFAULT
   simctl = {
     iOS = {
       "iPhone 13 Pro",
       "iPad (9th generation)",
     },
+  },
+  --- Mappings
+  mappings = {
+    --- Whether xbase mapping should be disabled.
+    enable = true,
+    --- Open build picker. showing targets and configuration.
+    build_picker = "<leader>b", --- set to 0 to disable
+    --- Open run picker. showing targets, devices and configuration
+    run_picker = "<leader>r", --- set to 0 to disable
+    --- Open watch picker. showing run or build, targets, devices and configuration
+    watch_picker = "<leader>s", --- set to 0 to disable
+    --- A list of all the previous pickers
+    all_picker = "<leader>ef", --- set to 0 to disable
   },
 }
 
@@ -93,7 +105,7 @@ consume_opts = function(startkey, d, m)
 end
 
 --- Set or extend defaults configuration
----@param opts table
+---@param opts table?
 config.set = function(opts)
   opts = opts or {}
 
@@ -112,8 +124,7 @@ config.set = function(opts)
       config.values = _XBASECONFIG
     end
   end
-
-  _XBASELOG.level = opts.log_level or defaults.log_level
+  log.level = opts.log_level or defaults.log_level
 end
 
 config.set()
