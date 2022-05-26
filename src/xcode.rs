@@ -1,3 +1,5 @@
+use crate::types::BuildConfiguration;
+use crate::util::fs::get_build_cache_dir_with_config;
 use crate::Result;
 use crate::{nvim::Logger, util::fs::get_build_cache_dir};
 use async_stream::stream;
@@ -48,7 +50,7 @@ where
 pub async fn fresh_build<'a, P: AsRef<Path> + 'a + Debug>(
     root: P,
 ) -> Result<impl Stream<Item = parser::Step> + 'a> {
-    append_build_root(&root, vec!["clean".into(), "build".into()])?
+    append_build_root(&root, None, vec!["clean".into(), "build".into()])?
         .pipe(|args| spawn(root, args))
         .await?
         .pipe(Ok)
@@ -94,16 +96,21 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
 
 pub fn append_build_root<P: AsRef<Path> + Debug>(
     root: P,
+    config: Option<&BuildConfiguration>,
     mut args: Vec<String>,
 ) -> Result<Vec<String>> {
-    get_build_cache_dir(&root)?
-        .pipe(|path| format!("SYMROOT={path}|CONFIGURATION_BUILD_DIR={path}|BUILD_DIR={path}"))
-        .split("|")
-        .map(ToString::to_string)
-        .collect::<Vec<String>>()
-        .pipe(|extra| {
-            args.extend(extra);
-            args
-        })
-        .pipe(Ok)
+    if let Some(config) = config {
+        get_build_cache_dir_with_config(&root, config)?
+    } else {
+        get_build_cache_dir(&root)?
+    }
+    .pipe(|path| format!("SYMROOT={path}|CONFIGURATION_BUILD_DIR={path}|BUILD_DIR={path}"))
+    .split("|")
+    .map(ToString::to_string)
+    .collect::<Vec<String>>()
+    .pipe(|extra| {
+        args.extend(extra);
+        args
+    })
+    .pipe(Ok)
 }

@@ -61,8 +61,7 @@ impl BuildConfiguration {
             args.extend(device.special_build_args())
         }
 
-        // TODO: Customize root based on target and configuration
-        append_build_root(root, args)
+        append_build_root(root, Some(&self), args)
     }
 }
 

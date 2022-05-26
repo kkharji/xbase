@@ -31,23 +31,51 @@ where
         .ok()?
         .display()
         .to_string()
+        .replace("/", "_")
         .pipe(Some)
 }
 
 #[cfg(any(feature = "server", feature = "daemon"))]
-pub fn get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(root_path: P) -> Result<String> {
+pub fn _get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(
+    root_path: P,
+    config: Option<&crate::types::BuildConfiguration>,
+) -> Result<String> {
     let path = || {
         let name = get_dirname_dir_root(&root_path)?;
-        Some(
-            dirs::cache_dir()?
-                .join("Xbase")
-                .join(name)
-                .to_string_lossy()
-                .to_string(),
-        )
+        let base = dirs::cache_dir()?
+            .join("Xbase")
+            .join(name)
+            .display()
+            .to_string();
+
+        if let Some(config) = config {
+            Some(
+                format!(
+                    "{base}/{}_{}",
+                    config.target,
+                    config.configuration.to_string()
+                )
+                .replace(" ", "_"),
+            )
+        } else {
+            Some(base)
+        }
     };
     path()
         .ok_or_else(|| anyhow::anyhow!("Fail to generate build_cache directory for {root_path:?}"))
+}
+
+#[cfg(any(feature = "server", feature = "daemon"))]
+pub fn get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(root_path: P) -> Result<String> {
+    _get_build_cache_dir(root_path, None)
+}
+
+#[cfg(any(feature = "server", feature = "daemon"))]
+pub fn get_build_cache_dir_with_config<P: AsRef<Path> + std::fmt::Debug>(
+    root_path: P,
+    config: &crate::types::BuildConfiguration,
+) -> Result<String> {
+    _get_build_cache_dir(root_path, Some(config))
 }
 
 /// Find All swift files in a directory.
