@@ -1,18 +1,27 @@
-# xbase (WIP: 0.1)
+<p align="center">
+<img src="./media/logo.png" alt="drawing" style="width:400px;"/>
+</P>
 
 ## 👁 Overview 
 
-Xcode replacement-ish development environment for neovim. Currently requires and recommends using [XcodeGen] as a way to configure and generate xcode projects.
+Xcode replacement-ish development environment for neovim. Supports building/watching/running
+xcode products, in addition to logging and auto-completion. It requires and recommends using
+[XcodeGen] as a way to configure and generate xcode projects without interacting with Xcode.
 
 It is still work in progress, if you have something in mind or found a bug open an issue.
+
+## 🌝 Motivation
+
+After purchasing a MacBook, I decided to get into iOS/macOS applications development. Though, coming from vim/shell development experience and being heavily keyboard driven, I could not handle the switch to closed sourced, opinionated, mouse-driven development environment. I tried workarounds such as [XVim2] and builtin vim emulator but still I'd catch myself often looking for my mouse. 
+
+Being a long time vim user and having previously develop few lua/nvim plugins, I decided to take sometime to invest in both creating a fairly complicated development environment for `xOS` and enrich my experience with [rust].
 
 ## 🌟 Features:
 
 * **Auto-Completion and Code navigation**\
-    [sourcekit-lsp] doesn't support auto-indexing. Therefore, [xbase] includes a custom build
-    server that auto-generate compiled command on directory changes (i.e. file removed/added).
-* **multi-nvim instance support**\
-    Thanks to having a single daemon running and simple client/server architecture, users can have and use multiple nvim instance running without process duplications and shared state. E.g. stop watch service ran from different nvim instance.
+    [sourcekit-lsp] doesn't support auto-indexing. Therefore, [xbase] includes a custom build server that auto-generate compiled command on directory changes (i.e. file removed/added).
+* **Multi-nvim instance support**\
+    Thanks to having a single daemon running and simple client/server architecture, users can have and use multiple nvim instance running without process duplications and shared state. E.g. stop watch service ran from a nvim instance in another instance.
 * **Auto-start/stop main background daemon**\
     No need to manual start/stop daemon background. The daemon will auto start/stop based on
     connect neovim (client instances)
@@ -21,8 +30,7 @@ It is still work in progress, if you have something in mind or found a bug open 
 * **Simulator Support**\
     Pick a simulator devices relative to target platform and run the target once or per file changes. If the simulator isn't running then it will auto launch it.
 * **Logging buffer**\
-  real-time logging of print statements and build logs. This feature depends partially on
-  [xcodebuild] crate which is still work-in-progress and might not print errors.
+  real-time logging of print statements and build logs. This feature depends partially on [xcodebuild] crate which is still work-in-progress and might not print errors. Currently logs are specific to the requested client, if you find yourself needing shared logs, open an issue.
 * **Statusline Support**\
     Global variable to update statusline with build/run commands + [feline] provider. Other
     statusline plugins support are welcomed.
@@ -30,19 +38,23 @@ It is still work in progress, if you have something in mind or found a bug open 
     light resource use. I've been using xbase for a while now, usually 0.0% cpu and 0.1% memory.
 
 
-## 🌝 Motivation
-
-After purchasing a MacBook, I decided to get into iOS/macOS applications development. Though, coming from vim/shell development experience and being heavily keyboard driven, I could not handle the switch to closed sourced, opinionated mouse, driven development environment. I tried workarounds such as xvim2 and builtin vim emulator but still I'd catch myself often looking for my mouse. 
-
-Therefore, being a long time vim user and having previously develop few lua/nvim plugins, I decided to take sometime to invest in both creating a fairly complicated development environment and expand my experience with coding in rust. 
 
 ## Installation
 
 packer.nvim:
 
 ```lua 
-use { 'tami5/xbase', run = 'make install' }
+use { 
+  'tami5/xbase', 
+    run = 'make install',
+    requires = {
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope.nvim"
+    }
+}
 ```
+
+`make install` would build all required binaries in addition to a lua library. The binaries will be moved to `path/to/repo/bin` and the lua library will be mvoed to `path/to/repo/lua/libxbase.so`.
 
 ## 🎮 Usage
 
@@ -97,8 +109,21 @@ statusline get updated.
 
 > NOTE: this is using a custom feline provider located in `watch.lua`, pr is welcome for other statusline support.
 
+## Debugging
+
+### Read logs
+```bash 
+# Daemon logs
+tail -f /tmp/xbase-daemon.log
+# Build Server logs
+tail -f /tmp/xbase-server.log
+```
+
+
 [XcodeGen]: https://github.com/yonaskolb/XcodeGen
 [sourcekit-lsp]: https://github.com/apple/sourcekit-lsp
 [xbase]: https://github.com/tami5/xbase
 [xcodebuild]: https://github.com/tami5/xcodebuild
 [feline]: https://github.com/feline-nvim/feline.nvim
+[XVim2]: https://github.com/XVimProject/XVim2
+[rust]: https://www.rust-lang.org
