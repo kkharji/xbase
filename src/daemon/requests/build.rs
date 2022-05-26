@@ -51,14 +51,20 @@ impl Handler for BuildRequest {
 impl Watchable for BuildRequest {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
         tracing::info!("Building {}", self.client.abbrev_root());
+        let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.config);
         let args = config.args(root, &None)?;
 
         let nvim = self.client.nvim(state)?;
         let ref mut logger = nvim.logger();
 
-        logger.set_title(format!("Rebuild:{}", config.target));
-        let success = build_with_logger(logger, root, &args, true, self.ops.is_once()).await?;
+        logger.set_title(format!(
+            "{}:{}",
+            if is_once { "Build" } else { "Rebuild" },
+            config.target
+        ));
+
+        let success = build_with_logger(logger, root, &args, false, is_once).await?;
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(msg).await?;
