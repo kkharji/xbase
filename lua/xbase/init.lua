@@ -1,5 +1,4 @@
 local M = {}
-local pid = vim.fn.getpid()
 
 vim.g.xbase = {
   ---@type Project[]
@@ -59,8 +58,9 @@ local function try_map(key, fun)
 end
 
 M.toggle_log_buffer = function(vsplit)
-  local bufnr = vim.g.xbase.clients[string.format("%s", pid)].log_bufnr
+  local bufnr = vim.g.xbase_log_bufnr
   local win = vim.fn.win_findbuf(bufnr)[1]
+
   if win then
     vim.api.nvim_win_close(win, false)
   end

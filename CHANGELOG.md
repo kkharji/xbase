@@ -2,8 +2,11 @@
 ## [unreleased]
 ### <!-- 1 -->Bug Fixes
 - `(Logger)` <a href="https://github.com/tami5/xbase/commit/25a4e56"> Incorrect title for build once requests</a>
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/db147a9"> Force scroll</a>
 ### <!-- 2 -->Refactor
-- `(Logger)` <a href="https://github.com/tami5/xbase/commit/32e9555"> Append logger title to all msgs</a>
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/f32fd6b"> Append logger title to all msgs</a>
+### <!-- 3 -->Enhancement
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/c545b73"> Output readability and traceability</a>
 
 ## [0.1.0] - 2022-05-26
 ### <!-- 0 -->Features

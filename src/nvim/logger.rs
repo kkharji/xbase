@@ -41,8 +41,10 @@ impl<'a> Logger<'a> {
         })
     }
 
+    // TODO(logger): always show current new logs in middle of the window
     pub async fn append(&mut self, msg: String) -> Result<()> {
         tracing::debug!("{msg}");
+        let win_info = self.win().await;
 
         let mut c = self.get_line_count().await?;
         let lines = msg
@@ -58,20 +60,33 @@ impl<'a> Logger<'a> {
 
         self.current_line_count = Some(c);
 
-        if let Some(win) = self.win().await {
-            win.set_cursor((c, 0)).await?;
+        if let Some((focused, win)) = win_info {
+            if !focused {
+                // self.nvim.exec("call feedkeys('zt')", false).await?;
+                win.set_cursor((c, 0)).await?;
+            } else {
+                let (current, _) = win.get_cursor().await?;
+                let diff = c - current;
+                if diff == 1 || diff == 2 {
+                    // self.nvim.exec("call feedkeys('zt')", false).await?;
+                    win.set_cursor((c, 0)).await?;
+                }
+            }
         }
 
         Ok(())
     }
 
-    /// Get window if it's available
-    pub async fn win(&self) -> Option<NvimWindow> {
+    /// Get logger window if it's available and whether is currently focused.
+    pub async fn win(&self) -> Option<(bool, NvimWindow)> {
         let windows = self.nvim.list_wins().await.ok()?;
         for win in windows.into_iter() {
             let buf = win.get_buf().await.ok()?;
+
             if buf.get_number().await.ok()? == self.nvim.log_bufnr {
-                return Some(win);
+                let curr = self.nvim.get_current_win().await.ok()?;
+                let is_focused = curr.get_number().await.ok()? == win.get_number().await.ok()?;
+                return Some((is_focused, win));
             }
         }
         None
@@ -79,7 +94,7 @@ impl<'a> Logger<'a> {
 
     /// Open Window
     pub async fn open_win(&mut self) -> Result<Window<NvimConnection>> {
-        if let Some(win) = self.win().await {
+        if let Some((_, win)) = self.win().await {
             return Ok(win);
         }
 
@@ -90,14 +105,18 @@ impl<'a> Logger<'a> {
             self.open_cmd = Some(v);
         };
 
-        let open_cmd = self.open_cmd.as_ref().unwrap();
+        // TODO(nvim): setup autocmd for buffer type
+        let setup_script = format!(
+            r#"
+            {}
+            setlocal nonumber norelativenumber
+            setlocal scrolloff=3
+            "#,
+            self.open_cmd.as_ref().unwrap()
+        );
 
-        self.nvim.exec(open_cmd, false).await?;
+        self.nvim.exec(&setup_script, false).await?;
         let win = self.nvim.get_current_win().await?;
-        // NOTE: This doesn't work
-        win.set_option("number", false.into()).await?;
-        win.set_option("relativenumber", false.into()).await?;
-        // self.nvim.exec("setl nu nornu so=9", false).await?;
         self.nvim.exec("wincmd w", false).await?;
 
         Ok(win)
