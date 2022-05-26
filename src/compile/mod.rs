@@ -10,7 +10,7 @@ use crate::Result;
 pub use command::CompilationCommand;
 pub use flags::CompileFlags;
 use serde::{Deserialize, Serialize};
-use std::path;
+use std::path::{Path, PathBuf};
 use tap::Pipe;
 use xcodebuild::parser::Step;
 
@@ -43,7 +43,7 @@ impl IntoIterator for CompilationDatabase {
 /// ```no_run use xbase::compile::CompilationDatabase;
 /// CompilationDatabase::from_file("/path/to/xcode_build_logs");
 /// ```
-pub fn parse_from_file<P: AsRef<path::Path> + Clone>(path: P) -> Result<CompilationDatabase> {
+pub fn parse_from_file<P: AsRef<Path> + Clone>(path: P) -> Result<CompilationDatabase> {
     std::fs::read_to_string(path)?
         .pipe_ref(|s| serde_json::from_str::<CompilationDatabase>(s))?
         .pipe(Ok)
@@ -89,11 +89,12 @@ pub async fn generate_from_steps(steps: &Vec<Step>) -> Result<CompilationDatabas
                 if val == "-module-name" {
                     name = Some(arguments[i + 1].to_owned());
                 } else if val == "-index-store-path" {
-                    index_store_path = Some(arguments[i + 1].to_owned());
+                    let ref val = arguments[i + 1];
+                    index_store_path = Some(val.pipe(PathBuf::from));
                 } else if val.ends_with(".swift") {
-                    files.push(val.to_owned());
+                    files.push(PathBuf::from(val));
                 } else if val.ends_with(".SwiftFileList") {
-                    file_lists.push(val.replace("@", "").to_owned());
+                    file_lists.push(val.replace("@", "").pipe(PathBuf::from));
                 }
             }
             if let Some(ref index_store_path) = index_store_path {
@@ -127,7 +128,6 @@ use {
         xcodegen,
     },
     process_stream::StreamExt,
-    std::path::PathBuf,
     tokio::{
         fs::{metadata, File},
         io::AsyncWriteExt,
@@ -136,7 +136,7 @@ use {
 };
 
 #[cfg(feature = "daemon")]
-pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
+pub async fn update_compilation_file(root: &PathBuf) -> Result<()> {
     // TODO(build): Ensure that build successed. check for Exit Code
     let steps = fresh_build(&root).await?.collect::<Vec<Step>>().await;
     let compile_commands = steps.pipe_ref(generate_from_steps).await?;
@@ -153,7 +153,7 @@ pub async fn update_compilation_file(root: &path::PathBuf) -> Result<()> {
 
 /// Ensure that buildServer.json exists in root directory.
 #[cfg(feature = "daemon")]
-pub async fn ensure_server_config(root: &path::PathBuf) -> Result<()> {
+pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
     use crate::constants::SERVER_BINARY_PATH;
 
     let path = root.join("buildServer.json");
@@ -197,7 +197,7 @@ pub async fn ensure_server_support<'a>(
     let compile_path = root.join(".compile");
     let compile_exists = metadata(compile_path).await.is_ok();
 
-    if ensure_server_config(&root).await.is_err() {
+    if ensure_server_config(root).await.is_err() {
         "fail to ensure build server configuration!"
             .pipe(|msg| state.clients.echo_err(root, name, msg))
             .await;
