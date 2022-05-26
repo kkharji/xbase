@@ -1,12 +1,12 @@
 use super::{NvimClient, NvimConnection, NvimWindow};
+use crate::nvim::BufferDirection;
 use crate::Result;
-use crate::{nvim::BufferDirection, util::fmt};
 use nvim_rs::{Buffer, Window};
 
 pub struct Logger<'a> {
     pub nvim: &'a NvimClient,
-    pub title: String,
-    pub buf: Buffer<NvimConnection>,
+    title: String,
+    buf: Buffer<NvimConnection>,
     open_cmd: Option<String>,
     current_line_count: Option<i64>,
 }
@@ -14,7 +14,7 @@ pub struct Logger<'a> {
 impl<'a> Logger<'a> {
     /// Set logger title
     pub fn set_title(&mut self, title: String) -> &mut Self {
-        self.title = fmt::as_section(title);
+        self.title = title;
         self
     }
 
@@ -41,14 +41,13 @@ impl<'a> Logger<'a> {
         })
     }
 
-    // TODO(logger): append title
-    pub async fn log(&mut self, msg: String) -> Result<()> {
+    pub async fn append(&mut self, msg: String) -> Result<()> {
         tracing::debug!("{msg}");
 
         let mut c = self.get_line_count().await?;
         let lines = msg
             .split("\n")
-            .map(ToString::to_string)
+            .map(|s| format!("[{}] {}", self.title, s))
             .collect::<Vec<String>>();
         let lines_len = lines.len() as i64;
 
@@ -63,11 +62,6 @@ impl<'a> Logger<'a> {
             win.set_cursor((c, 0)).await?;
         }
 
-        Ok(())
-    }
-
-    pub async fn log_title(&mut self) -> Result<()> {
-        self.log(self.title.clone()).await?;
         Ok(())
     }
 

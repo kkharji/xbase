@@ -1,5 +1,11 @@
 # Changelog
 ## [unreleased]
+### <!-- 1 -->Bug Fixes
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/25a4e56"> Incorrect title for build once requests</a>
+### <!-- 2 -->Refactor
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/32e9555"> Append logger title to all msgs</a>
+
+## [0.1.0] - 2022-05-26
 ### <!-- 0 -->Features
 - `(Build)` <a href="https://github.com/tami5/xbase/commit/611ef4d"> Pretty print</a>
 - `(Compile)` <a href="https://github.com/tami5/xbase/commit/8855851"> Generate compile flags for files</a>

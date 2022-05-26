@@ -32,30 +32,30 @@ impl Simulator {
             Err(Error::NotFound(_, _)) => {
                 let msg = format!("[Simulator] Launching");
                 tracing::info!("{msg}");
-                logger.log(msg).await?;
+                logger.append(msg).await?;
                 tokio::process::Command::new("open")
                     .args(&["-a", "Simulator"])
                     .spawn()?
                     .wait()
                     .await?;
                 let msg = format!("[Simulator] Connected");
-                logger.log(msg).await?;
-                logger.log(fmt::separator()).await?;
+                logger.append(msg).await?;
+                logger.append(fmt::separator()).await?;
             }
             Err(err) => {
                 let msg = err.to_string();
                 tracing::error!("{msg}");
-                logger.log(msg).await?;
+                logger.append(msg).await?;
             }
             _ => {}
         }
 
-        logger.log(self.booting_msg()).await?;
+        logger.append(self.booting_msg()).await?;
         if let Err(e) = self.device.boot() {
             let err: Error = e.into();
             let err_msg = err.to_string();
             if !err_msg.contains("current state Booted") {
-                logger.log(err_msg).await?;
+                logger.append(err_msg).await?;
                 logger.set_status_end(false, true).await?;
                 return Err(err);
             }
@@ -64,7 +64,7 @@ impl Simulator {
     }
 
     pub async fn install<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
-        logger.log(self.installing_msg()).await?;
+        logger.append(self.installing_msg()).await?;
         self.device
             .install(&self.output_dir())
             .pipe(|res| self.ok_or_abort(res, logger))
@@ -73,7 +73,7 @@ impl Simulator {
     }
 
     pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
-        logger.log(self.launching_msg()).await?;
+        logger.append(self.launching_msg()).await?;
         let mut process = Process::new("xcrun");
 
         process.args(&[
@@ -86,8 +86,8 @@ impl Simulator {
         process.arg(&self.info.product_bundle_identifier);
         process.kill_on_drop(true);
 
-        logger.log(self.connected_msg()).await?;
-        logger.log(fmt::separator()).await?;
+        logger.append(self.connected_msg()).await?;
+        logger.append(fmt::separator()).await?;
 
         Ok(process)
     }
@@ -99,7 +99,7 @@ impl Simulator {
     ) -> Result<()> {
         if let Err(e) = res {
             let error: Error = e.into();
-            logger.log(error.to_string()).await?;
+            logger.append(error.to_string()).await?;
             logger.set_status_end(false, true).await?;
             Err(error)
         } else {

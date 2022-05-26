@@ -29,7 +29,7 @@ impl std::fmt::Display for RunService {
 impl RunService {
     pub async fn new(state: &mut MutexGuard<'_, State>, req: RunRequest) -> Result<Self> {
         let key = req.to_string();
-        let ref target = req.config.target;
+        let target = req.config.target.clone();
         let ref root = req.client.root;
         let device = state.devices.from_lookup(req.device);
         let build_args = req.config.args(root, &device)?;
@@ -54,7 +54,7 @@ impl RunService {
 
         let medium = RunMedium::from_device_or_settings(device, build_settings, req.config)?;
         let process = medium.run(logger).await?;
-        let handler = RunServiceHandler::new(req.client.clone(), process, key.clone())?;
+        let handler = RunServiceHandler::new(target, req.client.clone(), process, key.clone())?;
 
         Ok(Self {
             client: req.client,
@@ -92,7 +92,12 @@ impl Watchable for RunService {
         };
 
         let process = self.medium.run(logger).await?;
-        *handler = RunServiceHandler::new(self.client.clone(), process, self.key.clone())?;
+        *handler = RunServiceHandler::new(
+            config.target.clone(),
+            self.client.clone(),
+            process,
+            self.key.clone(),
+        )?;
 
         Ok(())
     }

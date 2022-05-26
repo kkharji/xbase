@@ -264,7 +264,7 @@ pub async fn ensure_server_support<'a>(
                 logger.set_running().await.ok();
 
                 logger.open_win().await.ok();
-                logger.log(err.to_string()).await.ok();
+                logger.append(err.to_string()).await.ok();
 
                 logger.set_status_end(false, true).await.ok();
             }

@@ -11,7 +11,7 @@ pub struct RunServiceHandler {
 
 impl RunServiceHandler {
     // Change the status of the process to running
-    pub fn new(client: Client, mut process: Process, key: String) -> Result<Self> {
+    pub fn new(target: String, client: Client, mut process: Process, key: String) -> Result<Self> {
         let mut stream = process.spawn_and_stream()?;
         let kill_send = process.clone_kill_sender().unwrap();
 
@@ -30,20 +30,22 @@ impl RunServiceHandler {
                     }
                 };
 
+                logger.set_title(format!("Run:{target}"));
+
                 use process_stream::ProcessItem::*;
                 match output {
                     Output(msg) => {
                         if !msg.contains("ignoring singular matrix") {
-                            logger.log(msg).await?;
+                            logger.append(msg).await?;
                         }
                     }
                     Error(msg) => {
-                        logger.log(format!("[Error] {msg}")).await?;
+                        logger.append(format!("[Error] {msg}")).await?;
                     }
                     // TODO: this should be skipped when user re-run the app
                     Exit(code) => {
                         let success = &code == "0";
-                        logger.log(format!("[Exit] {code}")).await?;
+                        logger.append(format!("[Exit] {code}")).await?;
                         logger.set_status_end(success, !success).await?;
                         break;
                     }

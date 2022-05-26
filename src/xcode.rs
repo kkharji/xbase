@@ -81,12 +81,11 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
     let mut success = true;
 
     logger.set_running().await?;
-    logger.log_title().await?;
 
     while let Some(line) = stream.next().await {
         line.contains("FAILED").then(|| success = false);
 
-        logger.log(line).await?;
+        logger.append(line).await?;
     }
 
     logger.set_status_end(success, open).await?;
