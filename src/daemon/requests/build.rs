@@ -64,6 +64,8 @@ impl Watchable for BuildRequest {
             config.target
         ));
 
+        tracing::trace!("building with [{}]", args.join(" "));
+
         let success = build_with_logger(logger, root, &args, false, is_once).await?;
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());

@@ -43,7 +43,7 @@ impl<'a> Logger<'a> {
 
     // TODO(logger): always show current new logs in middle of the window
     pub async fn append(&mut self, msg: String) -> Result<()> {
-        tracing::debug!("{msg}");
+        tracing::trace!("{msg}");
         let win_info = self.win().await;
         let mut c = self.get_line_count().await?;
 

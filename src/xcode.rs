@@ -26,9 +26,9 @@ where
         while let Some(step) = stream.next().await {
             let line = match step {
                 Exit(v) if v != 0 => {
-                    "[Error] Build Failed".into()
+                    format!("[Exit] {v}")
                 }
-                BuildSucceed | CleanSucceed | TestSucceed | TestFailed | BuildFailed => {
+                BuildSucceed | CleanSucceed | TestSucceed | TestFailed => {
                     continue;
                 }
                 step => step.to_string().trim().to_string(),

@@ -4,11 +4,10 @@
 
 ## 👁 Overview 
 
-Xcode replacement-ish development environment for neovim. Supports building/watching/running
+A work in progress Xcode replacement-ish development environment for neovim. Supports building/watching/running
 xcode products, in addition to logging and auto-completion. It requires and recommends using
 [XcodeGen] as a way to configure and generate xcode projects without interacting with Xcode.
 
-It is still work in progress, if you have something in mind or found a bug open an issue.
 
 ## 🌝 Motivation
 
