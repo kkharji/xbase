@@ -6,7 +6,9 @@
 
 A *work in progress* Xcode replacement-ish development environment for neovim. [Xbase] currently supports building/watching/running xcode products, simulators, build/runtime, as well as some lsp support like auto-completion and code navigation. 
 
-NOTE: [Xbase] requires and recommends using [xcodegen] as a way to configure and generate xcode projects without interacting with Xcode. Future plans may include supporting [tuist] and barebone `package.swift`. However, a barebone .xcodeproj will never be supported.
+NOTE: Currently, [Xbase] requires and recommends using [xcodegen] as a way to configure and generate xcode projects without interacting with Xcode. 
+
+Checkout [Milestones](https://github.com/tami5/xbase/milestones) for planned future releases and features.
 
 
 ## 🌝 Motivation
