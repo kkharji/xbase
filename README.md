@@ -4,16 +4,16 @@
 
 ## 👁 Overview 
 
-A work in progress Xcode replacement-ish development environment for neovim. Supports building/watching/running
-xcode products, in addition to logging and auto-completion. It requires and recommends using
-[XcodeGen] as a way to configure and generate xcode projects without interacting with Xcode.
+A *work in progress* Xcode replacement-ish development environment for neovim. [Xbase] currently supports building/watching/running xcode products, simulators, build/runtime, as well as some lsp support like auto-completion and code navigation. 
+
+NOTE: [Xbase] requires and recommends using [xcodegen] as a way to configure and generate xcode projects without interacting with Xcode. Future plans may include supporting [tuist] and barebone `package.swift`. However, a barebone .xcodeproj will never be supported.
 
 
 ## 🌝 Motivation
 
 After purchasing a MacBook, I decided to get into iOS/macOS applications development. Though, coming from vim/shell development experience and being heavily keyboard driven, I could not handle the switch to closed sourced, opinionated, mouse-driven development environment. I tried workarounds such as [XVim2] and builtin vim emulator but still I'd catch myself often looking for my mouse. 
 
-Being a long time vim user and having previously develop few lua/nvim plugins, I decided to take sometime to invest in both creating a fairly complicated development environment for `xOS` and enrich my experience with [rust].
+Being a long time vim user and having previously develop few lua/nvim plugins, I decided to take sometime to invest in both simplify my development workflow for developing `xOS`stuff  and enrich my experience with [rust].
 
 ## 🌟 Features:
 
@@ -37,44 +37,19 @@ Being a long time vim user and having previously develop few lua/nvim plugins, I
     light resource use. I've been using xbase for a while now, usually 0.0% cpu and 0.1% memory.
 
 
-
-## Installation
-
-packer.nvim:
-
-```lua 
-use { 
-  'tami5/xbase', 
-    run = 'make install',
-    requires = {
-      "nvim-lua/plenary.nvim",
-      "nvim-telescope/telescope.nvim"
-    }
-}
-```
-
-`make install` would build all required binaries in addition to a lua library. The binaries will be moved to `path/to/repo/bin` and the lua library will be mvoed to `path/to/repo/lua/libxbase.so`.
-
 ## 🎮 Usage
 
-Currently, once you start a neovim instance where it has root has `project.yml`, the daemon server will auto-start if no instance is running, then the root will be registered for recompile-watch.
+TLDR:
+- Open xcode codebase with project.yml
+- Start coding
+- Use available actions which can be configure with shortcuts bellow
 
-From there, you have a telescope picker
+Once you start a neovim instance with a root containing `project.yml`, the daemon server will auto-start if no instance is running, and register the project once for recompile-watch, accpeting requests from clients. Currenlty, you should relay on pickers as means to interact with your deamon.
 
-```lua
-vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
-  pattern = { "*.m", "*.swift", "*.c", "*.yml" },
-  callback = function()
-    vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
-  end,
-})
--- so that on a new buffer it would work
-vim.keymap.set("n", "<leader>ef", require("xbase.pickers").actions, { buffer = true })
-```
-
-### Configuration (defaults)
+## ⚙️ Configuration
 ```lua 
-local defaults = {
+-- NOTE: Defaults
+{
   --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
   log_level = "debug",
   --- Default log buffer direction: { "horizontal", "vertical", "float" }
@@ -113,16 +88,22 @@ local defaults = {
 }
 ```
 
-## Preview
+## 🦾 Installation
 
-Watch build service. 
+packer.nvim:
 
-![](./media/statusline_watch.gif)
+```lua 
+use { 
+  'tami5/xbase', 
+    run = 'make install',
+    requires = {
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope.nvim"
+    }
+}
+```
 
-On error it opens a log buffer where you can inspect what went wrong, otherwise only the
-statusline get updated.
-
-> NOTE: this is using a custom feline provider located in `watch.lua`, pr is welcome for other statusline support.
+`make install` would build all required binaries in addition to a lua library. The binaries will be moved to `path/to/repo/bin` and the lua library will be mvoed to `path/to/repo/lua/libxbase.so`.
 
 ## Debugging
 
@@ -134,11 +115,21 @@ tail -f /tmp/xbase-daemon.log
 tail -f /tmp/xbase-server.log
 ```
 
+## Preview
 
-[XcodeGen]: https://github.com/yonaskolb/XcodeGen
+Watch build service. 
+
+![](./media/statusline_watch.gif)
+
+On error it opens a log buffer where you can inspect what went wrong, otherwise only the
+statusline get updated.
+
+[xcodegen]: https://github.com/yonaskolb/XcodeGen
 [sourcekit-lsp]: https://github.com/apple/sourcekit-lsp
-[xbase]: https://github.com/tami5/xbase
+[Xbase]: https://github.com/tami5/xbase
 [xcodebuild]: https://github.com/tami5/xcodebuild
 [feline]: https://github.com/feline-nvim/feline.nvim
 [XVim2]: https://github.com/XVimProject/XVim2
 [rust]: https://www.rust-lang.org
+[tuist]: https://github.com/tuist/tuist
+
