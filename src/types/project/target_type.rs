@@ -1,8 +1,7 @@
 use super::*;
 
-#[derive(Debug, Default, Deserialize, Serialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub enum ProjectTargetType {
-    #[default]
     #[serde(rename = "application")]
     Application,
     #[serde(rename = "application.on-demand-install-capable")]
@@ -57,6 +56,12 @@ pub enum ProjectTargetType {
     SystemExtension,
     #[serde(rename = "xpc-service")]
     XPCService,
+}
+
+impl Default for ProjectTargetType {
+    fn default() -> Self {
+        Self::Application
+    }
 }
 
 impl ProjectTargetType {

@@ -1,6 +1,3 @@
-#![feature(box_syntax)]
-#![feature(result_flattening)]
-
 #[cfg(feature = "compilation")]
 pub mod compile;
 

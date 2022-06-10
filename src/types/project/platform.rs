@@ -4,7 +4,7 @@ use std::str::FromStr;
 #[cfg(feature = "daemon")]
 use xcodebuild::parser::BuildSettings;
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub enum Platform {
     #[serde(rename = "iOS")]
     IOS,
@@ -14,8 +14,13 @@ pub enum Platform {
     TvOS,
     #[serde(rename = "macOS")]
     MacOS,
-    #[default]
     Unknown,
+}
+
+impl Default for Platform {
+    fn default() -> Self {
+        Self::Unknown
+    }
 }
 
 impl Platform {
