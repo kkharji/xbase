@@ -1,13 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Clone, Debug, strum::EnumString, Serialize, Deserialize)]
+#[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
 #[strum(ascii_case_insensitive)]
 pub enum BufferDirection {
-    #[default]
     Default,
     Vertical,
     Horizontal,
     TabEdit,
+}
+
+impl Default for BufferDirection {
+    fn default() -> Self {
+        Self::Default
+    }
 }
 
 #[cfg(feature = "daemon")]

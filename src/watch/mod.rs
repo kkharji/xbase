@@ -156,7 +156,7 @@ impl WatchService {
         let key = watchable.to_string();
         info!(r#"[WatchService] add("{key}")"#);
 
-        let other = self.listeners.insert(key, box (watchable));
+        let other = self.listeners.insert(key, Box::new(watchable));
         if let Some(watchable) = other {
             let key = watchable.to_string();
             error!("[WatchService] Watchable with key `{key}` already exists!")

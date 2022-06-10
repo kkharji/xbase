@@ -48,15 +48,18 @@ convertable!(Register);
 convertable!(RenameFile);
 convertable!(Drop);
 
-#[derive(
-    Default, Clone, Debug, serde::Serialize, serde::Deserialize, strum::Display, strum::EnumString,
-)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, strum::Display, strum::EnumString)]
 
 pub enum RequestOps {
     Watch,
     Stop,
-    #[default]
     Once,
+}
+
+impl Default for RequestOps {
+    fn default() -> Self {
+        Self::Once
+    }
 }
 
 impl RequestOps {

@@ -9,9 +9,7 @@ use std::{
 };
 use wax::Any;
 
-#[derive(Default)]
 pub enum EventKind {
-    #[default]
     None,
     FileCreated,
     FolderCreated,
@@ -20,6 +18,12 @@ pub enum EventKind {
     FileRenamed,
     FileRemoved,
     Other(NotifyEventKind),
+}
+
+impl Default for EventKind {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 #[derive(Default)]
