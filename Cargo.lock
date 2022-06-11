@@ -1672,7 +1672,7 @@ checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
 
 [[package]]
 name = "xbase"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1710,9 +1710,9 @@ dependencies = [
 
 [[package]]
 name = "xcodebuild"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "747a42b03340a5b1c2b8c30ca7a5e9b1258c7428ed9ce9b1f233ea37a4c6588a"
+checksum = "3c97aaa241577daa45fbd798b716ce123174f29c61544d172d9e3250f394e6cb"
 dependencies = [
  "anyhow",
  "async-stream",
