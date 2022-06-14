@@ -105,6 +105,7 @@ pub fn append_build_root<P: AsRef<Path> + Debug>(
     .collect::<Vec<String>>()
     .pipe(|extra| {
         args.extend(extra);
+        args.push("-allowProvisioningUpdates".to_string());
         args
     })
     .pipe(Ok)
