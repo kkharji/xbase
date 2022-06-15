@@ -1,7 +1,9 @@
 use super::{NvimClient, NvimConnection, NvimWindow};
 use crate::Result;
 use crate::{nvim::BufferDirection, util::fmt};
+use futures::StreamExt;
 use nvim_rs::{Buffer, Window};
+use xclog::XCLogger;
 
 pub struct Logger<'a> {
     pub nvim: &'a NvimClient,
@@ -39,6 +41,38 @@ impl<'a> Logger<'a> {
                 count => count,
             }
         })
+    }
+
+    /// Consume bulid logs via logging them to client
+    pub async fn consume_build_logs(
+        &mut self,
+        mut xclogger: XCLogger,
+        clear: bool,
+        open: bool,
+    ) -> Result<bool> {
+        let mut success = true;
+        // TODO(nvim): close log buffer if it is open for new direction
+        // Currently the buffer direction will be ignored if the buffer is opened already
+        if clear {
+            self.clear_content().await?;
+        }
+
+        // TODO(nvim): build log correct height
+        if open {
+            self.open_win().await?;
+        }
+
+        self.set_running(false).await?;
+
+        while let Some(line) = xclogger.next().await {
+            line.contains("FAILED").then(|| success = false);
+
+            self.append(line.to_string()).await?;
+        }
+
+        self.set_status_end(success, open).await?;
+
+        Ok(success)
     }
 
     // TODO(logger): always show current new logs in middle of the window

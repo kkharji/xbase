@@ -20,6 +20,7 @@ pub use {
 
 #[cfg(feature = "daemon")]
 use {
+    super::{BuildConfiguration, Device},
     crate::{error::EnsureOptional, state::State, xcodegen, Result},
     tokio::sync::MutexGuard,
 };
@@ -117,21 +118,54 @@ impl Project {
 
 #[cfg(feature = "daemon")]
 impl Project {
-    /// Generate compile commands for project
+    /// Generate compile commands for project via compiling all targets
     pub async fn generate_compile_commands(&self) -> Result<()> {
-        use crate::xcode::append_build_root;
-        use crate::CompileError;
-        use xclog::XCCompilationDatabase;
+        use xclog::{XCCompilationDatabase, XCCompileCommand};
 
-        let args = append_build_root(&self.root, None, vec!["clean".into(), "build".into()])?;
-        let compile_commands = XCCompilationDatabase::generate(&self.root, &args).await?;
+        tracing::info!("Generating compile commands ... ");
+        let mut compile_commands: Vec<XCCompileCommand> = vec![];
+        for (target, _) in self.targets.iter() {
+            let build_args = vec![
+                "clean".into(),
+                "build".into(),
+                "-scheme".into(),
+                // NOTE: does scheme name differ?
+                self.name.clone(),
+                "-target".into(),
+                target.to_string(),
+                "-configuration".into(),
+                // NOTE: Should configuration differ?
+                "Debug".into(),
+            ];
+            println!("{build_args:#?}");
+            let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
 
-        if compile_commands.is_empty() {
-            return Err(CompileError::Empty(self.root.clone()).into());
+            compile_db
+                .into_iter()
+                .for_each(|cmd| compile_commands.push(cmd));
         }
 
-        compile_commands.write(self.root.join(".compile")).await?;
+        tracing::info!("Compile Commands Generated");
+
+        let json = serde_json::to_vec_pretty(&compile_commands)?;
+        tokio::fs::write(self.root.join(".compile"), &json).await?;
 
         Ok(())
+    }
+
+    pub fn build_args(
+        &self,
+        build_config: &BuildConfiguration,
+        device: &Option<Device>,
+    ) -> Vec<String> {
+        let mut args = build_config.args(device);
+        // TODO: check if scheme isn't already defined!
+        args.extend_from_slice(&[
+            "-scheme".into(),
+            self.name.clone(),
+            "-allowProvisioningUpdates".into(),
+        ]);
+
+        args
     }
 }
