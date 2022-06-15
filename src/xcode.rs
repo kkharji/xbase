@@ -1,56 +1,13 @@
+use crate::nvim::Logger;
 use crate::types::BuildConfiguration;
-use crate::util::fs::get_build_cache_dir_with_config;
 use crate::Result;
-use crate::{nvim::Logger, util::fs::get_build_cache_dir};
-use async_stream::stream;
-use process_stream::{Stream, StreamExt};
+use process_stream::StreamExt;
 use std::path::Path;
 use tap::Pipe;
-use xcodebuild::{parser, runner::spawn};
+use xclog::XCLogger;
 
 #[cfg(feature = "daemon")]
 use std::fmt::Debug;
-
-#[cfg(feature = "daemon")]
-pub async fn stream_build<'a, P: 'a>(
-    root: P,
-    args: &'a Vec<String>,
-) -> Result<impl Stream<Item = String> + 'a>
-where
-    P: AsRef<Path>,
-{
-    let mut stream = spawn(root, args).await?;
-
-    Ok(Box::pin(stream! {
-        use xcodebuild::parser::Step::*;
-        while let Some(step) = stream.next().await {
-            let line = match step {
-                Exit(v) if v != 0 => {
-                    format!("[Exit] {v}")
-                }
-                BuildSucceed | CleanSucceed | TestSucceed | TestFailed => {
-                    continue;
-                }
-                step => step.to_string().trim().to_string(),
-            };
-            if !line.is_empty() {
-                for line in line.split("\n") {
-                    yield line.to_string();
-                }
-            }
-        }
-    }))
-}
-
-#[cfg(feature = "daemon")]
-pub async fn fresh_build<'a, P: AsRef<Path> + 'a + Debug>(
-    root: P,
-) -> Result<impl Stream<Item = parser::Step> + 'a> {
-    append_build_root(&root, None, vec!["clean".into(), "build".into()])?
-        .pipe(|args| spawn(root, args))
-        .await?
-        .pipe(Ok)
-}
 
 pub async fn build_with_logger<'a, P: AsRef<Path>>(
     logger: &mut Logger<'a>,
@@ -59,7 +16,8 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
     clear: bool,
     open: bool,
 ) -> Result<bool> {
-    let mut stream = crate::xcode::stream_build(root, args).await?;
+    let mut xclogger = XCLogger::new(root.as_ref(), args)?;
+    // let mut stream = crate::xcode::stream_build(root, args).await?;
 
     // TODO(nvim): close log buffer if it is open for new direction
     //
@@ -78,10 +36,10 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
 
     logger.set_running(false).await?;
 
-    while let Some(line) = stream.next().await {
+    while let Some(line) = xclogger.next().await {
         line.contains("FAILED").then(|| success = false);
 
-        logger.append(line).await?;
+        logger.append(line.to_string()).await?;
     }
 
     logger.set_status_end(success, open).await?;
@@ -95,9 +53,9 @@ pub fn append_build_root<P: AsRef<Path> + Debug>(
     mut args: Vec<String>,
 ) -> Result<Vec<String>> {
     if let Some(config) = config {
-        get_build_cache_dir_with_config(&root, config)?
+        crate::util::fs::get_build_cache_dir_with_config(&root, config)?
     } else {
-        get_build_cache_dir(&root)?
+        crate::util::fs::get_build_cache_dir(&root)?
     }
     .pipe(|path| format!("SYMROOT={path}|CONFIGURATION_BUILD_DIR={path}|BUILD_DIR={path}"))
     .split("|")
