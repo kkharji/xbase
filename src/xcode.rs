@@ -54,7 +54,7 @@ pub fn append_build_root<P: AsRef<Path> + Debug>(
     } else {
         crate::util::fs::get_build_cache_dir(&root)?
     }
-    .pipe(|path| format!("SYMROOT={path}|CONFIGURATION_BUILD_DIR={path}|BUILD_DIR={path}"))
+    .pipe(|path| format!("SYMROOT={path}|CONFIGURATION_BUILD_DIR={path}"))
     .split("|")
     .map(ToString::to_string)
     .collect::<Vec<String>>()

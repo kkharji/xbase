@@ -114,3 +114,24 @@ impl Project {
         Ok(())
     }
 }
+
+#[cfg(feature = "daemon")]
+impl Project {
+    /// Generate compile commands for project
+    pub async fn generate_compile_commands(&self) -> Result<()> {
+        use crate::xcode::append_build_root;
+        use crate::CompileError;
+        use xclog::XCCompilationDatabase;
+
+        let args = append_build_root(&self.root, None, vec!["clean".into(), "build".into()])?;
+        let compile_commands = XCCompilationDatabase::generate(&self.root, &args).await?;
+
+        if compile_commands.is_empty() {
+            return Err(CompileError::Empty(self.root.clone()).into());
+        }
+
+        compile_commands.write(self.root.join(".compile")).await?;
+
+        Ok(())
+    }
+}

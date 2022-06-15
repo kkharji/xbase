@@ -49,8 +49,8 @@ pub enum Error {
 
 #[derive(ThisError, Debug)]
 pub enum CompileError {
-    #[error("No compile commands generated for \n{0:#?}")]
-    NoCompileCommandsGenerated(PathBuf),
+    #[error("No compile commands generated for: {0:#?}")]
+    Empty(PathBuf),
 }
 
 #[derive(ThisError, Debug)]

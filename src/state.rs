@@ -45,6 +45,7 @@ pub struct State {
 #[cfg(feature = "server")]
 impl State {
     /// Get [`CompilationDatabase`] for a .compile file path.
+    /// TODO(server): support getting compile commands for header files
     pub fn compile_commands(&mut self, compile_filepath: &Path) -> Result<&XCCompilationDatabase> {
         tracing::debug!("Getting compile commands");
         if self.compile_commands.contains_key(compile_filepath) {

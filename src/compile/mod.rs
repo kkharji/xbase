@@ -6,35 +6,11 @@
 
 #[cfg(feature = "daemon")]
 use {
-    crate::{
-        client::Client,
-        error::{CompileError, XcodeGenError},
-        state::State,
-        util::pid,
-        xcodegen, Result,
-    },
+    crate::{client::Client, error::XcodeGenError, state::State, util::pid, xcodegen, Result},
     std::path::PathBuf,
     tap::Pipe,
     tokio::{fs::metadata, io::AsyncWriteExt, sync::MutexGuard},
 };
-
-#[cfg(feature = "daemon")]
-pub async fn update_compilation_file(root: &PathBuf) -> Result<()> {
-    // TODO(build): Ensure that build successed. check for Exit Code
-    use crate::xcode::append_build_root;
-    use xclog::XCCompilationDatabase;
-
-    let args = append_build_root(&root, None, vec!["clean".into(), "build".into()])?;
-    let compile_commands = XCCompilationDatabase::generate(&root, &args).await?;
-
-    if compile_commands.is_empty() {
-        return Err(CompileError::NoCompileCommandsGenerated(root.to_path_buf()).into());
-    }
-
-    compile_commands.write(root.join(".compile")).await?;
-
-    Ok(())
-}
 
 /// Ensure that buildServer.json exists in root directory.
 #[cfg(feature = "daemon")]
@@ -133,8 +109,7 @@ pub async fn ensure_server_support<'a>(
     }
 
     // The following command won't successed if this file doesn't exists
-
-    if let Err(err) = update_compilation_file(&root).await {
+    if let Err(err) = state.projects.get(&root)?.generate_compile_commands().await {
         "setup: fail to regenerate compilation database!"
             .pipe(|msg| state.clients.echo_err(&root, &name, msg))
             .await;

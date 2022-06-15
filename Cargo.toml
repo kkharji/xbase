@@ -30,7 +30,8 @@ server      = [
   "wax",
   "shell-words",
   "compilation",
-  "crossbeam-channel"
+  "crossbeam-channel",
+  "xclog"
   ]
 lua         = [ "mlua", "serial", "simctl", "lazy_static" ]
 serial      = [ "serde", "serde_json", "serde_yaml" ]
