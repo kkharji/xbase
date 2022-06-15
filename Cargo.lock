@@ -1827,12 +1827,13 @@ dependencies = [
  "url",
  "wax 0.4.0",
  "xclog",
- "xcodebuild",
 ]
 
 [[package]]
 name = "xclog"
-version = "0.2.3"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e188c949a043ac804dd087348d5ff845375062dbd16fb795fb1d81b908b7455"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1855,30 +1856,6 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "wax 0.5.0",
-]
-
-[[package]]
-name = "xcodebuild"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c97aaa241577daa45fbd798b716ce123174f29c61544d172d9e3250f394e6cb"
-dependencies = [
- "anyhow",
- "async-stream",
- "async-trait",
- "derive-deref-rs",
- "lazy_static",
- "parity-tokio-ipc",
- "paste",
- "process-stream",
- "shell-words",
- "tap",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
 ]
 
 [[package]]

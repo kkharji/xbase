@@ -2,7 +2,7 @@ use super::*;
 use std::str::FromStr;
 
 #[cfg(feature = "daemon")]
-use xcodebuild::parser::BuildSettings;
+use xclog::XCBuildSettings;
 
 #[derive(Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub enum Platform {
@@ -38,7 +38,7 @@ impl Platform {
     }
 
     #[cfg(feature = "daemon")]
-    pub fn get_from_settings(settings: &BuildSettings) -> Result<Platform> {
+    pub fn get_from_settings(settings: &XCBuildSettings) -> Result<Platform> {
         let display = &settings.platform_display_name;
         let value = if display.contains("Simulator") {
             display

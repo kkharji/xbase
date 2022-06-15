@@ -6,7 +6,7 @@ use crate::types::{BuildConfiguration, Device};
 use crate::Result;
 use process_stream::Process;
 use tap::Pipe;
-use xcodebuild::parser::BuildSettings;
+use xclog::XCBuildSettings;
 
 /// Runner to run the built binary
 pub enum RunMedium {
@@ -17,7 +17,7 @@ pub enum RunMedium {
 impl RunMedium {
     pub fn from_device_or_settings(
         device: Option<Device>,
-        settings: BuildSettings,
+        settings: XCBuildSettings,
         config: BuildConfiguration,
     ) -> Result<Self> {
         match device {
@@ -45,7 +45,7 @@ impl RunMedium {
         }
     }
 
-    pub fn info(&self) -> &BuildSettings {
+    pub fn info(&self) -> &XCBuildSettings {
         match self {
             RunMedium::Simulator(s) => s.info(),
             RunMedium::Bin(b) => b.info(),

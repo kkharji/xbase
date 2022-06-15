@@ -7,19 +7,23 @@ use crate::{
 use process_stream::Process;
 use std::path::PathBuf;
 use tap::Pipe;
-use xcodebuild::parser::BuildSettings;
+use xclog::XCBuildSettings;
 
 /// Simulator Device runner
 #[derive(derive_deref_rs::Deref)]
 pub struct Simulator {
     #[deref]
     device: Device,
-    info: BuildSettings,
+    info: XCBuildSettings,
     config: BuildConfiguration,
 }
 
 impl Simulator {
-    pub fn new(device: Device, build_settings: BuildSettings, config: BuildConfiguration) -> Self {
+    pub fn new(
+        device: Device,
+        build_settings: XCBuildSettings,
+        config: BuildConfiguration,
+    ) -> Self {
         Self {
             device,
             config,
@@ -119,7 +123,7 @@ impl Simulator {
 
     /// Get a reference to the simulator's info.
     #[must_use]
-    pub fn info(&self) -> &BuildSettings {
+    pub fn info(&self) -> &XCBuildSettings {
         &self.info
     }
 

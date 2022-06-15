@@ -9,7 +9,7 @@ use crate::{
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
-use xcodebuild::runner::build_settings;
+use xclog::XCBuildSettings;
 use {super::handler::RunServiceHandler, super::meduim::RunMedium};
 
 /// Run Service
@@ -44,7 +44,7 @@ impl RunService {
         logger.set_title(format!("Build:{target}"));
         logger.set_direction(&req.direction);
 
-        let build_settings = build_settings(root, &build_args).await?;
+        let build_settings = XCBuildSettings::new(root, &build_args).await?;
 
         if !build_with_logger(logger, root, &build_args, false, false).await? {
             let msg = format!("Failed: {}", req.config);
