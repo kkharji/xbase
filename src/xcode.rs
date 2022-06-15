@@ -16,11 +16,10 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
     clear: bool,
     open: bool,
 ) -> Result<bool> {
+    let mut success = true;
     let mut xclogger = XCLogger::new(root.as_ref(), args)?;
-    // let mut stream = crate::xcode::stream_build(root, args).await?;
 
     // TODO(nvim): close log buffer if it is open for new direction
-    //
     // Currently the buffer direction will be ignored if the buffer is opened already
 
     if clear {
@@ -31,8 +30,6 @@ pub async fn build_with_logger<'a, P: AsRef<Path>>(
     if open {
         logger.open_win().await?;
     }
-
-    let mut success = true;
 
     logger.set_running(false).await?;
 

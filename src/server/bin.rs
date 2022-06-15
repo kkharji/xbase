@@ -15,10 +15,11 @@ fn main() -> Result<()> {
 
     conn.initialize(|params| {
         let res = BuildServer::new(&params).expect("Initialize");
-        tracing::info!("Initialized");
         server = res.1;
         res.0
     })?;
+
+    tracing::info!("Initialized");
 
     for msg in &conn.receiver {
         if let Message::Request(ref req) = msg {
