@@ -29,7 +29,7 @@ end
 local insert_entry = function(acc, picker, command, target, configuration, device)
   local item = {
     command = command,
-    config = { target = target, configuration = configuration },
+    settings = { target = target, configuration = configuration },
   }
 
   if command == "Run" then
@@ -37,7 +37,7 @@ local insert_entry = function(acc, picker, command, target, configuration, devic
   end
 
   if picker == "Watch" then
-    if util.is_watching(item.config, command, item.device) then
+    if util.is_watching(item.settings, command, item.device) then
       item.ops = "Stop"
       item.kind = command
     else
@@ -95,8 +95,8 @@ local get_selections = function(picker)
 end
 
 local entry_maker = function(entry)
-  local config = ("(%s)"):format(entry.config.configuration)
-  local target = entry.config.target
+  local config = ("(%s)"):format(entry.settings.configuration)
+  local target = entry.settings.target
   local device
   entry.ordinal = ""
 
