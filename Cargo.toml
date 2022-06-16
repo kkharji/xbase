@@ -1,4 +1,11 @@
 [workspace]
 members = [
-  "crates/*",
+  # Shared protocol
+  "proto",
+  # sourcekit build server helper
+  "sourcekit",
+  # Main xbase daemon
+  "daemon",
+  # library to communicate with the daemon
+  "lualib",
 ]

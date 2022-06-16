@@ -11,13 +11,13 @@ lint:
 	nix-shell -p lua51Packages.luacheck --command 'luacheck lua/xbase && exit 0 || exit 1'
 
 watchlua:
-	cargo watch -x 'build -p xbase-lualib' -w 'crates/lualib/' -c
+	cargo watch -x 'build -p xbase-lualib' -w 'lualib' -c
 
 watchdaemon:
-	RUST_LOG="xbase=trace" cargo watch -x 'run -p xbase-daemon' -w 'crates/daemon' -c
+	RUST_LOG="xbase=trace" cargo watch -x 'run -p xbase-daemon' -w 'daemon' -c
 
 watchserver:
-	RUST_LOG="trace" cargo watch -x 'build -p xbase-sourcekit-helper' -w 'crates/sourcekit/' -c
+	RUST_LOG="trace" cargo watch -x 'build -p xbase-sourcekit-helper' -w 'sourcekit' -c
 
 clean:
 	rm -rf bin;
