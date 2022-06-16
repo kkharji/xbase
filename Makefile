@@ -21,29 +21,29 @@ watchdaemon:
 	RUST_LOG="xbase=trace" cargo watch -x 'run --bin xbase-daemon --features=daemon' -w 'src' -w 'Cargo.toml' -c
 
 watchserver:
-	RUST_LOG="trace" cargo watch -x 'build --bin xbase-server --features=server' -w 'src' -w 'Cargo.toml' -c
+	RUST_LOG="trace" cargo watch -x 'build -p xbase-sourcekit-helper' -w 'crates/sourcekit/' -c
 
 clean:
 	rm -rf bin;
 	rm -rf lua/libxbase.so
-	
+
 install: clean
 	mkdir bin
-	cargo build --release --bin xbase-server --features=server 
-	cargo build --release --bin xbase-daemon --features=daemon 
+	cargo build --release -p xbase-sourcekit-helper
+	cargo build --release --bin xbase-daemon --features=daemon
 	cargo build --release -p libxbase
 	mv target/release/xbase-daemon       ./bin/xbase-daemon
-	mv target/release/xbase-server       ./bin/xbase-server
+	ln -sf ../target/debug/xbase-sourcekit-helper ./bin/xbase-sourcekit-helper
 	mv target/release/liblibxbase.dylib  ./lua/libxbase.so
 	cargo clean # NOTE: 3.2 GB must be cleaned up
 	echo "DONE"
 
 install_debug: clean
 	mkdir bin
-	cargo build --bin xbase-server --features=server 
-	cargo build --bin xbase-daemon --features=daemon 
+	cargo build -p xbase-sourcekit-helper
+	cargo build --bin xbase-daemon --features=daemon
 	cargo build -p libxbase
 	ln -sf ../target/debug/xbase-daemon  ./bin/xbase-daemon
-	ln -sf ../target/debug/xbase-server  ./bin/xbase-server
+	ln -sf ../target/debug/xbase-sourcekit-helper ./bin/xbase-sourcekit-helper
 	ln -sf ../target/debug/liblibxbase.dylib ./lua/libxbase.so
 	echo "DONE"

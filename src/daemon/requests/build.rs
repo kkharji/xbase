@@ -1,5 +1,3 @@
-use xclog::XCLogger;
-
 use super::*;
 use crate::{nvim::BufferDirection, types::BuildConfiguration};
 use std::fmt::Debug;
@@ -11,6 +9,7 @@ use {
     crate::util::serde::value_or_default,
     crate::watch::{Event, Watchable},
     tokio::sync::MutexGuard,
+    xclog::XCLogger,
 };
 
 /// Build a project.

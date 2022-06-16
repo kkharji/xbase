@@ -1,8 +1,9 @@
-use bsp_server::{types::BuildTargetIdentifier, Message, Notification, RequestId, Response};
+use bsp_server::{
+    types::{BuildTargetIdentifier, Url},
+    Message, Notification, RequestId, Response,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tap::Pipe;
-use url::Url;
 
 /// Request to register or unregister changes in file options or dependencies.
 #[derive(Debug, Deserialize, Serialize)]
@@ -89,14 +90,13 @@ pub struct OptionsChangedNotification {
 
 impl OptionsChangedNotification {
     pub fn new(uri: Url, options: Vec<String>, working_directory: Option<Url>) -> Self {
-        OptionsResponse {
-            options,
-            working_directory,
-        }
-        .pipe(|updated_options| Self {
+        Self {
             uri,
-            updated_options,
-        })
+            updated_options: OptionsResponse {
+                options,
+                working_directory,
+            },
+        }
     }
 }
 
@@ -156,6 +156,7 @@ pub struct BuildTargetOutputPaths {
 }
 
 impl BuildTargetOutputPaths {
+    #[allow(dead_code)]
     pub fn new(target: BuildTargetIdentifier, output_paths: Vec<Url>) -> Self {
         Self {
             target,

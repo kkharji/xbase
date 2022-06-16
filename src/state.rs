@@ -1,31 +1,15 @@
-#[cfg(feature = "server")]
-use {
-    crate::error::EnsureOptional,
-    xclog::{XCCompilationDatabase, XCCompileArgs, XCCompileCommand},
-};
-
-#[cfg(feature = "server")]
-use std::collections::HashMap;
-
-#[cfg(feature = "server")]
-use std::path::Path;
-
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 use crate::Result;
 
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 use std::path::PathBuf;
 
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 use tap::Pipe;
 
 /// Build Server State.
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
 pub struct State {
-    #[cfg(feature = "server")]
-    pub compile_commands: HashMap<PathBuf, XCCompilationDatabase>,
-    #[cfg(feature = "server")]
-    pub file_flags: HashMap<PathBuf, XCCompileArgs>,
     /// Managed Workspaces
     #[cfg(feature = "daemon")]
     pub projects: crate::store::ProjectStore,
@@ -40,64 +24,6 @@ pub struct State {
     // pub runners: crate::store::WatchStore,
     #[cfg(feature = "daemon")]
     pub devices: crate::store::Devices,
-}
-
-#[cfg(feature = "server")]
-impl State {
-    /// Get [`CompilationDatabase`] for a .compile file path.
-    /// TODO(server): support getting compile commands for header files
-    pub fn compile_commands(&mut self, compile_filepath: &Path) -> Result<&XCCompilationDatabase> {
-        tracing::debug!("Getting compile commands");
-        if self.compile_commands.contains_key(compile_filepath) {
-            tracing::debug!("Using Cached compile database");
-            self.compile_commands.get(compile_filepath)
-        } else {
-            tracing::debug!("Reading from {compile_filepath:?}");
-            XCCompilationDatabase::try_from_filepath(compile_filepath)?
-                .pipe(|cmds| self.compile_commands.insert(compile_filepath.into(), cmds))
-                .pipe(|_| self.compile_commands.get(compile_filepath))
-        }
-        .to_result("CompilationDatabase", compile_filepath)
-    }
-
-    /// Get [`CompileFlags`] for a file
-    pub fn get_compile_args_for_filepath(
-        &mut self,
-        filepath: &Path,
-        compile_filepath: Option<&PathBuf>,
-    ) -> Result<&XCCompileArgs> {
-        tracing::debug!("Getting arguments");
-        if let Some(compile_filepath) = compile_filepath {
-            if self.file_flags.contains_key(filepath) {
-                tracing::debug!("Using Cache ...");
-                self.file_flags.get(filepath)
-            } else {
-                tracing::debug!("Queriying ...");
-                let compile_database = self.compile_commands(compile_filepath)?;
-                let file_flags = compile_database
-                    .iter()
-                    .flat_map(XCCompileCommand::compile_flags)
-                    .flatten()
-                    .collect::<HashMap<_, _>>();
-
-                self.file_flags.extend(file_flags);
-                self.file_flags.get(filepath)
-            }
-        } else {
-            tracing::debug!("Searching source code for compile args");
-
-            XCCompileArgs::try_from_filepath(filepath)?
-                .pipe(|args| self.file_flags.insert(filepath.to_path_buf(), args))
-                .pipe(|_| self.file_flags.get(filepath))
-        }
-        .to_result("XCCompileArgs", filepath)
-    }
-
-    /// Clear [`BuildServerState`]
-    pub fn clear(&mut self) {
-        self.file_flags = Default::default();
-        self.compile_commands = Default::default();
-    }
 }
 
 #[cfg(feature = "daemon")]

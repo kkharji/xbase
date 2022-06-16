@@ -30,7 +30,8 @@ pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
         json!({
             "name": "Xbase",
             "argv": [SERVER_BINARY_PATH],
-            "version": "0.1",
+            // TODO(daemon): if buildServer.version ~= 0.2 it should be removed and regenerated
+            "version": "0.2",
             "bspVersion": "0.2",
             "languages": ["swift", "objective-c", "objective-cpp", "c", "cpp"]
         })

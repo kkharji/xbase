@@ -35,16 +35,6 @@ pub enum Error {
     Run(String),
     #[error("[Error] (Message) {0}")]
     Message(String),
-    #[error("[Error] (send) {0}")]
-    #[cfg(feature = "server")]
-    Channel(#[from] crossbeam_channel::SendError<bsp_server::Message>),
-    #[cfg(feature = "server")]
-    #[error("[Error] (BSP) {0}")]
-    BspServer(#[from] bsp_server::ProtocolError),
-    #[cfg(feature = "server")]
-    #[error("[Error] (Lock) {0}")]
-    Lock(String),
-    #[cfg(feature = "daemon")]
     #[error("[Error] (Watcher) {0}")]
     NotifyWatch(#[from] notify::Error),
 }
@@ -97,7 +87,6 @@ pub enum ConversionError {
     ToString,
 }
 
-#[cfg(feature = "daemon")]
 impl From<simctl::Error> for Error {
     fn from(e: simctl::Error) -> Self {
         use tap::Pipe;
@@ -118,10 +107,8 @@ impl From<simctl::Error> for Error {
     }
 }
 
-#[cfg(feature = "daemon")]
 use nvim_rs::error::{CallError as NvimCallError, LoopError as NvimLoopError};
 
-#[cfg(feature = "daemon")]
 impl From<Box<NvimCallError>> for Error {
     fn from(e: Box<NvimCallError>) -> Self {
         use nvim_rs::error::*;
@@ -148,7 +135,6 @@ impl From<Box<NvimCallError>> for Error {
     }
 }
 
-#[cfg(feature = "daemon")]
 impl From<NvimLoopError> for Error {
     fn from(e: NvimLoopError) -> Self {
         use nvim_rs::error::*;

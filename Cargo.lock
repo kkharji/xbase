@@ -1809,7 +1809,6 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "bsp-server",
  "crossbeam-channel",
  "derive-deref-rs",
  "dirs",
@@ -1839,10 +1838,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "xbase-sourcekit-helper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bsp-server",
+ "dirs",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tap",
+ "tracing 0.1.0",
+ "xclog",
+]
+
+[[package]]
 name = "xclog"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d3428ce8e66bcd0f415c8eb01a1096c5d7e3d36b70788596517f922e9335fb6"
+checksum = "c6053a2608afa77fb746e9a4127d18318b88f345eaaecac3630069940b0f8d63"
 dependencies = [
  "anyhow",
  "async-stream",

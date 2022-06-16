@@ -1,13 +1,13 @@
 //! Functions to query filesystem for files and directories
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 use anyhow::Result;
 use std::path::Path;
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 use std::path::PathBuf;
 use tap::Pipe;
 
 /// Get all files in SwiftFileList file.
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 pub fn get_files_list<T, P>(file_lists: P) -> Result<Vec<T>>
 where
     T: From<String>,
@@ -34,7 +34,7 @@ where
         .pipe(Some)
 }
 
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 pub fn _get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(
     root_path: P,
     config: Option<&crate::types::BuildConfiguration>,
@@ -64,12 +64,12 @@ pub fn _get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(
         .ok_or_else(|| anyhow::anyhow!("Fail to generate build_cache directory for {root_path:?}"))
 }
 
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 pub fn get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(root_path: P) -> Result<String> {
     _get_build_cache_dir(root_path, None)
 }
 
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 pub fn get_build_cache_dir_with_config<P: AsRef<Path> + std::fmt::Debug>(
     root_path: P,
     config: &crate::types::BuildConfiguration,
@@ -79,7 +79,7 @@ pub fn get_build_cache_dir_with_config<P: AsRef<Path> + std::fmt::Debug>(
 
 /// Find All swift files in a directory.
 #[tracing::instrument(skip_all)]
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 pub fn find_swift_files(project_root: &Path) -> Result<Vec<String>> {
     wax::walk("**/*.swift", project_root, usize::MAX)?
         .enumerate()
@@ -96,7 +96,7 @@ pub fn find_swift_files(project_root: &Path) -> Result<Vec<String>> {
 
 /// Is the given directory is a directory and has .git?
 #[tracing::instrument(skip_all)]
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 fn is_project_root(directory: &Path) -> bool {
     if directory.is_dir() {
         directory.join(".git").exists()
@@ -108,7 +108,7 @@ fn is_project_root(directory: &Path) -> bool {
 
 /// Find Header directory and frameworks from path.
 #[tracing::instrument(ret, skip_all)]
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 pub fn find_header_dirs(root: &Path) -> Result<(Vec<String>, Vec<String>)> {
     wax::walk("**/*.h", root, usize::MAX)?
         .flatten()
@@ -141,7 +141,7 @@ pub fn find_header_dirs(root: &Path) -> Result<(Vec<String>, Vec<String>)> {
 
 /// Find directory, swiftflags and comple file from a path to file within a project.
 #[tracing::instrument(skip_all)]
-#[cfg(any(feature = "server", feature = "daemon"))]
+#[cfg(feature = "daemon")]
 pub fn find_swift_module_root(
     file_path: &Path,
 ) -> (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) {
