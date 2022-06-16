@@ -21,6 +21,7 @@ pub use {
 #[cfg(feature = "daemon")]
 use {
     super::{BuildConfiguration, Device},
+    crate::util::fs::{get_build_cache_dir, get_build_cache_dir_with_config},
     crate::{error::EnsureOptional, state::State, xcodegen, Result},
     tokio::sync::MutexGuard,
 };
@@ -124,26 +125,24 @@ impl Project {
 
         tracing::info!("Generating compile commands ... ");
         let mut compile_commands: Vec<XCCompileCommand> = vec![];
-        for (target, _) in self.targets.iter() {
-            let build_args = vec![
-                "clean".into(),
-                "build".into(),
-                "-scheme".into(),
-                // NOTE: does scheme name differ?
-                self.name.clone(),
-                "-target".into(),
-                target.to_string(),
-                "-configuration".into(),
-                // NOTE: Should configuration differ?
-                "Debug".into(),
-            ];
-            println!("{build_args:#?}");
-            let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
+        let cache_root = get_build_cache_dir(&self.root)?;
+        // Because xcodebuild clean can't remove it
+        tokio::fs::remove_dir_all(&cache_root).await?;
 
-            compile_db
-                .into_iter()
-                .for_each(|cmd| compile_commands.push(cmd));
-        }
+        let build_args: Vec<String> = vec![
+            "clean".into(),
+            "build".into(),
+            format!("SYMROOT={cache_root}"),
+            "-configuration".into(),
+            "Debug".into(),
+            "-allowProvisioningUpdates".into(),
+        ];
+        println!("{build_args:#?}");
+        let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
+
+        compile_db
+            .into_iter()
+            .for_each(|cmd| compile_commands.push(cmd));
 
         tracing::info!("Compile Commands Generated");
 
@@ -157,15 +156,17 @@ impl Project {
         &self,
         build_config: &BuildConfiguration,
         device: &Option<Device>,
-    ) -> Vec<String> {
+    ) -> Result<Vec<String>> {
         let mut args = build_config.args(device);
         // TODO: check if scheme isn't already defined!
         args.extend_from_slice(&[
-            "-scheme".into(),
-            self.name.clone(),
+            format!(
+                "SYMROOT={}",
+                get_build_cache_dir_with_config(&self.root, build_config)?
+            ),
             "-allowProvisioningUpdates".into(),
         ]);
 
-        args
+        Ok(args)
     }
 }

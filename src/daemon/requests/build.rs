@@ -54,7 +54,7 @@ impl Watchable for BuildRequest {
         tracing::info!("Building {}", self.client.abbrev_root());
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.config);
-        let args = state.projects.get(root)?.build_args(&config, &None);
+        let args = state.projects.get(root)?.build_args(&config, &None)?;
 
         let nvim = self.client.nvim(state)?;
         let ref mut logger = nvim.logger();

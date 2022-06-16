@@ -31,7 +31,7 @@ impl RunService {
         let target = req.config.target.clone();
         let ref root = req.client.root;
         let device = state.devices.from_lookup(req.device);
-        let build_args = state.projects.get(root)?.build_args(&req.config, &device);
+        let build_args = state.projects.get(root)?.build_args(&req.config, &device)?;
         let nvim = req.client.nvim(state)?;
 
         let ref mut logger = nvim.logger();
@@ -77,7 +77,7 @@ impl Watchable for RunService {
 
         let (root, config) = (&self.client.root, &self.medium.config());
         let mut handler = self.handler.clone().lock_owned().await;
-        let mut args = state.projects.get(root)?.build_args(&config, &None);
+        let mut args = state.projects.get(root)?.build_args(&config, &None)?;
 
         if let RunMedium::Simulator(ref sim) = self.medium {
             args.extend(sim.special_build_args())
