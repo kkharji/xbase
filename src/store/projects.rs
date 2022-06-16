@@ -39,7 +39,7 @@ impl ProjectStore {
             .ok_or_else(|| LoopError::NoProject(root.into()).into())
     }
 
-    pub fn get(&mut self, root: &PathBuf) -> Result<&Project> {
+    pub fn get(&self, root: &PathBuf) -> Result<&Project> {
         self.0
             .get(root)
             .ok_or_else(|| LoopError::NoProject(root.into()).into())

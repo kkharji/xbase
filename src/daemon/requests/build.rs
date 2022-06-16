@@ -1,3 +1,5 @@
+use xclog::XCLogger;
+
 use super::*;
 use crate::{nvim::BufferDirection, types::BuildConfiguration};
 use std::fmt::Debug;
@@ -8,7 +10,6 @@ use {
     crate::state::State,
     crate::util::serde::value_or_default,
     crate::watch::{Event, Watchable},
-    crate::xcode::build_with_logger,
     tokio::sync::MutexGuard,
 };
 
@@ -53,7 +54,7 @@ impl Watchable for BuildRequest {
         tracing::info!("Building {}", self.client.abbrev_root());
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.config);
-        let args = config.args(root, &None)?;
+        let args = state.projects.get(root)?.build_args(&config, &None)?;
 
         let nvim = self.client.nvim(state)?;
         let ref mut logger = nvim.logger();
@@ -65,8 +66,9 @@ impl Watchable for BuildRequest {
         ));
 
         tracing::trace!("building with [{}]", args.join(" "));
+        let xclogger = XCLogger::new(&root, args)?;
+        let success = logger.consume_build_logs(xclogger, false, is_once).await?;
 
-        let success = build_with_logger(logger, root, &args, false, is_once).await?;
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(msg).await?;

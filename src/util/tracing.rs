@@ -19,6 +19,7 @@ pub fn install_tracing(
         .with_writer(rolling::never(root, filename))
         .with_target(true)
         .with_file(false)
+        .without_time()
         .with_thread_names(false)
         .with_thread_ids(false)
         .with_ansi(false);
@@ -26,6 +27,7 @@ pub fn install_tracing(
         .with_writer(io::stdout)
         .with_target(true)
         .with_line_number(true)
+        .without_time()
         .with_file(false);
 
     if with_stdout {

@@ -20,9 +20,6 @@ mod client;
 #[cfg(any(feature = "daemon", feature = "lua"))]
 mod nvim;
 
-#[cfg(feature = "daemon")]
-mod xcode;
-
 pub mod constants;
 pub mod state;
 pub mod store;

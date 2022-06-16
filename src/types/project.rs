@@ -20,6 +20,8 @@ pub use {
 
 #[cfg(feature = "daemon")]
 use {
+    super::{BuildConfiguration, Device},
+    crate::util::fs::{get_build_cache_dir, get_build_cache_dir_with_config},
     crate::{error::EnsureOptional, state::State, xcodegen, Result},
     tokio::sync::MutexGuard,
 };
@@ -112,5 +114,59 @@ impl Project {
     ) -> Result<()> {
         state.watcher.get_mut(&self.root)?.listeners.clear();
         Ok(())
+    }
+}
+
+#[cfg(feature = "daemon")]
+impl Project {
+    /// Generate compile commands for project via compiling all targets
+    pub async fn generate_compile_commands(&self) -> Result<()> {
+        use xclog::{XCCompilationDatabase, XCCompileCommand};
+
+        tracing::info!("Generating compile commands ... ");
+        let mut compile_commands: Vec<XCCompileCommand> = vec![];
+        let cache_root = get_build_cache_dir(&self.root)?;
+        // Because xcodebuild clean can't remove it
+        tokio::fs::remove_dir_all(&cache_root).await?;
+
+        let build_args: Vec<String> = vec![
+            "clean".into(),
+            "build".into(),
+            format!("SYMROOT={cache_root}"),
+            "-configuration".into(),
+            "Debug".into(),
+            "-allowProvisioningUpdates".into(),
+        ];
+        println!("{build_args:#?}");
+        let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
+
+        compile_db
+            .into_iter()
+            .for_each(|cmd| compile_commands.push(cmd));
+
+        tracing::info!("Compile Commands Generated");
+
+        let json = serde_json::to_vec_pretty(&compile_commands)?;
+        tokio::fs::write(self.root.join(".compile"), &json).await?;
+
+        Ok(())
+    }
+
+    pub fn build_args(
+        &self,
+        build_config: &BuildConfiguration,
+        device: &Option<Device>,
+    ) -> Result<Vec<String>> {
+        let mut args = build_config.args(device);
+        // TODO: check if scheme isn't already defined!
+        args.extend_from_slice(&[
+            format!(
+                "SYMROOT={}",
+                get_build_cache_dir_with_config(&self.root, build_config)?
+            ),
+            "-allowProvisioningUpdates".into(),
+        ]);
+
+        Ok(args)
     }
 }

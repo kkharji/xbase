@@ -3,13 +3,12 @@ use crate::{
     daemon::RunRequest,
     state::State,
     watch::{Event, Watchable},
-    xcode::build_with_logger,
     Error, Result,
 };
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
-use xcodebuild::runner::build_settings;
+use xclog::{XCBuildSettings, XCLogger};
 use {super::handler::RunServiceHandler, super::meduim::RunMedium};
 
 /// Run Service
@@ -32,7 +31,7 @@ impl RunService {
         let target = req.config.target.clone();
         let ref root = req.client.root;
         let device = state.devices.from_lookup(req.device);
-        let build_args = req.config.args(root, &device)?;
+        let build_args = state.projects.get(root)?.build_args(&req.config, &device)?;
         let nvim = req.client.nvim(state)?;
 
         let ref mut logger = nvim.logger();
@@ -44,9 +43,11 @@ impl RunService {
         logger.set_title(format!("Build:{target}"));
         logger.set_direction(&req.direction);
 
-        let build_settings = build_settings(root, &build_args).await?;
+        let build_settings = XCBuildSettings::new(root, &build_args).await?;
+        let xclogger = XCLogger::new(&root, build_args)?;
+        let success = logger.consume_build_logs(xclogger, false, false).await?;
 
-        if !build_with_logger(logger, root, &build_args, false, false).await? {
+        if !success {
             let msg = format!("Failed: {}", req.config);
             nvim.echo_err(&msg).await?;
             return Err(Error::Build(msg));
@@ -76,7 +77,7 @@ impl Watchable for RunService {
 
         let (root, config) = (&self.client.root, &self.medium.config());
         let mut handler = self.handler.clone().lock_owned().await;
-        let mut args = config.args(root, &None)?;
+        let mut args = state.projects.get(root)?.build_args(&config, &None)?;
 
         if let RunMedium::Simulator(ref sim) = self.medium {
             args.extend(sim.special_build_args())
@@ -89,8 +90,10 @@ impl Watchable for RunService {
         let ref mut logger = nvim.logger();
 
         logger.set_title(format!("Run:{}", config.target));
+        let xclogger = XCLogger::new(&root, args)?;
+        let success = logger.consume_build_logs(xclogger, false, false).await?;
 
-        if !build_with_logger(logger, root, &args, false, false).await? {
+        if !success {
             let ref msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(msg).await?;
         };

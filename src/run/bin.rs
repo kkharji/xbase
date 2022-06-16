@@ -3,16 +3,16 @@ use crate::types::BuildConfiguration;
 use crate::{Error, Result};
 use process_stream::Process;
 use std::path::PathBuf;
-use xcodebuild::parser::BuildSettings;
+use xclog::XCBuildSettings;
 
 pub struct Bin {
     path: PathBuf,
-    info: BuildSettings,
+    info: XCBuildSettings,
     config: BuildConfiguration,
 }
 
 impl Bin {
-    pub fn new(info: BuildSettings, config: BuildConfiguration) -> Self {
+    pub fn new(info: XCBuildSettings, config: BuildConfiguration) -> Self {
         Self {
             path: info.path_to_output_binary().unwrap_or_default(),
             info,
@@ -30,7 +30,7 @@ impl Bin {
 
     /// Get a reference to the bin's info.
     #[must_use]
-    pub fn info(&self) -> &BuildSettings {
+    pub fn info(&self) -> &XCBuildSettings {
         &self.info
     }
 

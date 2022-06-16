@@ -68,10 +68,7 @@ impl WatchService {
 
                 let ensure = client.ensure_server_support(state, Some(event.path()));
 
-                if let Err(e) = ensure.await {
-                    let ref msg = format!("Fail to recompile {e}");
-                    client.echo_err(state, name, msg).await;
-                } else {
+                if ensure.await.is_ok() {
                     client.echo_msg(state, name, "recompiled").await;
                     debug!("[WatchService] project {name:?} recompiled successfully");
                 }

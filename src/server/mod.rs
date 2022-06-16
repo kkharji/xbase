@@ -30,7 +30,6 @@ pub struct BuildServer {
 
 impl BuildServer {
     /// Create a new instance of BuildServer
-    #[tracing::instrument(skip_all, name = "InitializeServer")]
     pub fn new(params: &InitializeBuild) -> Result<(InitializeBuild, Self)> {
         let root_path = params.root_path();
         let config_filepath = root_path.join("buildServer.json");
@@ -55,7 +54,6 @@ impl BuildServer {
         id: RequestId,
         params: OptionsChangedRequest,
     ) -> Result<()> {
-        tracing::info!("Handling");
         // Empty response, ensure response before notification
         conn.send(Response::ok(id, Value::Null))?;
         if !matches!(params.action, RegisterAction::Register) {
@@ -64,10 +62,11 @@ impl BuildServer {
         }
 
         let filepath = params.uri.path();
-        let root = self.root_path.pipe_ref(Url::from_directory_path).ok();
-        let flags = self.file_flags(filepath)?;
 
-        tracing::info!("{filepath}");
+        tracing::info!("{filepath:?}");
+
+        let root = self.root_path.pipe_ref(Url::from_directory_path).ok();
+        let flags = self.get_compile_args_for_filepath(filepath)?;
 
         let notification: Message =
             OptionsChangedNotification::new(params.uri, flags, root).try_into()?;
@@ -88,7 +87,7 @@ impl BuildServer {
         tracing::info!("{filepath}");
 
         let root = self.root_path.pipe_ref(Url::from_directory_path).ok();
-        let flags = self.file_flags(filepath)?;
+        let flags = self.get_compile_args_for_filepath(filepath)?;
         let response = OptionsResponse::new(flags, root).as_response(id);
 
         conn.send(response)?;
@@ -164,13 +163,13 @@ impl BuildServer {
 }
 
 impl BuildServer {
-    fn file_flags(&mut self, uri: &str) -> Result<Vec<String>> {
+    fn get_compile_args_for_filepath(&mut self, uri: &str) -> Result<Vec<String>> {
         let build_target_path = uri.pipe(PathBuf::from);
         let compile_filepath = self.compile_filepath.as_ref();
 
         match crate::constants::SERVER_STATE.clone().lock() {
             Ok(mut state) => state
-                .file_flags(&build_target_path, compile_filepath)?
+                .get_compile_args_for_filepath(&build_target_path, compile_filepath)?
                 .to_vec()
                 .pipe(Result::Ok),
             Err(err) => {

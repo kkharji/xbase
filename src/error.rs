@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use thiserror::Error as ThisError;
-use xcodebuild::parser::Step;
 
 #[derive(ThisError, Debug)]
 pub enum Error {
@@ -50,8 +49,8 @@ pub enum Error {
 
 #[derive(ThisError, Debug)]
 pub enum CompileError {
-    #[error("No compile commands generated\n{0:#?}")]
-    NoCompileCommandsGenerated(Vec<Step>),
+    #[error("No compile commands generated for: {0:#?}")]
+    Empty(PathBuf),
 }
 
 #[derive(ThisError, Debug)]
