@@ -10,14 +10,8 @@ lint:
 	cargo clippy --workspace
 	nix-shell -p lua51Packages.luacheck --command 'luacheck lua/xbase && exit 0 || exit 1'
 
-watchlua:
-	cargo watch -x 'build -p xbase-lualib' -w 'lualib' -c
-
-watchdaemon:
-	RUST_LOG="xbase=trace" cargo watch -x 'run -p xbase-daemon' -w 'daemon' -c
-
-watchserver:
-	RUST_LOG="trace" cargo watch -x 'build -p xbase-sourcekit-helper' -w 'sourcekit' -c
+watch:
+	RUST_LOG="trace" cargo watch -x 'build -p xbase-sourcekit-helper -p xbase-lualib' -x 'run -p xbase-daemon' -w 'sourcekit' -w 'daemon' -w 'proto' -w 'lualib' -c
 
 clean:
 	rm -rf bin;
