@@ -125,7 +125,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
- "tracing",
+ "tracing 0.1.35",
 ]
 
 [[package]]
@@ -667,15 +667,6 @@ dependencies = [
  "bindgen",
  "errno",
  "libc",
-]
-
-[[package]]
-name = "libxbase"
-version = "0.1.0"
-dependencies = [
- "mlua",
- "serde_json",
- "xbase",
 ]
 
 [[package]]
@@ -1321,9 +1312,9 @@ dependencies = [
 
 [[package]]
 name = "strum"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e96acfc1b70604b8b2f1ffa4c57e59176c7dbb05d556c71ecd2f5498a1dee7f8"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 dependencies = [
  "strum_macros",
 ]
@@ -1512,7 +1503,18 @@ dependencies = [
  "futures-sink",
  "pin-project-lite",
  "tokio",
- "tracing",
+ "tracing 0.1.35",
+]
+
+[[package]]
+name = "tracing"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+ "tracing 0.1.35",
+ "tracing-appender",
+ "tracing-attributes",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1583,7 +1585,7 @@ dependencies = [
  "sharded-slab",
  "smallvec",
  "thread_local",
- "tracing",
+ "tracing 0.1.35",
  "tracing-core",
  "tracing-log",
 ]
@@ -1792,13 +1794,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
 
 [[package]]
-name = "xbase"
+name = "xbase-daemon"
 version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "bsp-server",
  "crossbeam-channel",
  "derive-deref-rs",
  "dirs",
@@ -1806,10 +1807,10 @@ dependencies = [
  "lazy_static",
  "libc",
  "libproc",
- "mlua",
  "notify",
  "nvim-rs",
  "parity-tokio-ipc",
+ "paste",
  "process-stream",
  "serde",
  "serde_json",
@@ -1821,19 +1822,54 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util 0.7.3",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "url",
+ "tracing 0.1.0",
  "wax 0.4.0",
+ "xbase-proto",
+ "xclog",
+]
+
+[[package]]
+name = "xbase-lualib"
+version = "0.1.0"
+dependencies = [
+ "mlua",
+ "serde_json",
+ "tap",
+ "xbase-proto",
+]
+
+[[package]]
+name = "xbase-proto"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "paste",
+ "serde",
+ "serde_json",
+ "strum",
+ "tracing 0.1.0",
+]
+
+[[package]]
+name = "xbase-sourcekit-helper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bsp-server",
+ "dirs",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tap",
+ "tracing 0.1.0",
  "xclog",
 ]
 
 [[package]]
 name = "xclog"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d3428ce8e66bcd0f415c8eb01a1096c5d7e3d36b70788596517f922e9335fb6"
+checksum = "c6053a2608afa77fb746e9a4127d18318b88f345eaaecac3630069940b0f8d63"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1852,7 +1888,7 @@ dependencies = [
  "tap",
  "tokio",
  "tokio-stream",
- "tracing",
+ "tracing 0.1.35",
  "tracing-appender",
  "tracing-subscriber",
  "wax 0.5.0",

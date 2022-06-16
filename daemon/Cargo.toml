@@ -1,0 +1,54 @@
+[package]
+name = "xbase-daemon"
+version = "0.1.2"
+edition = "2021"
+
+[dependencies]
+
+# Internal
+tracing               = { path = "./../tracing/" }
+xbase-proto           = { path = "./../proto/" }
+
+# Error Handling
+anyhow                = { version = "^1.0.42" }
+thiserror             = { version = "1.0.31" }
+
+# Serialization Feature
+serde                 = { version = "1.0",    features = ["derive"] }
+serde_json            = { version = "1.0.79" }
+serde_yaml            = { version = "0.8.23" }
+strum                 = { version = "0.24.0",  features = ["derive"] }
+
+# Async Runtime Feature
+tokio                 = { version = "1.17.0", features = ["full"] }
+futures               = { version = "0.3.21" }
+tokio-util            = { version = "0.7.1",  features = ["codec"] }
+async-trait           = { version = "0.1.52" }
+async-stream          = { version = "0.3.3" }
+parity-tokio-ipc      = { version = "0.9.0" }
+process-stream        = { version = "0.2.*" }
+crossbeam-channel     = { version = "0.5.4" }
+
+
+# Filesystem watcher
+notify                = { version = "5.0.0-pre.13" }
+dirs                  = { version = "4.0" }
+wax                   = { version = "0.4.0" }
+
+# Static
+lazy_static           = { version = "1.4.0" }
+
+# Nvim
+nvim-rs               = { version = "0.4.0", features = ["use_tokio"] }
+
+# Other
+tap                   = "1.0.1"
+xclog                 = { version  = "0.2.*",  features = ["with_tracing"] }
+simctl                = { git = "https://github.com/tami5/simctl" }
+derive-deref-rs       = { version = "0.1.1"}
+shell-words           = { version  = "1.1.0" }
+
+# Unix Api
+libc                  = { version = "0.2.126"}
+libproc               = { version = "0.12.0" }
+paste = "1.0.7"

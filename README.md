@@ -2,18 +2,18 @@
 <img src="./media/logo.png" alt="drawing" style="width:400px;"/>
 </P>
 
-## 👁 Overview 
+## 👁 Overview
 
-A *work in progress* Xcode replacement-ish development environment for neovim. [Xbase] currently supports building/watching/running xcode products, simulators, build/runtime, as well as some lsp support like auto-completion and code navigation. 
+A **WORK IN PROGRESS** Xcode replacement-ish development environment for neovim. [Xbase] currently supports building/watching/running xcode products, simulators, build/runtime, as well as some lsp support like auto-completion and code navigation.
 
-NOTE: Currently, [Xbase] requires and recommends using [xcodegen] as a way to configure and generate xcode projects without interacting with Xcode. 
+NOTE: Currently, [Xbase] requires and recommends using [xcodegen] as a way to configure and generate xcode projects without interacting with Xcode.
 
-Checkout [Milestones](https://github.com/tami5/xbase/milestones) for planned future releases and features.
+Checkout [Milestones](https://github.com/tami5/xbase/milestones) for planned future releases and features and [CONTRIBUTING](./CONTRIBUTING.md) if you would like to contribute to the betterment of this endeavor
 
 
 ## 🌝 Motivation
 
-After purchasing a MacBook, I decided to get into iOS/macOS applications development. Though, coming from vim/shell development experience and being heavily keyboard driven, I could not handle the switch to closed sourced, opinionated, mouse-driven development environment. I tried workarounds such as [XVim2] and builtin vim emulator but still I'd catch myself often looking for my mouse. 
+After purchasing a MacBook, I decided to get into iOS/macOS applications development. Though, coming from vim/shell development experience and being heavily keyboard driven, I could not handle the switch to closed sourced, opinionated, mouse-driven development environment. I tried workarounds such as [XVim2] and builtin vim emulator but still I'd catch myself often looking for my mouse.
 
 Being a long time vim user and having previously develop few lua/nvim plugins, I decided to take sometime to invest in both simplify my development workflow for developing `xOS`stuff  and enrich my experience with [rust].
 
@@ -49,7 +49,7 @@ TLDR:
 Once you start a neovim instance with a root containing `project.yml`, the daemon server will auto-start if no instance is running, and register the project once for recompile-watch, accpeting requests from clients. Currenlty, you should relay on pickers as means to interact with your deamon.
 
 ## ⚙️ Configuration
-```lua 
+```lua
 -- NOTE: Defaults
 {
   --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
@@ -94,9 +94,9 @@ Once you start a neovim instance with a root containing `project.yml`, the daemo
 
 packer.nvim:
 
-```lua 
-use { 
-  'tami5/xbase', 
+```lua
+use {
+  'tami5/xbase',
     run = 'make install',
     requires = {
       "nvim-lua/plenary.nvim",
@@ -110,7 +110,7 @@ use {
 ## Debugging
 
 ### Read logs
-```bash 
+```bash
 # Daemon logs
 tail -f /tmp/xbase-daemon.log
 # Build Server logs
@@ -119,7 +119,7 @@ tail -f /tmp/xbase-server.log
 
 ## Preview
 
-Watch build service. 
+Watch build service.
 
 ![](./media/statusline_watch.gif)
 
