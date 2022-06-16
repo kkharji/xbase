@@ -125,7 +125,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
- "tracing",
+ "tracing 0.1.35",
 ]
 
 [[package]]
@@ -1512,7 +1512,18 @@ dependencies = [
  "futures-sink",
  "pin-project-lite",
  "tokio",
- "tracing",
+ "tracing 0.1.35",
+]
+
+[[package]]
+name = "tracing"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+ "tracing 0.1.35",
+ "tracing-appender",
+ "tracing-attributes",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1583,7 +1594,7 @@ dependencies = [
  "sharded-slab",
  "smallvec",
  "thread_local",
- "tracing",
+ "tracing 0.1.35",
  "tracing-core",
  "tracing-log",
 ]
@@ -1821,9 +1832,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util 0.7.3",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
+ "tracing 0.1.0",
  "url",
  "wax 0.4.0",
  "xclog",
@@ -1852,7 +1861,7 @@ dependencies = [
  "tap",
  "tokio",
  "tokio-stream",
- "tracing",
+ "tracing 0.1.35",
  "tracing-appender",
  "tracing-subscriber",
  "wax 0.5.0",

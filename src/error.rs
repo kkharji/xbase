@@ -5,6 +5,8 @@ use thiserror::Error as ThisError;
 pub enum Error {
     #[error("[Error] (Compile): {0}")]
     Compile(#[from] CompileError),
+    #[error("{0}")]
+    Tracing(#[from] tracing::TracingError),
     #[error("[Error] (Conversion) {0}")]
     Conversion(#[from] ConversionError),
     #[error("[Error] (Lookup) {0} with {0} doesn't exist")]

@@ -2,8 +2,8 @@ use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
-use tracing::*;
-use xbase::util::{pid, tracing::install_tracing};
+use tracing::Level;
+use xbase::util::pid;
 use xbase::Result;
 use xbase::{constants::*, daemon::*};
 
@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
 
     let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
-    install_tracing("/tmp", "xbase-daemon.log", Level::TRACE, true)?;
+    tracing::setup("/tmp", "xbase-daemon.log", Level::TRACE, true)?;
 
     tracing::info!("Started");
     loop {
@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
                 let msg = {
                     let mut msg = String::default();
                     if let Err(e) = s.read_to_string(&mut msg).await {
-                        return error!("[Read Error]: {:?}", e);
+                        return tracing::error!("[Read Error]: {:?}", e);
                     };
                     msg
                 };
@@ -33,13 +33,13 @@ async fn main() -> Result<()> {
 
                 let req = match Request::read(msg.clone()) {
                     Err(e) => {
-                        return error!("[Parse Error]: {:?} message: {msg}", e);
+                        return tracing::error!("[Parse Error]: {:?} message: {msg}", e);
                     }
                     Ok(req) => req,
                 };
 
                 if let Err(e) = req.message.handle().await {
-                    return error!("[Failure]: Cause: ({:?})", e);
+                    return tracing::error!("[Failure]: Cause: ({:?})", e);
                 };
 
                 let state = DAEMON_STATE.clone();

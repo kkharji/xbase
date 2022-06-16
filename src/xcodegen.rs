@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
 
 /*
-   FIXME: make xCodeGen binary path configurable.
+   TODO: make XCodeGen binary path configurable.
 
    Current implementation will not work unless the user has xcodeGen located in
    `~/.mint/bin/xcodegen`. Should either make it configurable as well as support a

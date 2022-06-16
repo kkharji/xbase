@@ -2,10 +2,9 @@
 #[cfg(any(feature = "server", feature = "daemon"))]
 use anyhow::Result;
 use std::path::Path;
-use tap::Pipe;
-
 #[cfg(any(feature = "server", feature = "daemon"))]
 use std::path::PathBuf;
+use tap::Pipe;
 
 /// Get all files in SwiftFileList file.
 #[cfg(any(feature = "server", feature = "daemon"))]
@@ -96,7 +95,7 @@ pub fn find_swift_files(project_root: &Path) -> Result<Vec<String>> {
 }
 
 /// Is the given directory is a directory and has .git?
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 #[cfg(any(feature = "server", feature = "daemon"))]
 fn is_project_root(directory: &Path) -> bool {
     if directory.is_dir() {
@@ -141,7 +140,7 @@ pub fn find_header_dirs(root: &Path) -> Result<(Vec<String>, Vec<String>)> {
 }
 
 /// Find directory, swiftflags and comple file from a path to file within a project.
-#[tracing::instrument(ret)]
+#[tracing::instrument(skip_all)]
 #[cfg(any(feature = "server", feature = "daemon"))]
 pub fn find_swift_module_root(
     file_path: &Path,

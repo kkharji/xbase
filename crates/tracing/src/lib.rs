@@ -1,19 +1,30 @@
-//! Wrapping functions for tracing module
-use anyhow::Result;
 use std::io;
+use thiserror::Error;
+use tracing::dispatcher::SetGlobalDefaultError;
 use tracing::subscriber::set_global_default;
-use tracing::Level;
+
 use tracing_appender::rolling;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::{fmt, registry, EnvFilter};
 
+/// Tracing Errors
+#[derive(Debug, Error)]
+pub enum TracingError {
+    #[error("[Error] Fail to install tracing globally: {0}")]
+    SetDefault(#[from] SetGlobalDefaultError),
+}
+
+pub use tracing::*;
+pub use tracing_attributes;
+pub use tracing_subscriber::*;
+
 /// Setup tracing
-pub fn install_tracing(
+pub fn setup(
     root: &str,
     filename: &str,
     default_level: Level,
     with_stdout: bool,
-) -> Result<()> {
+) -> Result<(), TracingError> {
     let default_filter = EnvFilter::from_default_env().add_directive(default_level.into());
     let fmt_file = fmt::Layer::new()
         .with_writer(rolling::never(root, filename))
@@ -36,10 +47,10 @@ pub fn install_tracing(
                 .with(default_filter)
                 .with(fmt_file)
                 .with(fmt_stdout),
-        )
-        .map_err(anyhow::Error::from)
+        )?
     } else {
-        set_global_default(registry().with(default_filter).with(fmt_file))
-            .map_err(anyhow::Error::from)
+        set_global_default(registry().with(default_filter).with(fmt_file))?
     }
+    Ok(())
 }
+

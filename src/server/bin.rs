@@ -1,13 +1,12 @@
 use bsp_server::{Connection, Message, Request};
 use tracing::Level;
-use xbase::Result;
-use xbase::{
-    server::{BuildServer, BuildTargetOutputPathsRequest, OptionsChangedRequest, OptionsRequest},
-    util::tracing::install_tracing,
+use xbase::server::{
+    BuildServer, BuildTargetOutputPathsRequest, OptionsChangedRequest, OptionsRequest,
 };
+use xbase::Result;
 
 fn main() -> Result<()> {
-    install_tracing("/tmp/", "xbase-server.log", Level::DEBUG, false)?;
+    tracing::setup("/tmp/", "xbase-server.log", Level::DEBUG, false)?;
     let (conn, io_threads) = Connection::stdio();
     let mut server = BuildServer::default();
 
