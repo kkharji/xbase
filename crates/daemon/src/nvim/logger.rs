@@ -1,8 +1,9 @@
 use super::{NvimClient, NvimConnection, NvimWindow};
+use crate::util::fmt;
 use crate::Result;
-use crate::{nvim::BufferDirection, util::fmt};
 use futures::StreamExt;
 use nvim_rs::{Buffer, Window};
+use xbase_proto::BufferDirection;
 use xclog::XCLogger;
 
 pub struct Logger<'a> {

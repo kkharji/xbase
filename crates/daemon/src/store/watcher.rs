@@ -1,10 +1,10 @@
-use crate::client::Client;
 use crate::error::EnsureOptional;
 use crate::watch::WatchService;
 use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use xbase_proto::Client;
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct WatchStore(HashMap<PathBuf, WatchService>);

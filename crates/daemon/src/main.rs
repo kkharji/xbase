@@ -5,7 +5,8 @@ use tokio::net::UnixListener;
 use tracing::Level;
 use xbase_daemon::util::pid;
 use xbase_daemon::Result;
-use xbase_daemon::{constants::*, daemon::*};
+use xbase_daemon::{constants::*, RequestHandler};
+use xbase_proto::{Message, Request};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -38,7 +39,7 @@ async fn main() -> Result<()> {
                     Ok(req) => req,
                 };
 
-                if let Err(e) = req.message.handle().await {
+                if let Err(e) = handle(req).await {
                     return tracing::error!("[Failure]: Cause: ({:?})", e);
                 };
 
@@ -51,6 +52,15 @@ async fn main() -> Result<()> {
         } else {
             tracing::error!("Fail to accept a connection")
         };
+    }
+}
+
+async fn handle(req: Request) -> Result<()> {
+    match req.message {
+        Message::Build(c) => RequestHandler::handle(c).await,
+        Message::Run(c) => RequestHandler::handle(c).await,
+        Message::Register(c) => RequestHandler::handle(c).await,
+        Message::Drop(c) => RequestHandler::handle(c).await,
     }
 }
 

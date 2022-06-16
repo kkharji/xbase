@@ -1,37 +1,26 @@
-use super::*;
-use crate::{nvim::BufferDirection, types::BuildConfiguration};
-use std::fmt::Debug;
-
-use {
-    crate::constants::DAEMON_STATE,
-    crate::state::State,
-    crate::util::serde::value_or_default,
-    crate::watch::{Event, Watchable},
-    tokio::sync::MutexGuard,
-    xclog::XCLogger,
-};
-
-/// Build a project.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BuildRequest {
-    pub client: Client,
-    pub settings: BuildConfiguration,
-    #[serde(deserialize_with = "value_or_default")]
-    pub direction: BufferDirection,
-    #[serde(deserialize_with = "value_or_default")]
-    pub ops: RequestOps,
-}
+use crate::constants::DAEMON_STATE;
+use crate::state::State;
+use crate::watch::{Event, Watchable};
+use crate::RequestHandler;
+use crate::Result;
+use async_trait::async_trait;
+use tokio::sync::MutexGuard;
+use xbase_proto::{BuildRequest, Operation};
+use xclog::XCLogger;
 
 #[async_trait]
-impl Handler for BuildRequest {
-    async fn handle(self) -> Result<()> {
+impl RequestHandler for BuildRequest {
+    async fn handle(self) -> Result<()>
+    where
+        Self: Sized + std::fmt::Debug,
+    {
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
         match self.ops {
-            RequestOps::Once => self.trigger(state, &Event::default()).await?,
+            Operation::Once => self.trigger(state, &Event::default()).await?,
             _ => {
-                let watcher = self.client.get_watcher_mut(state)?;
+                let watcher = state.watcher.get_mut(&self.client.root)?;
                 if self.ops.is_watch() {
                     watcher.add(self)?;
                 } else {
@@ -40,6 +29,7 @@ impl Handler for BuildRequest {
                 state.sync_client_state().await?;
             }
         }
+
         Ok(())
     }
 }
@@ -50,9 +40,10 @@ impl Watchable for BuildRequest {
         tracing::info!("Building {}", self.client.abbrev_root());
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
-        let args = state.projects.get(root)?.build_args(&config, &None)?;
+        // let args = state.projects.get(root)?.build_args(&config, &None)?;
+        let args: Vec<String> = vec![];
 
-        let nvim = self.client.nvim(state)?;
+        let nvim = state.clients.get(&self.client.pid)?;
         let ref mut logger = nvim.logger();
 
         logger.set_title(format!(
@@ -90,11 +81,5 @@ impl Watchable for BuildRequest {
     /// Drop watchable for watching a given file system
     async fn discard(&self, _state: &MutexGuard<State>) -> Result<()> {
         Ok(())
-    }
-}
-
-impl std::fmt::Display for BuildRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:Build:{}", self.client.root.display(), self.settings)
     }
 }

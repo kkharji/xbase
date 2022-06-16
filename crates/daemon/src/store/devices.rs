@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use xbase_proto::DeviceLookup;
 use {crate::types::Device, simctl::Simctl, std::collections::HashMap};
 
 #[derive(Debug, Serialize, Deserialize, derive_deref_rs::Deref)]
@@ -18,12 +19,6 @@ impl Default for Devices {
                 .collect(),
         )
     }
-}
-
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct DeviceLookup {
-    pub name: Option<String>,
-    pub udid: Option<String>,
 }
 
 impl Devices {

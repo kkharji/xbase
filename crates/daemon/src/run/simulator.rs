@@ -1,12 +1,13 @@
 use crate::{
     nvim::Logger,
-    types::{BuildConfiguration, Device},
+    types::Device,
     util::{fmt, pid},
     Error, Result,
 };
 use process_stream::Process;
 use std::path::PathBuf;
 use tap::Pipe;
+use xbase_proto::BuildSettings;
 use xclog::XCBuildSettings;
 
 /// Simulator Device runner
@@ -15,19 +16,15 @@ pub struct Simulator {
     #[deref]
     device: Device,
     info: XCBuildSettings,
-    config: BuildConfiguration,
+    settings: BuildSettings,
 }
 
 impl Simulator {
-    pub fn new(
-        device: Device,
-        build_settings: XCBuildSettings,
-        config: BuildConfiguration,
-    ) -> Self {
+    pub fn new(device: Device, info: XCBuildSettings, settings: BuildSettings) -> Self {
         Self {
             device,
-            config,
-            info: build_settings,
+            settings,
+            info,
         }
     }
 
@@ -129,8 +126,8 @@ impl Simulator {
 
     /// Get a reference to the simulator's config.
     #[must_use]
-    pub fn config(&self) -> &BuildConfiguration {
-        &self.config
+    pub fn settings(&self) -> &BuildSettings {
+        &self.settings
     }
 }
 

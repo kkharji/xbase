@@ -1,11 +1,7 @@
 //! Module for generating Compilation Database.
-//!
-//! based on <https://clang.llvm.org/docs/JSONCompilationDatabase.html>
-//!
-//! see <https://github.com/apple/sourcekit-lsp/blob/main/Sources/SKCore/CompilationDatabase.swift>
-
+use xbase_proto::Client;
 use {
-    crate::{client::Client, error::XcodeGenError, state::State, util::pid, xcodegen, Result},
+    crate::{error::XcodeGenError, state::State, util::pid, xcodegen, Result},
     std::path::PathBuf,
     tap::Pipe,
     tokio::{fs::metadata, io::AsyncWriteExt, sync::MutexGuard},

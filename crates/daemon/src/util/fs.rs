@@ -3,6 +3,7 @@ use anyhow::Result;
 use std::path::Path;
 use std::path::PathBuf;
 use tap::Pipe;
+use xbase_proto::BuildSettings;
 
 /// Get all files in SwiftFileList file.
 pub fn get_files_list<T, P>(file_lists: P) -> Result<Vec<T>>
@@ -33,7 +34,7 @@ where
 
 pub fn _get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(
     root_path: P,
-    config: Option<&crate::types::BuildConfiguration>,
+    config: Option<&BuildSettings>,
 ) -> Result<String> {
     let path = || {
         let name = get_dirname_dir_root(&root_path)?;
@@ -66,7 +67,7 @@ pub fn get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(root_path: P) -> Re
 
 pub fn get_build_cache_dir_with_config<P: AsRef<Path> + std::fmt::Debug>(
     root_path: P,
-    config: &crate::types::BuildConfiguration,
+    config: &BuildSettings,
 ) -> Result<String> {
     _get_build_cache_dir(root_path, Some(config))
 }

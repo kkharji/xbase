@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 use strum::{Display as EnumDisplay, EnumString};
 
 /// Client data
@@ -68,6 +68,19 @@ impl Default for Operation {
     }
 }
 
+impl Display for BuildSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "xcodebuild")?;
+        write!(f, " -configuration {}", self.configuration)?;
+
+        if let Some(ref scheme) = self.scheme {
+            write!(f, " -scheme {scheme}")?;
+        }
+        write!(f, " -target {}", self.target)?;
+        Ok(())
+    }
+}
+
 impl Operation {
     /// Returns `true` if the request kind is [`Watch`].
     ///
@@ -91,5 +104,34 @@ impl Operation {
     #[must_use]
     pub fn is_once(&self) -> bool {
         matches!(self, Self::Once)
+    }
+}
+
+impl Client {
+    pub fn abbrev_root(&self) -> String {
+        let dirname = || {
+            let path = &self.root;
+            Some(
+                path.strip_prefix(path.ancestors().nth(2)?)
+                    .ok()?
+                    .display()
+                    .to_string()
+                    .replace("/", "_"),
+            )
+        };
+
+        dirname().unwrap_or_default()
+    }
+}
+
+impl BufferDirection {
+    pub fn to_nvim_command(&self, bufnr: i64) -> String {
+        match self {
+            // TOOD: support build log float as default
+            BufferDirection::Default => format!("sbuffer {bufnr}"),
+            BufferDirection::Vertical => format!("vert sbuffer {bufnr}"),
+            BufferDirection::Horizontal => format!("sbuffer {bufnr}"),
+            BufferDirection::TabEdit => format!("tabe {bufnr}"),
+        }
     }
 }

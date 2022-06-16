@@ -1,13 +1,10 @@
-use crate::{
-    client::Client,
-    error::{EnsureOptional, LoopError},
-    Result,
-};
-
+use crate::error::{EnsureOptional, LoopError};
 use crate::types::{Project, Root};
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use xbase_proto::Client;
 
 #[derive(Default, Debug, Deserialize, Serialize, derive_deref_rs::Deref)]
 pub struct ProjectStore(HashMap<Root, Project>);

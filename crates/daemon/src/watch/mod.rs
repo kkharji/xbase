@@ -3,8 +3,9 @@ mod serialize;
 
 pub use event::{Event, EventKind};
 
+use crate::compile::ensure_server_support;
 use crate::error::EnsureOptional;
-use crate::{client::Client, constants::DAEMON_STATE, state::State, Result};
+use crate::{constants::DAEMON_STATE, state::State, Result};
 use async_trait::async_trait;
 use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
 use std::collections::HashMap;
@@ -14,6 +15,7 @@ use std::time::SystemTime;
 use tokio::sync::mpsc::channel;
 use tokio::{sync::MutexGuard, task::JoinHandle};
 use tracing::{debug, error, info, trace};
+use xbase_proto::Client;
 
 #[derive(derive_deref_rs::Deref)]
 pub struct WatchService {
@@ -62,12 +64,17 @@ impl WatchService {
             if recompile {
                 let ref name = client.abbrev_root();
 
-                client.echo_msg(state, name, "recompiling ..").await;
+                state
+                    .clients
+                    .echo_msg(&client.root, name, "recompiling ... (may take few seconds)")
+                    .await;
 
-                let ensure = client.ensure_server_support(state, Some(event.path()));
-
+                let ensure = ensure_server_support(state, client, Some(event.path()));
                 if ensure.await.is_ok() {
-                    client.echo_msg(state, name, "recompiled").await;
+                    state
+                        .clients
+                        .echo_msg(&client.root, name, "recompiled successfully!")
+                        .await;
                     debug!("[WatchService] project {name:?} recompiled successfully");
                 }
             };

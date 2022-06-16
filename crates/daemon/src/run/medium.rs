@@ -2,10 +2,11 @@
 
 use super::{bin::Bin, simulator::Simulator};
 use crate::nvim::Logger;
-use crate::types::{BuildConfiguration, Device};
+use crate::types::Device;
 use crate::Result;
 use process_stream::Process;
 use tap::Pipe;
+use xbase_proto::BuildSettings;
 use xclog::XCBuildSettings;
 
 /// Runner to run the built binary
@@ -17,12 +18,12 @@ pub enum RunMedium {
 impl RunMedium {
     pub fn from_device_or_settings(
         device: Option<Device>,
-        settings: XCBuildSettings,
-        config: BuildConfiguration,
+        info: XCBuildSettings,
+        config: BuildSettings,
     ) -> Result<Self> {
         match device {
-            Some(device) => Self::Simulator(Simulator::new(device, settings, config)),
-            None => Self::Bin(Bin::new(settings, config)),
+            Some(device) => Self::Simulator(Simulator::new(device, info, config)),
+            None => Self::Bin(Bin::new(info, config)),
         }
         .pipe(Ok)
     }
@@ -38,9 +39,9 @@ impl RunMedium {
         }
     }
 
-    pub fn config(&self) -> &BuildConfiguration {
+    pub fn settings(&self) -> &BuildSettings {
         match self {
-            RunMedium::Simulator(s) => s.config(),
+            RunMedium::Simulator(s) => s.settings(),
             RunMedium::Bin(b) => b.config(),
         }
     }
@@ -54,7 +55,7 @@ impl RunMedium {
 
     pub fn target(&self) -> &str {
         match self {
-            RunMedium::Simulator(s) => s.config().target.as_str(),
+            RunMedium::Simulator(s) => s.settings().target.as_str(),
             RunMedium::Bin(b) => b.config().target.as_str(),
         }
     }

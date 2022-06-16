@@ -1,7 +1,8 @@
 #![allow(dead_code)]
-use crate::{client::Client, constants::DAEMON_STATE, Result};
+use crate::{constants::DAEMON_STATE, Result};
 use process_stream::{Process, StreamExt};
 use tokio::task::JoinHandle;
+use xbase_proto::Client;
 
 /// Run Service Task Handler
 pub struct RunServiceHandler {
@@ -20,7 +21,7 @@ impl RunServiceHandler {
             while let Some(output) = stream.next().await {
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
-                let ref mut logger = match client.nvim(state) {
+                let ref mut logger = match state.clients.get(&client.pid) {
                     Ok(nvim) => nvim.logger(),
                     Err(_) => {
                         tracing::info!("Nvim Instance closed, closing runner ..");

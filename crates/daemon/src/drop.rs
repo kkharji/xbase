@@ -1,15 +1,9 @@
-use super::*;
-
-/// Drop a client
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DropRequest {
-    client: Client,
-    #[serde(default)]
-    remove_client: bool,
-}
+use crate::{RequestHandler, Result};
+use async_trait::async_trait;
+use xbase_proto::DropRequest;
 
 #[async_trait]
-impl Handler for DropRequest {
+impl RequestHandler for DropRequest {
     async fn handle(self) -> Result<()> {
         use crate::constants::DAEMON_STATE;
         let Self { client, .. } = self;
@@ -17,17 +11,17 @@ impl Handler for DropRequest {
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
-        if client.is_registered(state) {
+        if state.clients.contains_key(&client.pid) {
             tracing::info!("Drop({}: {})", client.pid, client.abbrev_root());
             // NOTE: Should only be Some if no more client depend on it
             if let Some(_) = state.projects.remove(&client).await? {
                 // NOTE: Remove project watchers
-                client.remove_watcher(state);
+                state.watcher.remove(&client);
             }
 
             // NOTE: Try removing client with given pid
             if self.remove_client {
-                client.remove_self(state);
+                state.clients.remove(&client);
             }
 
             // NOTE: Sink state to all client vim.g.xbase.state

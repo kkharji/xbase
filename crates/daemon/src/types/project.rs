@@ -6,22 +6,20 @@ mod platform;
 mod target;
 mod target_type;
 
+use super::Device;
 use super::Root;
+use crate::util::fs::{get_build_cache_dir, get_build_cache_dir_with_config};
+use crate::{error::EnsureOptional, state::State, xcodegen, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tokio::sync::MutexGuard;
+use xbase_proto::BuildSettings;
 
 use tap::Pipe;
 
 pub use {
     config::PluginConfig, dependency::*, options::*, package::*, platform::*, target::*,
     target_type::*,
-};
-
-use {
-    super::{BuildConfiguration, Device},
-    crate::util::fs::{get_build_cache_dir, get_build_cache_dir_with_config},
-    crate::{error::EnsureOptional, state::State, xcodegen, Result},
-    tokio::sync::MutexGuard,
 };
 
 /// Represent XcodeGen Project
@@ -150,15 +148,27 @@ impl Project {
 
     pub fn build_args(
         &self,
-        build_config: &BuildConfiguration,
+        build_settings: &BuildSettings,
         device: &Option<Device>,
     ) -> Result<Vec<String>> {
-        let mut args = build_config.args(device);
+        let mut args = build_settings
+            .to_string()
+            .split_whitespace()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
+
+        args.remove(0);
+        args.insert(0, "build".to_string());
+
+        if let Some(device) = device {
+            args.extend(device.special_build_args())
+        }
+
         // TODO: check if scheme isn't already defined!
         args.extend_from_slice(&[
             format!(
                 "SYMROOT={}",
-                get_build_cache_dir_with_config(&self.root, build_config)?
+                get_build_cache_dir_with_config(&self.root, build_settings)?
             ),
             "-allowProvisioningUpdates".into(),
         ]);

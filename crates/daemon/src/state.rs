@@ -1,6 +1,7 @@
 use crate::Result;
 use std::path::PathBuf;
 use tap::Pipe;
+use xbase_proto::Client;
 
 /// Build Server State.
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
@@ -20,7 +21,7 @@ impl State {
     #[allow(dead_code)]
     async fn get_client_projects<'a>(
         &'a self,
-        client: &'a crate::client::Client,
+        client: &'a Client,
     ) -> Result<Vec<(&'a PathBuf, &'a crate::types::Project)>> {
         self.projects
             .iter()

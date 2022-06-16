@@ -18,7 +18,6 @@ macro_rules! into_request {
                     Self { message }
                 }
             }
-            impl crate::RequestHandler for [<$type Request>] {}
         }
     };
 }

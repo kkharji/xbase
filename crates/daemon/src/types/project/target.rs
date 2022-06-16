@@ -1,6 +1,5 @@
 use super::{Platform, ProjectDependency, ProjectTargetType};
-use crate::util::serde::value_or_vec;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use tap::Pipe;
@@ -63,6 +62,26 @@ where
         Ok(ValueOrMap::Number(s)) => Ok(HashMap::from([(Platform::default(), s.to_string())])),
         Ok(ValueOrMap::Map(v)) => Ok(v),
         _ => Ok(HashMap::default()),
+    }
+}
+
+pub(crate) fn value_or_vec<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    #[derive(serde::Deserialize)]
+    #[serde(untagged)]
+    enum ValueOrVec<T> {
+        Value(T),
+        Vec(Vec<T>),
+        None,
+    }
+
+    match ValueOrVec::deserialize(deserializer) {
+        Ok(ValueOrVec::Value(s)) => Ok(vec![s]),
+        Ok(ValueOrVec::Vec(v)) => Ok(v),
+        _ => Ok(vec![]),
     }
 }
 

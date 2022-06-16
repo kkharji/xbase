@@ -1,13 +1,9 @@
-mod buffer;
 mod logger;
 
-pub use buffer::BufferDirection;
+use crate::Result;
+use nvim_rs::{compat::tokio::Compat, create::tokio::new_path as connect, rpc::handler::Dummy};
 use serde::{Deserialize, Serialize};
-
-use {
-    crate::{client::Client, Result},
-    nvim_rs::{compat::tokio::Compat, create::tokio::new_path as connect, rpc::handler::Dummy},
-};
+use xbase_proto::Client;
 
 pub use logger::*;
 

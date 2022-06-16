@@ -1,6 +1,4 @@
 use crate::{
-    client::Client,
-    daemon::RunRequest,
     state::State,
     watch::{Event, Watchable},
     Error, Result,
@@ -8,8 +6,9 @@ use crate::{
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
+use xbase_proto::{Client, RunRequest};
 use xclog::{XCBuildSettings, XCLogger};
-use {super::handler::RunServiceHandler, super::meduim::RunMedium};
+use {super::handler::RunServiceHandler, super::medium::RunMedium};
 
 /// Run Service
 pub struct RunService {
@@ -35,7 +34,7 @@ impl RunService {
             .projects
             .get(root)?
             .build_args(&req.settings, &device)?;
-        let nvim = req.client.nvim(state)?;
+        let nvim = state.clients.get(&req.client.pid)?;
 
         let ref mut logger = nvim.logger();
         if !req.ops.is_watch() {
@@ -78,7 +77,7 @@ impl Watchable for RunService {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
         tracing::info!("Running {}", self.client.abbrev_root());
 
-        let (root, config) = (&self.client.root, &self.medium.config());
+        let (root, config) = (&self.client.root, &self.medium.settings());
         let mut handler = self.handler.clone().lock_owned().await;
         let mut args = state.projects.get(root)?.build_args(&config, &None)?;
 
@@ -89,7 +88,7 @@ impl Watchable for RunService {
         handler.process().kill().await;
         handler.inner().abort();
 
-        let nvim = self.client.nvim(state)?;
+        let nvim = state.clients.get(&self.client.pid)?;
         let ref mut logger = nvim.logger();
 
         logger.set_title(format!("Run:{}", config.target));
