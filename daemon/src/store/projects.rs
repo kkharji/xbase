@@ -1,5 +1,5 @@
 use crate::error::{EnsureOptional, LoopError};
-use crate::types::{Project, Root};
+use crate::project::Project;
 use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use xbase_proto::Client;
 
 #[derive(Default, Debug, Deserialize, Serialize, derive_deref_rs::Deref)]
-pub struct ProjectStore(HashMap<Root, Project>);
+pub struct ProjectStore(HashMap<PathBuf, Project>);
 
 // TODO(projects): pressist a list of projects paths and information
 impl ProjectStore {

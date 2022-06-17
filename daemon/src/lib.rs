@@ -1,14 +1,15 @@
 pub mod build;
 pub mod compile;
 pub mod constants;
+pub mod device;
 pub mod drop;
 pub mod error;
 pub mod nvim;
+pub mod project;
 pub mod register;
 pub mod run;
 pub mod state;
 pub mod store;
-pub mod types;
 pub mod util;
 pub mod watch;
 pub mod xcodegen;

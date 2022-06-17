@@ -1,3 +1,4 @@
+use crate::project::Project;
 use crate::Result;
 use std::path::PathBuf;
 use tap::Pipe;
@@ -19,14 +20,14 @@ pub struct State {
 impl State {
     /// Get all projects that client have access to it.
     #[allow(dead_code)]
-    async fn get_client_projects<'a>(
+    fn get_client_projects<'a>(
         &'a self,
         client: &'a Client,
-    ) -> Result<Vec<(&'a PathBuf, &'a crate::types::Project)>> {
+    ) -> Result<Vec<(&'a PathBuf, &'a Project)>> {
         self.projects
             .iter()
             .filter(|(_, p)| p.clients.contains(&client.pid))
-            .collect::<Vec<(&'a PathBuf, &'a crate::types::Project)>>()
+            .collect::<Vec<(&'a PathBuf, &'a Project)>>()
             .pipe(Ok)
     }
 

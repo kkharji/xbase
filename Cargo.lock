@@ -1811,7 +1811,6 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "crossbeam-channel",
  "derive-deref-rs",
  "dirs",
  "futures 0.3.21",

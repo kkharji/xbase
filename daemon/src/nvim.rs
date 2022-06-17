@@ -1,5 +1,7 @@
 mod logger;
 
+use std::path::PathBuf;
+
 use crate::Result;
 use nvim_rs::{compat::tokio::Compat, create::tokio::new_path as connect, rpc::handler::Dummy};
 use serde::{Deserialize, Serialize};
@@ -13,7 +15,7 @@ pub type NvimWindow = nvim_rs::Window<NvimConnection>;
 #[derive(Deserialize, Serialize)]
 pub struct NvimClient {
     pub pid: i32,
-    pub roots: Vec<crate::types::Root>,
+    pub roots: Vec<PathBuf>,
     #[serde(skip)]
     pub conn: Option<nvim_rs::Neovim<NvimConnection>>,
     pub log_bufnr: i64,

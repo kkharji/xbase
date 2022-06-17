@@ -1,6 +1,6 @@
 use crate::{
+    device::Device,
     nvim::Logger,
-    types::Device,
     util::{fmt, pid},
     Error, Result,
 };

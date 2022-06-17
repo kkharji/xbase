@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use super::{bin::Bin, simulator::Simulator};
+use crate::device::Device;
 use crate::nvim::Logger;
-use crate::types::Device;
 use crate::Result;
 use process_stream::Process;
 use tap::Pipe;

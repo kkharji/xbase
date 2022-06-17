@@ -1,4 +1,4 @@
-use super::Platform;
+use super::project::Platform;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 

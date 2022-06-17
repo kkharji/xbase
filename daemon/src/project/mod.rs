@@ -6,12 +6,12 @@ mod platform;
 mod target;
 mod target_type;
 
-use super::Device;
-use super::Root;
+use crate::device::Device;
 use crate::util::fs::{get_build_cache_dir, get_build_cache_dir_with_config};
 use crate::{error::EnsureOptional, state::State, xcodegen, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use tokio::sync::MutexGuard;
 use xbase_proto::BuildSettings;
 
@@ -38,7 +38,7 @@ pub struct Project {
 
     #[serde(skip)]
     /// Root directory
-    pub root: Root,
+    pub root: PathBuf,
 
     #[serde(default)]
     /// Connected Clients
