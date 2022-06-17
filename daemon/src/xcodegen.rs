@@ -5,25 +5,16 @@ use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
 
-/*
-   TODO: make XCodeGen binary path configurable.
-
-   Current implementation will not work unless the user has xcodeGen located in
-   `~/.mint/bin/xcodegen`. Should either make it configurable as well as support a
-   number of paths by default.
-*/
-lazy_static::lazy_static! {
-    static ref XCODEGEN: PathBuf = dirs::home_dir().unwrap().join(".mint/bin/xcodegen");
-}
-
 #[inline]
-fn xcodgen() -> tokio::process::Command {
-    tokio::process::Command::new(&*XCODEGEN)
+fn xcodgen() -> Result<tokio::process::Command> {
+    let xcodegen_path = which::which("xcodegen")?;
+    Ok(tokio::process::Command::new(xcodegen_path))
 }
 
 // Run xcodgen generate
 pub async fn generate<P: AsRef<Path> + Debug>(root: P) -> Result<ExitStatus> {
-    let status = xcodgen()
+    tracing::info!("Regenerating xcodegen project");
+    let status = xcodgen()?
         .current_dir(root)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())

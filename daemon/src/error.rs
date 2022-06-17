@@ -37,6 +37,8 @@ pub enum Error {
     Message(String),
     #[error("[Error] (Watcher) {0}")]
     NotifyWatch(#[from] notify::Error),
+    #[error("[Error] (Which) {0}")]
+    WhichError(#[from] which::Error),
 }
 
 #[derive(ThisError, Debug)]
