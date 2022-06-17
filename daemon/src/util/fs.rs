@@ -1,13 +1,10 @@
 //! Functions to query filesystem for files and directories
 use anyhow::Result;
-use std::path::Path;
+use std::{fmt::Debug, path::Path};
 use tap::Pipe;
 use xbase_proto::BuildSettings;
 
-pub fn get_dirname_dir_root<P>(path: P) -> Option<String>
-where
-    P: AsRef<Path>,
-{
+pub fn get_dirname_dir_root(path: impl AsRef<Path>) -> Option<String> {
     let path = path.as_ref();
     path.strip_prefix(path.ancestors().nth(2)?)
         .ok()?
@@ -17,7 +14,7 @@ where
         .pipe(Some)
 }
 
-pub fn _get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(
+pub fn _get_build_cache_dir<P: AsRef<Path> + Debug>(
     root_path: P,
     config: Option<&BuildSettings>,
 ) -> Result<String> {
@@ -30,14 +27,9 @@ pub fn _get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(
             .to_string();
 
         if let Some(config) = config {
-            Some(
-                format!(
-                    "{base}/{}_{}",
-                    config.target,
-                    config.configuration.to_string()
-                )
-                .replace(" ", "_"),
-            )
+            let target = &config.target;
+            let config = config.configuration.to_string();
+            Some(format!("{base}/{target}_{config}",).replace(" ", "_"))
         } else {
             Some(base)
         }
@@ -46,13 +38,66 @@ pub fn _get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(
         .ok_or_else(|| anyhow::anyhow!("Fail to generate build_cache directory for {root_path:?}"))
 }
 
-pub fn get_build_cache_dir<P: AsRef<Path> + std::fmt::Debug>(root_path: P) -> Result<String> {
+pub fn get_build_cache_dir<P: AsRef<Path> + Debug>(root_path: P) -> Result<String> {
     _get_build_cache_dir(root_path, None)
 }
 
-pub fn get_build_cache_dir_with_config<P: AsRef<Path> + std::fmt::Debug>(
+pub fn get_build_cache_dir_with_config<P: AsRef<Path> + Debug>(
     root_path: P,
     config: &BuildSettings,
 ) -> Result<String> {
     _get_build_cache_dir(root_path, Some(config))
+}
+
+/// Read .gitignore from root and return vec of glob patterns if the .gitignore eixists.
+pub async fn gitignore_to_glob_patterns<P: AsRef<Path>>(path: P) -> Result<Vec<String>> {
+    let gitignore_path = path.as_ref().join(".gitignore");
+    if !gitignore_path.exists() {
+        return Ok(Default::default());
+    }
+    let content = tokio::fs::read_to_string(gitignore_path).await?;
+    Ok(gitignore_content_to_glob_patterns(content))
+}
+
+pub fn gitignore_content_to_glob_patterns(content: String) -> Vec<String> {
+    content
+        .split("\n")
+        .filter(|s| !s.is_empty() && !s.starts_with("#"))
+        .flat_map(|s| {
+            if s.starts_with("!") {
+                None // TODO(watchignore): support ! patterns
+            } else {
+                Some(("", s))
+            }
+        })
+        .filter(|&(_, s)| s.chars().next() != Some('/'))
+        .map(|(pat, s)| {
+            if s != "/" {
+                (pat, format!("**/{s}"))
+            } else {
+                (pat, format!("{s}"))
+            }
+        })
+        .flat_map(|(pat, s)| {
+            let pattern = format!("{pat}{s}");
+            vec![pattern.clone(), format!("{pattern}/**")]
+        })
+        .collect::<Vec<String>>()
+}
+
+#[test]
+fn test_gitignore_patterns() {
+    let gitignore_patterns =
+        gitignore_content_to_glob_patterns(String::from(".build.log\n.compile"));
+    assert_eq!(
+        gitignore_patterns,
+        vec![
+            "**/.build.log".to_string(),
+            "**/.build.log/**".to_string(),
+            "**/.compile".to_string(),
+            "**/.compile/**".to_string()
+        ]
+    );
+
+    println!("{gitignore_patterns:#?}");
 }

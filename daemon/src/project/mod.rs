@@ -7,7 +7,9 @@ mod target;
 mod target_type;
 
 use crate::device::Device;
-use crate::util::fs::{get_build_cache_dir, get_build_cache_dir_with_config};
+use crate::util::fs::{
+    get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
+};
 use crate::{error::EnsureOptional, state::State, xcodegen, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -31,10 +33,6 @@ pub struct Project {
 
     /// The list of targets in the project mapped by name
     pub targets: HashMap<String, ProjectTarget>,
-
-    #[serde(rename(deserialize = "xbase"), default)]
-    /// xbase local configuration
-    pub xbase: PluginConfig,
 
     #[serde(skip)]
     /// Root directory
@@ -63,9 +61,10 @@ impl Project {
 
         let content = tokio::fs::read_to_string(path).await?;
         let mut project = serde_yaml::from_str::<Project>(&content)?;
+        let gitignore_patterns = gitignore_to_glob_patterns(root).await?;
 
         // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
-        project.ignore_patterns.extend(project.xbase.ignore.clone());
+        project.ignore_patterns.extend(gitignore_patterns);
         project.ignore_patterns.extend(vec![
             "**/.git/**".into(),
             "**/*.xcodeproj/**".into(),
