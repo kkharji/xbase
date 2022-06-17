@@ -23,7 +23,7 @@ pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
     file.write_all(
         json!({
             "name": "Xbase",
-            "argv": [SERVER_BINARY_PATH],
+            "argv": [&*SERVER_BINARY_PATH],
             // TODO(daemon): if buildServer.version ~= 0.2 it should be removed and regenerated
             "version": "0.2",
             "bspVersion": "0.2",

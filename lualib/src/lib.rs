@@ -2,18 +2,24 @@ mod extension;
 use extension::*;
 
 use mlua::{lua_module, prelude::*};
+use std::path::PathBuf;
 use std::{net::Shutdown, os::unix::net::UnixStream, process::Command, str::FromStr};
 use tap::Pipe;
 use xbase_proto::*;
 
 static DAEMON_SOCKET_PATH: &str = "/tmp/xbase-daemon.socket";
-static DAEMON_BINARY_PATH: &'static str = {
-    if cfg!(debug_assertions) {
-        concat!(env!("CARGO_MANIFEST_DIR"), "/target/debug/xbase-daemon")
-    } else {
-        concat!(env!("CARGO_MANIFEST_DIR"), "/bin/xbase-daemon")
-    }
-};
+
+lazy_static::lazy_static! {
+    static ref DAEMON_BINARY_PATH: PathBuf = {
+        let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+        if cfg!(debug_assertions) {
+            root.extend(&["target", "debug", "xbase-daemon"]);
+        } else {
+            root.extend(&["bin", "xbase-daemon"]);
+        }
+        root
+    };
+}
 
 /// Check if Daemon is running
 fn is_running(_: &Lua, _: ()) -> LuaResult<bool> {
@@ -28,7 +34,7 @@ fn ensure(lua: &Lua, _: ()) -> LuaResult<bool> {
     if is_running(lua, ()).unwrap() {
         Ok(false)
     } else {
-        Command::new(DAEMON_BINARY_PATH).spawn().unwrap();
+        Command::new(&*DAEMON_BINARY_PATH).spawn().unwrap();
         // Give time for the daemon to be started
         std::thread::sleep(std::time::Duration::new(1, 0));
         lua.info("Spawned Background Server")?;
