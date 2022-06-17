@@ -1,10 +1,29 @@
 # Changelog
 ## [unreleased]
+### <!-- 0 -->Features
+- `(Build)` <a href="https://github.com/tami5/xbase/commit/64f7591"> Always allow provisioning updates</a>
+### <!-- 1 -->Bug Fixes
+- `(Lua)` <a href="https://github.com/tami5/xbase/commit/7ff5e0d"> Xclog is not defined</a>
+- `(General)` <a href="https://github.com/tami5/xbase/commit/9a13cc8"> Xcodegen binary not found</a>
+### <!-- 2 -->Refactor
+- `(General)` <a href="https://github.com/tami5/xbase/commit/26ffb32"> Update logging and compile commands (xclog) (#70)</a>
+- `(General)` <a href="https://github.com/tami5/xbase/commit/3c53d44"> Separate concerns + contribution guidelines (#76)</a>
+
+## [0.1.2] - 2022-06-11
+### <!-- 0 -->Features
+- `(General)` <a href="https://github.com/tami5/xbase/commit/b6432a8"> Work on stable rust channel</a>
+### <!-- 1 -->Bug Fixes
+- `(General)` <a href="https://github.com/tami5/xbase/commit/c9632fa"> Wrong version of xcodebuild + more unstable code removal</a>
+
+## [0.1.1] - 2022-05-30
+### <!-- 0 -->Features
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/572f787"> Different indicator for running process</a>
 ### <!-- 1 -->Bug Fixes
 - `(Logger)` <a href="https://github.com/tami5/xbase/commit/25a4e56"> Incorrect title for build once requests</a>
-- `(Logger)` <a href="https://github.com/tami5/xbase/commit/db147a9"> Force scroll</a>
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/4345ae4"> Force scroll</a>
 ### <!-- 2 -->Refactor
 - `(Logger)` <a href="https://github.com/tami5/xbase/commit/f32fd6b"> Append logger title to all msgs</a>
+- `(Logger)` <a href="https://github.com/tami5/xbase/commit/8f472b1"> Print exit code</a>
 ### <!-- 3 -->Enhancement
 - `(Logger)` <a href="https://github.com/tami5/xbase/commit/c545b73"> Output readability and traceability</a>
 
