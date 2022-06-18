@@ -42,13 +42,52 @@ Being a long time vim user and having previously develop few lua/nvim plugins, I
 ## 🎮 Usage
 
 TLDR:
+- Install plugin
+- run `require'xbase'.setup({ --[[ see default configuration ]]  })`
 - Open xcode codebase with project.yml
 - Start coding
 - Use available actions which can be configure with shortcuts bellow
 
-Once you start a neovim instance with a root containing `project.yml`, the daemon server will auto-start if no instance is running, and register the project once for recompile-watch, accpeting requests from clients. Currenlty, you should relay on pickers as means to interact with your deamon.
+Once you start a neovim instance with a root containing `project.yml`, the daemon server will auto-start if no instance is running, and register the project once for recompile-watch, accepting requests from clients. Currently, you should relay on pickers as means to interact with your deamon.
 
-## ⚙️ Configuration
+## 🦾 Installation
+
+For now, xbase nvim picker depends on telescope, so you need to have telescope installed.
+
+To install xbase you need run `make install` or have your plugin manager do it for you (recommended!). `make install` will build all required binaries in addition to a lua library. The binaries will be moved to `path/to/repo/bin` and the lua library will be moved to `path/to/repo/lua/libxbase.so`.
+
+
+#### [packer]
+```lua
+use {
+  'tami5/xbase',
+    run = 'make install',
+    requires = {
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope.nvim"
+    },
+    config = function()
+      require'xbase'.setup({})  -- see default configuration bellow
+    end
+}
+```
+
+#### [vim-plug]
+```vim
+Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-telescope/telescope.nvim'
+Plug 'tami5/xbase', { 'do': 'make install' }
+```
+
+#### [dein]
+```vim
+call dein#add('nvim-lua/plenary.nvim')
+call dein#add('nvim-telescope/telescope.nvim')
+call dein#add('tami5/xbase', { 'build': 'make install' })
+```
+
+
+## ⚙️  Default Configuration
 ```lua
 -- NOTE: Defaults
 {
@@ -90,23 +129,6 @@ Once you start a neovim instance with a root containing `project.yml`, the daemo
 }
 ```
 
-## 🦾 Installation
-
-packer.nvim:
-
-```lua
-use {
-  'tami5/xbase',
-    run = 'make install',
-    requires = {
-      "nvim-lua/plenary.nvim",
-      "nvim-telescope/telescope.nvim"
-    }
-}
-```
-
-`make install` would build all required binaries in addition to a lua library. The binaries will be moved to `path/to/repo/bin` and the lua library will be mvoed to `path/to/repo/lua/libxbase.so`.
-
 ## Debugging
 
 ### Read logs
@@ -134,4 +156,6 @@ statusline get updated.
 [XVim2]: https://github.com/XVimProject/XVim2
 [rust]: https://www.rust-lang.org
 [tuist]: https://github.com/tuist/tuist
-
+[dein]: https://github.com/Shougo/dein.vim
+[packer]: https://github.com/wbthomason/packer.nvim
+[vim-plug]: https://github.com/junegunn/vim-plug
