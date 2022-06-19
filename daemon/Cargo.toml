@@ -10,7 +10,7 @@ log                   = { path = "./../log/" }
 xbase-proto           = { path = "./../proto/" }
 
 # Error Handling
-anyhow                = { version = "^1.0.42" }
+anyhow                = { version = "^1.0.58" }
 thiserror             = { version = "1.0.31" }
 
 # Serialization Feature
