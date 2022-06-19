@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use tokio::sync::mpsc::channel;
 use tokio::{sync::MutexGuard, task::JoinHandle};
-use tracing::{debug, error, info, trace};
+use log::{debug, error, info, trace};
 use xbase_proto::Client;
 
 #[derive(derive_deref_rs::Deref)]

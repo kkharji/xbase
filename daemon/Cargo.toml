@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 
 # Internal
-tracing               = { path = "./../tracing/" }
+log                   = { path = "./../log/" }
 xbase-proto           = { path = "./../proto/" }
 
 # Error Handling

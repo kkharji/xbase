@@ -37,7 +37,7 @@ impl RequestHandler for BuildRequest {
 #[async_trait]
 impl Watchable for BuildRequest {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
-        tracing::info!("Building {}", self.client.abbrev_root());
+        log::info!("Building {}", self.client.abbrev_root());
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
         // let args = state.projects.get(root)?.build_args(&config, &None)?;
@@ -52,7 +52,7 @@ impl Watchable for BuildRequest {
             config.target
         ));
 
-        tracing::trace!("building with [{}]", args.join(" "));
+        log::trace!("building with [{}]", args.join(" "));
         let xclogger = XCLogger::new(&root, args)?;
         let success = logger.consume_build_logs(xclogger, false, is_once).await?;
 

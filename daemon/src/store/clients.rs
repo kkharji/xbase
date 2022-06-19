@@ -11,7 +11,7 @@ pub struct ClientStore(HashMap<i32, NvimClient>);
 
 impl ClientStore {
     pub async fn add(&mut self, client: &Client) -> Result<()> {
-        tracing::info!("[Clients] add({})", client.pid);
+        log::info!("[Clients] add({})", client.pid);
         NvimClient::new(client)
             .await?
             .pipe(|client| self.insert(client.pid, client))
@@ -19,7 +19,7 @@ impl ClientStore {
     }
 
     pub fn remove(&mut self, client: &Client) {
-        tracing::debug!("[Clients] remove({})", client.pid);
+        log::debug!("[Clients] remove({})", client.pid);
         self.0.remove(&client.pid);
     }
 

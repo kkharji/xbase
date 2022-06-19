@@ -24,7 +24,7 @@ impl RunServiceHandler {
                 let ref mut logger = match state.clients.get(&client.pid) {
                     Ok(nvim) => nvim.logger(),
                     Err(_) => {
-                        tracing::info!("Nvim Instance closed, closing runner ..");
+                        log::info!("Nvim Instance closed, closing runner ..");
                         state.watcher.get_mut(&client.root)?.listeners.remove(&key);
                         kill_send.send(()).await.ok();
                         break;

@@ -137,7 +137,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
- "tracing 0.1.35",
+ "tracing",
 ]
 
 [[package]]
@@ -772,6 +772,17 @@ dependencies = [
 
 [[package]]
 name = "log"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+ "tracing",
+ "tracing-appender",
+ "tracing-attributes",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "log"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
@@ -850,7 +861,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "713d550d9b44d89174e066b7a6217ae06234c10cb47819a88290d2b353c31799"
 dependencies = [
  "libc",
- "log",
+ "log 0.4.17",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys",
 ]
@@ -969,7 +980,7 @@ checksum = "28f2726e013fbe2d39a8471eba99ae60b91ba602f330adf12f0dd206f413b1b4"
 dependencies = [
  "async-trait",
  "futures 0.3.21",
- "log",
+ "log 0.4.17",
  "parity-tokio-ipc",
  "rmp",
  "rmpv",
@@ -997,7 +1008,7 @@ checksum = "9981e32fb75e004cc148f5fb70342f393830e0a4aa62e3cc93b50976218d42b6"
 dependencies = [
  "futures 0.3.21",
  "libc",
- "log",
+ "log 0.4.17",
  "rand 0.7.3",
  "tokio",
  "winapi",
@@ -1689,7 +1700,7 @@ checksum = "57fc868aae093479e3131e3d165c93b1c7474109d13c90ec0dda2a1bbfff0674"
 dependencies = [
  "bytes 0.4.12",
  "futures 0.1.31",
- "log",
+ "log 0.4.17",
 ]
 
 [[package]]
@@ -1724,7 +1735,7 @@ dependencies = [
  "futures-core",
  "futures-io",
  "futures-sink",
- "log",
+ "log 0.4.17",
  "pin-project-lite",
  "tokio",
 ]
@@ -1740,18 +1751,7 @@ dependencies = [
  "futures-sink",
  "pin-project-lite",
  "tokio",
- "tracing 0.1.35",
-]
-
-[[package]]
-name = "tracing"
-version = "0.1.0"
-dependencies = [
- "thiserror",
- "tracing 0.1.35",
- "tracing-appender",
- "tracing-attributes",
- "tracing-subscriber",
+ "tracing",
 ]
 
 [[package]]
@@ -1805,7 +1805,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ddad33d2d10b1ed7eb9d1f518a5674713876e97e5bb9b7345a7984fbb4f922"
 dependencies = [
  "lazy_static",
- "log",
+ "log 0.4.17",
  "tracing-core",
 ]
 
@@ -1822,7 +1822,7 @@ dependencies = [
  "sharded-slab",
  "smallvec",
  "thread_local",
- "tracing 0.1.35",
+ "tracing",
  "tracing-core",
  "tracing-log",
 ]
@@ -2048,6 +2048,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "libproc",
+ "log 0.1.0",
  "notify",
  "nvim-rs",
  "parity-tokio-ipc",
@@ -2063,7 +2064,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util 0.7.3",
- "tracing 0.1.0",
  "wax",
  "which",
  "xbase-proto",
@@ -2087,11 +2087,11 @@ name = "xbase-proto"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "log 0.1.0",
  "paste",
  "serde",
  "serde_json",
  "strum",
- "tracing 0.1.0",
 ]
 
 [[package]]
@@ -2101,11 +2101,11 @@ dependencies = [
  "anyhow",
  "bsp-server",
  "dirs",
+ "log 0.1.0",
  "once_cell",
  "serde",
  "serde_json",
  "tap",
- "tracing 0.1.0",
  "xclog",
 ]
 
@@ -2132,7 +2132,7 @@ dependencies = [
  "tap",
  "tokio",
  "tokio-stream",
- "tracing 0.1.35",
+ "tracing",
  "tracing-appender",
  "tracing-subscriber",
  "wax",
@@ -2159,7 +2159,7 @@ dependencies = [
  "phf_codegen",
  "serde",
  "tap",
- "tracing 0.1.35",
+ "tracing",
  "tracing-appender",
  "tracing-subscriber",
  "wax",

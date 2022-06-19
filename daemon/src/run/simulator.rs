@@ -32,7 +32,7 @@ impl Simulator {
         match pid::get_by_name("Simulator") {
             Err(Error::NotFound(_, _)) => {
                 let msg = format!("[Simulator] Launching");
-                tracing::info!("{msg}");
+                log::info!("{msg}");
                 logger.append(msg).await?;
                 tokio::process::Command::new("open")
                     .args(&["-a", "Simulator"])
@@ -45,7 +45,7 @@ impl Simulator {
             }
             Err(err) => {
                 let msg = err.to_string();
-                tracing::error!("{msg}");
+                log::error!("{msg}");
                 logger.append(msg).await?;
             }
             _ => {}

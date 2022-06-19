@@ -75,7 +75,7 @@ impl RunService {
 #[async_trait::async_trait]
 impl Watchable for RunService {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
-        tracing::info!("Running {}", self.client.abbrev_root());
+        log::info!("Running {}", self.client.abbrev_root());
 
         let (root, config) = (&self.client.root, &self.medium.settings());
         let mut handler = self.handler.clone().lock_owned().await;

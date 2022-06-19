@@ -21,7 +21,7 @@ pub trait RequestHandler {
     where
         Self: Sized + std::fmt::Debug,
     {
-        tracing::error!("Not Implemented! {:#?}", self);
+        log::error!("Not Implemented! {:#?}", self);
         Ok(())
     }
 }

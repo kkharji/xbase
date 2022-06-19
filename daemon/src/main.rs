@@ -2,7 +2,7 @@ use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
-use tracing::Level;
+use log::Level;
 use xbase_daemon::util::pid;
 use xbase_daemon::Result;
 use xbase_daemon::{constants::*, RequestHandler};
@@ -14,16 +14,16 @@ async fn main() -> Result<()> {
 
     let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
-    tracing::setup("/tmp", "xbase-daemon.log", Level::TRACE, true)?;
+    log::setup("/tmp", "xbase-daemon.log", Level::TRACE, true)?;
 
-    tracing::info!("Started");
+    log::info!("Started");
     loop {
         if let Ok((mut s, _)) = listener.accept().await {
             tokio::spawn(async move {
                 let msg = {
                     let mut msg = String::default();
                     if let Err(e) = s.read_to_string(&mut msg).await {
-                        return tracing::error!("[Read Error]: {:?}", e);
+                        return log::error!("[Read Error]: {:?}", e);
                     };
                     msg
                 };
@@ -34,13 +34,13 @@ async fn main() -> Result<()> {
 
                 let req = match Request::read(msg.clone()) {
                     Err(e) => {
-                        return tracing::error!("[Parse Error]: {:?} message: {msg}", e);
+                        return log::error!("[Parse Error]: {:?} message: {msg}", e);
                     }
                     Ok(req) => req,
                 };
 
                 if let Err(e) = handle(req).await {
-                    return tracing::error!("[Failure]: Cause: ({:?})", e);
+                    return log::error!("[Failure]: Cause: ({:?})", e);
                 };
 
                 let state = DAEMON_STATE.clone();
@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
                 // update_watchers(state.clone()).await;
             });
         } else {
-            tracing::error!("Fail to accept a connection")
+            log::error!("Fail to accept a connection")
         };
     }
 }

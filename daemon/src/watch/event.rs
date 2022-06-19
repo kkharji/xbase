@@ -44,7 +44,7 @@ impl Event {
         use NotifyEventKind::*;
 
         if event.paths.len() > 1 {
-            tracing::error!("[FsEvent] More than one path! {:#?}", event)
+            log::error!("[FsEvent] More than one path! {:#?}", event)
         }
 
         let kind = match event.kind {
@@ -61,7 +61,7 @@ impl Event {
         let file_name = match path.file_name() {
             Some(name) => name.to_string_lossy().to_string(),
             None => {
-                tracing::error!("[FsEvent] Unable to get event file path name!!! {path:?}",);
+                log::error!("[FsEvent] Unable to get event file path name!!! {path:?}",);
                 Default::default()
             }
         };
@@ -70,13 +70,13 @@ impl Event {
 
         // Skip ignore paths
         if is_match(ignore, &*path.to_string_lossy()) {
-            tracing::trace!(r#"[WatchService] Ignored "{file_name}""#);
+            log::trace!(r#"[WatchService] Ignored "{file_name}""#);
             return None;
         }
 
         // Skip if Unsupported event
         if let EventKind::Other(kind) = kind {
-            tracing::trace!(r#"[WatchService] Skip {:?} of "{file_name}""#, kind,);
+            log::trace!(r#"[WatchService] Skip {:?} of "{file_name}""#, kind,);
             return None;
         }
 
@@ -90,7 +90,7 @@ impl Event {
         // Skip when last run was less then 1 second agot
         let last_run = state.last_run();
         if !(last_run > 1) {
-            tracing::trace!("[WatchService] Skip [last_run: {last_run}] [{event}]");
+            log::trace!("[WatchService] Skip [last_run: {last_run}] [{event}]");
             return None;
         }
 
@@ -146,7 +146,7 @@ impl Event {
     /// Get the event's is seen.
     #[must_use]
     pub fn is_seen(&self) -> bool {
-        tracing::trace!("{}", self.file_name);
+        log::trace!("{}", self.file_name);
 
         if self.file_name.eq("project.yml") {
             return false;
@@ -154,7 +154,7 @@ impl Event {
         let mut last_path = match self.last_path.lock() {
             Ok(path) => path,
             Err(err) => {
-                tracing::error!("{err}");
+                log::error!("{err}");
                 err.into_inner()
             }
         };
@@ -177,7 +177,7 @@ impl fmt::Display for Event {
             FileUpdated => "Updated",
             FileRenamed => "Renamed",
             Other(event) => {
-                tracing::trace!("[FsEvent] Other: {:?}", event);
+                log::trace!("[FsEvent] Other: {:?}", event);
                 "other"
             }
             _ => "",

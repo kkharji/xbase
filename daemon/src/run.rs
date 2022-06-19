@@ -17,7 +17,7 @@ impl RequestHandler for RunRequest {
     where
         Self: Sized + std::fmt::Debug,
     {
-        tracing::info!("⚙️ Running: {}", self.settings.to_string());
+        log::info!("⚙️ Running: {}", self.settings.to_string());
 
         let ref key = self.to_string();
         let state = DAEMON_STATE.clone();

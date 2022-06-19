@@ -19,7 +19,7 @@ impl ProjectStore {
         project.root = root.clone();
         project.clients.push(*pid);
 
-        tracing::info!("[Projects] add({})", client.abbrev_root());
+        log::info!("[Projects] add({})", client.abbrev_root());
 
         self.0.insert(root.to_path_buf(), project);
 
@@ -54,7 +54,7 @@ impl ProjectStore {
 
         // Remove project only when no more client using that data.
         if project.clients.is_empty() {
-            tracing::info!("[Projects] remove({:?})", client.abbrev_root());
+            log::info!("[Projects] remove({:?})", client.abbrev_root());
             return Ok(self.0.remove(root));
         }
 
