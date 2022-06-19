@@ -17,26 +17,56 @@ After purchasing a MacBook, I decided to get into iOS/macOS applications develop
 
 Being a long time vim user and having previously develop few lua/nvim plugins, I decided to take sometime to invest in both simplify my development workflow for developing `xOS`stuff  and enrich my experience with [rust].
 
-## 🌟 Features:
+## Table of Content
 
-* **Auto-Completion and Code navigation**\
-    [sourcekit-lsp] doesn't support auto-indexing. Therefore, [xbase] includes a custom build server that auto-generate compiled command on directory changes (i.e. file removed/added).
-* **Multi-nvim instance support**\
-    Thanks to having a single daemon running and simple client/server architecture, users can have and use multiple nvim instance running without process duplications and shared state. E.g. stop watch service ran from a nvim instance in another instance.
-* **Auto-start/stop main background daemon**\
-    No need to manual start/stop daemon background. The daemon will auto start/stop based on
-    connect neovim (client instances)
-* **Multi Target/Project Support**\
-    Users can develop across different projects and build/run on root directory changes or once.
-* **Simulator Support**\
-    Pick a simulator devices relative to target platform and run the target once or per file changes. If the simulator isn't running then it will auto launch it.
-* **Logging buffer**\
-  real-time logging of print statements and build logs. This feature depends partially on [xcodebuild] crate which is still work-in-progress and might not print errors. Currently logs are specific to the requested client, if you find yourself needing shared logs, open an issue.
-* **Statusline Support**\
-    Global variable to update statusline with build/run commands + [feline] provider. Other
-    statusline plugins support are welcomed.
-* **No footprint**\
-    light resource use. I've been using xbase for a while now, usually 0.0% cpu and 0.1% memory.
+- [🌟 Features](#-features)
+  - [Auto-Completion and Code navigation](#auto-completion-and-code-navigation)
+  - [Multi-nvim instance support](#multi-nvim-instance-support)
+  - [Auto-start/stop main background daemon](#auto-startstop-main-background-daemon)
+  - [Multi Target/Project Support](#multi-targetproject-support)
+  - [Simulator Support](#simulator-support)
+  - [Logging](#logging)
+  - [Statusline Support](#statusline-support)
+  - [Zero Footprint](#zero-footprint)
+- [🎮 Usage](#-usage)
+- [🛠 Requirements](#-requirements)
+- [🦾 Installation](#-installation)
+- [⚙️ Defaults](#-defaults)
+- [🩺 Debugging](#-debugging)
+- [🎥 Preview](#-preview)
+
+## 🌟 Features
+
+#### Auto-Completion and Code navigation
+
+> [sourcekit-lsp] doesn't support auto-indexing. Therefore, [xbase] includes a custom build server that auto-generate compiled command on directory changes (i.e. file removed/added).
+
+#### Multi-nvim instance support
+
+> Thanks to having a single daemon running and simple client/server architecture, users can have and use multiple nvim instance running without process duplications and shared state. E.g. stop watch service ran from a nvim instance in another instance.
+
+#### Auto-start/stop main background daemon
+
+> No need to manual start/stop daemon background. The daemon will auto start/stop based on
+connect neovim (client instances)
+
+#### Multi Target/Project Support
+> Users can develop across different projects and build/run on root directory changes or once.
+`*`
+
+#### Simulator Support
+> Pick a simulator devices relative to target platform and run the target once or per file changes. If the simulator isn't running then it will auto launch it.
+
+#### Logging
+> real-time logging of print statements and build logs. This feature depends partially on [xcodebuild] crate which is still work-in-progress and might not print errors. Currently logs are specific to the requested client, if you find yourself needing shared logs, open an issue.
+
+#### Statusline Support
+> Global variable to update statusline with build/run commands + [feline] provider. Other
+statusline plugins support are welcomed.
+
+#### Zero Footprint
+
+> light resource use. I've been using xbase for a while now, usually 0.0% cpu and 0.1% memory.
 
 
 ## 🎮 Usage
@@ -48,16 +78,23 @@ TLDR:
 - Start coding
 - Use available actions which can be configure with shortcuts bellow
 
-Once you start a neovim instance with a root containing `project.yml`, the daemon server will auto-start if no instance is running, and register the project once for recompile-watch, accepting requests from clients. Currently, you should relay on pickers as means to interact with your deamon.
+Once you start a neovim instance with a root containing `project.yml`, the daemon server will auto-start if no instance is running, and register the project once for recompile-watch, accepting requests from clients. Currently, you should relay on pickers as means to interact with your daemon.
+
+## 🛠 Requirements
+
+- [neovim] v0.7.0 or nightly
+- [rust] 1.60.0 or up (see [rust getting started])
+- [telescope.nvim]
+- [plenery.nvim]
 
 ## 🦾 Installation
 
-For now, xbase nvim picker depends on telescope, so you need to have telescope installed.
+To install xbase on your system you need run `make install`. This will run `cargo build
+--release` on all the required binaries in addition to a lua library. The binaries will be
+moved to `path/to/repo/bin` and the lua library will be moved to
+`path/to/repo/lua/libxbase.so`.
 
-To install xbase you need run `make install` or have your plugin manager do it for you (recommended!). `make install` will build all required binaries in addition to a lua library. The binaries will be moved to `path/to/repo/bin` and the lua library will be moved to `path/to/repo/lua/libxbase.so`.
-
-
-#### [packer]
+#### With [packer]
 ```lua
 use {
   'tami5/xbase',
@@ -72,22 +109,24 @@ use {
 }
 ```
 
-#### [vim-plug]
+#### With [vim-plug]
 ```vim
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'tami5/xbase', { 'do': 'make install' }
+lua require'xbase'.setup()
 ```
 
-#### [dein]
+#### With [dein]
 ```vim
 call dein#add('nvim-lua/plenary.nvim')
 call dein#add('nvim-telescope/telescope.nvim')
 call dein#add('tami5/xbase', { 'build': 'make install' })
+lua require'xbase'.setup()
 ```
 
 
-## ⚙️  Default Configuration
+## ⚙️ Defaults
 ```lua
 -- NOTE: Defaults
 {
@@ -129,7 +168,7 @@ call dein#add('tami5/xbase', { 'build': 'make install' })
 }
 ```
 
-## Debugging
+## 🩺 Debugging
 
 ### Read logs
 ```bash
@@ -139,7 +178,7 @@ tail -f /tmp/xbase-daemon.log
 tail -f /tmp/xbase-server.log
 ```
 
-## Preview
+## 🎥 Preview
 
 Watch build service.
 
@@ -159,3 +198,7 @@ statusline get updated.
 [dein]: https://github.com/Shougo/dein.vim
 [packer]: https://github.com/wbthomason/packer.nvim
 [vim-plug]: https://github.com/junegunn/vim-plug
+[rust getting started]: https://www.rust-lang.org/tools/install
+[telescope.nvim]: https://github.com/nvim-telescope/telescope.nvim
+[plenery.nvim]: https://github.com/nvim-lua/plenary.nvim
+[neovim]: https://github.com/neovim/neovim
