@@ -1,23 +1,21 @@
 mod generator;
-mod platform;
 
 use crate::device::Device;
 use crate::util::fs::{
     get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
 };
-use crate::watch::{Event, EventKind};
+use crate::watch::Event;
 use crate::Error;
 use crate::{state::State, Result};
 use anyhow::Context;
 use generator::ProjectGenerator;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::sync::MutexGuard;
 use xbase_proto::BuildSettings;
+use xcodeproj::pbxproj::PBXTargetPlatform;
 use xcodeproj::XCodeProject;
-
-pub use platform::*;
 
 /// Project Inner
 #[derive(Debug)]
@@ -41,7 +39,7 @@ pub struct Project {
     pub name: String,
 
     /// The list of targets in the project mapped by name
-    pub targets: HashMap<String, Platform>,
+    pub targets: HashMap<String, PBXTargetPlatform>,
 
     /// Root directory
     #[serde(skip)]
@@ -96,18 +94,16 @@ impl Project {
                 .unwrap();
 
             tracing::debug!("[Project] name = {}", project.name);
+            let objects = xcodeproj.objects();
+
             project.targets = xcodeproj
                 .targets()
                 .into_iter()
-                .flat_map(|t| {
-                    let name = t.name?.to_string();
-                    let sdkroots = t.sdkroots();
-                    let sdkroot = sdkroots.first()?;
-                    let platform = Platform::from_sdk_root(sdkroot.as_str());
-                    Some((name, platform))
-                })
+                .flat_map(|t| Some((t.name?.to_string(), t.platfrom(objects))))
                 .collect::<HashMap<_, _>>();
+
             tracing::debug!("[Project] targets = {:?}", project.targets);
+
             ProjectInner::XCodeProject(xcodeproj)
         };
 

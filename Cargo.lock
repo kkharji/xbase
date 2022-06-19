@@ -2195,6 +2195,7 @@ dependencies = [
  "pest_derive",
  "phf",
  "phf_codegen",
+ "serde",
  "tap",
  "tracing 0.1.35",
  "tracing-appender",
