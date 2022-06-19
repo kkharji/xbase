@@ -120,7 +120,7 @@ impl Project {
         let mut compile_commands: Vec<XCCompileCommand> = vec![];
         let cache_root = get_build_cache_dir(&self.root)?;
         // Because xcodebuild clean can't remove it
-        tokio::fs::remove_dir_all(&cache_root).await?;
+        tokio::fs::remove_dir_all(&cache_root).await.ok();
 
         let build_args: Vec<String> = vec![
             "clean".into(),
