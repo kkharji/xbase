@@ -9,3 +9,10 @@ members = [
   # library to communicate with the daemon
   "lualib",
 ]
+
+[profile.dev]
+debug = 0
+
+[profile.release]
+incremental = true
+debug = 0

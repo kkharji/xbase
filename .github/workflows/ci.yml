@@ -9,7 +9,7 @@ jobs:
   build:
     name: Build & Install
     env:
-      CARGO_INCREMENTAL: 1
+      CARGO_INCREMENTAL: 0
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
