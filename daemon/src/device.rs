@@ -1,10 +1,10 @@
-use super::project::Platform;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
+use xcodeproj::pbxproj::PBXTargetPlatform;
 
 #[derive(Clone, Debug, Serialize, Deserialize, derive_deref_rs::Deref)]
 pub struct Device {
-    pub platform: Platform,
+    pub platform: PBXTargetPlatform,
     #[serde(flatten)]
     #[deref]
     inner: simctl::Device,
@@ -27,7 +27,7 @@ impl Hash for Device {
 impl From<simctl::Device> for Device {
     fn from(inner: simctl::Device) -> Self {
         let ref id = inner.runtime_identifier;
-        let platform = Platform::from_identifer(id);
+        let platform = PBXTargetPlatform::from_identifer(id);
         Self { inner, platform }
     }
 }
@@ -37,11 +37,11 @@ impl Device {
     // -sdk driverkit -sdk iphoneos -sdk macosx -sdk appletvos -sdk watchos
     pub fn special_build_args(&self) -> Vec<String> {
         match self.platform {
-            Platform::IOS => vec!["-sdk".into(), "iphonesimulator".into()],
-            Platform::WatchOS => vec!["-sdk".into(), "watchsimulator".into()],
-            Platform::TvOS => vec!["-sdk".into(), "appletvsimulator".into()],
-            Platform::MacOS => vec!["-sdk".into(), "macosx".into()],
-            Platform::Unknown => vec![],
+            PBXTargetPlatform::IOS => vec!["-sdk".into(), "iphonesimulator".into()],
+            PBXTargetPlatform::WatchOS => vec!["-sdk".into(), "watchsimulator".into()],
+            PBXTargetPlatform::TvOS => vec!["-sdk".into(), "appletvsimulator".into()],
+            PBXTargetPlatform::MacOS => vec!["-sdk".into(), "macosx".into()],
+            PBXTargetPlatform::Unknown => vec![],
         }
     }
 }

@@ -3,6 +3,10 @@ use thiserror::Error as ThisError;
 
 #[derive(ThisError, Debug)]
 pub enum Error {
+    #[error("[Error] (Register): {0}")]
+    Register(String),
+    #[error("[Error] {0} is **not implemented**!")]
+    NotImplemented(String),
     #[error("[Error] (Compile): {0}")]
     Compile(#[from] CompileError),
     #[error("{0}")]

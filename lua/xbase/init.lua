@@ -17,6 +17,12 @@ vim.g.xbase = {
 M.should_register = function(root, _)
   if vim.loop.fs_stat(root .. "/project.yml") then
     return true
+  elseif vim.loop.fs_stat(root .. "/Project.swift") then
+    return true
+    -- elseif vim.loop.fs_stat(root .. "/Package.swift") then
+    -- return true
+  elseif vim.fn.glob(root .. "/*.xcodeproj"):len() ~= 0 then
+    return true
   end
   return false
 end

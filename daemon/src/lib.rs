@@ -12,7 +12,6 @@ pub mod state;
 pub mod store;
 pub mod util;
 pub mod watch;
-pub mod xcodegen;
 pub use error::{CompileError, Error, LoopError};
 pub type Result<T> = std::result::Result<T, Error>;
 

@@ -25,20 +25,11 @@ end
 M.get_targets_runners = function(project)
   local targets = {}
 
-  for name, target in pairs(project.targets) do
-    if #target.platform > 1 then
-      for _, platform in ipairs(target.platform) do
-        table.insert(targets, {
-          name = string.format("%s_%s", name, platform),
-          runners = get_devices(platform),
-        })
-      end
-    else
-      table.insert(targets, {
-        name = name,
-        runners = get_devices(target.platform[1]),
-      })
-    end
+  for name, platform in pairs(project.targets) do
+    table.insert(targets, {
+      name = name,
+      runners = get_devices(platform),
+    })
   end
 
   return targets
@@ -70,7 +61,6 @@ M.is_watching = function(config, command, device)
   end
 
   key = key .. " -target " .. config.target
-  print(key)
 
   return watching[key] ~= nil
 end
