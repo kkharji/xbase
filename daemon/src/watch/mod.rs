@@ -7,6 +7,7 @@ use crate::compile::ensure_server_support;
 use crate::error::EnsureOptional;
 use crate::{constants::DAEMON_STATE, state::State, Result};
 use async_trait::async_trait;
+use log::{debug, error, info, trace};
 use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -14,7 +15,6 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use tokio::sync::mpsc::channel;
 use tokio::{sync::MutexGuard, task::JoinHandle};
-use log::{debug, error, info, trace};
 use xbase_proto::Client;
 
 #[derive(derive_deref_rs::Deref)]

@@ -1,8 +1,8 @@
+use log::Level;
 use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
-use log::Level;
 use xbase_daemon::util::pid;
 use xbase_daemon::Result;
 use xbase_daemon::{constants::*, RequestHandler};
