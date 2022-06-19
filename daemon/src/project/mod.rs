@@ -1,13 +1,8 @@
 mod generator;
 
 use crate::device::Device;
-use crate::util::fs::{
-    get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
-};
 use crate::watch::Event;
-use crate::Error;
 use crate::{state::State, Result};
-use anyhow::Context;
 use generator::ProjectGenerator;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -68,41 +63,19 @@ impl Project {
         project.generator = ProjectGenerator::new(root);
 
         project.inner = if root.join("Package.swift").exists() {
-            tracing::debug!("[Project] Kind = Swift",);
+            tracing::debug!("[Project] Kind: \"Swift\"",);
+            // TODO(project): Get swift project name
             project.name = "UnknownSwiftProject".into();
             ProjectInner::Swift
         } else {
-            tracing::debug!("[Project] Kind = XCodeProject");
-            tracing::debug!("[Project] Generator = {:?}", project.generator);
-            let matches = wax::walk("*.xcodeproj", root, 1)
-                .context("Glob")?
-                .flatten()
-                .map(|entry| entry.into_path())
-                .collect::<Vec<PathBuf>>();
+            let xcodeproj = XCodeProject::new(root)?;
+            project.name = xcodeproj.name().to_owned();
+            project.targets = xcodeproj.targets_platform();
 
-            let path = if matches.is_empty() {
-                return Err(Error::Register("Expected swift or xcode project".into()));
-            } else {
-                &matches[0]
-            };
-
-            let xcodeproj = XCodeProject::new(path)?;
-
-            project.name = path
-                .file_name()
-                .and_then(|name| Some(name.to_str()?.split_once(".")?.0.to_string()))
-                .unwrap();
-
-            tracing::debug!("[Project] name = {}", project.name);
-            let objects = xcodeproj.objects();
-
-            project.targets = xcodeproj
-                .targets()
-                .into_iter()
-                .flat_map(|t| Some((t.name?.to_string(), t.platfrom(objects))))
-                .collect::<HashMap<_, _>>();
-
-            tracing::debug!("[Project] targets = {:?}", project.targets);
+            tracing::debug!("[New Project] name: {:?}", project.name);
+            tracing::debug!("[New Project] Kind: \"XCodeProject\"");
+            tracing::debug!("[New Project] Generator: \"{:?}\"", project.generator);
+            tracing::debug!("[New Project] targets: {:?}", project.targets);
 
             ProjectInner::XCodeProject(xcodeproj)
         };
@@ -157,6 +130,10 @@ impl Project {
         }
     }
 }
+
+use crate::util::fs::{
+    get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
+};
 
 impl Project {
     /// Generate compile commands for project via compiling all targets

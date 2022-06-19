@@ -61,7 +61,6 @@ M.is_watching = function(config, command, device)
   end
 
   key = key .. " -target " .. config.target
-  print(key)
 
   return watching[key] ~= nil
 end

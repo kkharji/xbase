@@ -54,7 +54,6 @@ M.build = function(opts)
 end
 
 M.run = function(opts)
-  I(opts)
   require("libxbase").run(opts)
 end
 

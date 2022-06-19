@@ -2200,6 +2200,7 @@ dependencies = [
  "tracing 0.1.35",
  "tracing-appender",
  "tracing-subscriber",
+ "wax 0.5.0",
 ]
 
 [[package]]
