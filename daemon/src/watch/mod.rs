@@ -69,7 +69,7 @@ impl WatchService {
                     .echo_msg(&client.root, name, "recompiling ... (may take few seconds)")
                     .await;
 
-                let ensure = ensure_server_support(state, client, Some(event.path()));
+                let ensure = ensure_server_support(state, client, Some(event));
                 if ensure.await.is_ok() {
                     state
                         .clients

@@ -1,7 +1,9 @@
 //! Module for generating Compilation Database.
 use xbase_proto::Client;
+
+use crate::watch::Event;
 use {
-    crate::{error::XcodeGenError, state::State, util::pid, xcodegen, Result},
+    crate::{error::XcodeGenError, state::State, util::pid, Result},
     std::path::PathBuf,
     tap::Pipe,
     tokio::{fs::metadata, io::AsyncWriteExt, sync::MutexGuard},
@@ -42,7 +44,7 @@ pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
 pub async fn ensure_server_support<'a>(
     state: &'a mut MutexGuard<'_, State>,
     client: &Client,
-    path: Option<&PathBuf>,
+    event: Option<&Event>,
 ) -> Result<bool> {
     let Client { root, .. } = client;
     let ref name = client.abbrev_root();
@@ -56,8 +58,8 @@ pub async fn ensure_server_support<'a>(
             .await;
     }
 
-    if let Some(path) = path {
-        let generated = match xcodegen::regenerate(path, &root).await {
+    if event.is_some() {
+        let generated = match state.projects.get(root)?.regenerate(event).await {
             Ok(generated) => generated,
             Err(e) => {
                 state.clients.echo_err(&root, name, &e.to_string()).await;
@@ -72,14 +74,14 @@ pub async fn ensure_server_support<'a>(
         return Ok(false);
     }
 
-    if xcodegen::is_valid(&root) && path.is_none() {
+    if event.is_none() {
         "⚙ generating xcodeproj ..."
             .pipe(|msg| state.clients.echo_msg(root, name, msg))
             .await;
 
-        if let Some(err) = match xcodegen::generate(&root).await {
-            Ok(status) => {
-                if status.success() {
+        if let Some(err) = match state.projects.get(root)?.regenerate(event).await {
+            Ok(generated) => {
+                if generated {
                     "setup: ⚙ generate xcodeproj ..."
                         .pipe(|msg| state.clients.echo_msg(root, name, msg))
                         .await;

@@ -5,13 +5,14 @@ use crate::device::Device;
 use crate::util::fs::{
     get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
 };
+use crate::watch::{Event, EventKind};
 use crate::Error;
 use crate::{state::State, Result};
 use anyhow::Context;
 use generator::ProjectGenerator;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::sync::MutexGuard;
 use xbase_proto::BuildSettings;
 use xcodeproj::XCodeProject;
@@ -143,6 +144,21 @@ impl Project {
     ) -> Result<()> {
         state.watcher.get_mut(&self.root)?.listeners.clear();
         Ok(())
+    }
+
+    pub async fn regenerate(&self, event: Option<&Event>) -> Result<bool> {
+        if let Some(event) = event {
+            let is_generator_file = ProjectGenerator::is_genertor_file(event.path());
+            if (event.is_content_update_event() && is_generator_file)
+                || (event.is_create_event() || event.is_remove_event())
+            {
+                self.generator.regenerate(&self.root).await
+            } else {
+                Ok(false)
+            }
+        } else {
+            self.generator.regenerate(&self.root).await
+        }
     }
 }
 
