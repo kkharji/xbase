@@ -22,6 +22,15 @@ impl Default for Platform {
 }
 
 impl Platform {
+    pub fn from_sdk_root(sdk_root: &str) -> Self {
+        match sdk_root {
+            "iphoneos" => Self::IOS,
+            "macosx" => Self::MacOS,
+            "appletvos" => Self::TvOS,
+            "watchos" => Self::WatchOS,
+            _ => Self::Unknown,
+        }
+    }
     pub fn from_identifer(identifer: &str) -> Self {
         let name = identifer.replace("com.apple.CoreSimulator.SimRuntime.", "");
         let platform_str = name.split("-").next().unwrap().to_string();

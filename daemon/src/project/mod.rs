@@ -1,70 +1,127 @@
-mod config;
-mod dependency;
-mod options;
-mod package;
+// mod config;
+// mod dependency;
+// mod options;
+// mod package;
+mod generator;
 mod platform;
-mod target;
-mod target_type;
-
+use crate::Error;
+use generator::ProjectGenerator;
+// mod target;
+// mod target_type;
+// pub use {
+//     config::PluginConfig, dependency::*, options::*, package::*, platform::*, target::*,
+//     target_type::*,
+// };
 use crate::device::Device;
 use crate::util::fs::{
     get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
 };
-use crate::{error::EnsureOptional, state::State, xcodegen, Result};
+use crate::{state::State, Result};
+use anyhow::Context;
+pub use platform::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::sync::MutexGuard;
 use xbase_proto::BuildSettings;
+use xcodeproj::XCodeProject;
 
-use tap::Pipe;
+/// Project Inner
+#[derive(Debug)]
+pub enum ProjectInner {
+    None,
+    XCodeProject(XCodeProject),
+    Swift,
+}
 
-pub use {
-    config::PluginConfig, dependency::*, options::*, package::*, platform::*, target::*,
-    target_type::*,
-};
+impl Default for ProjectInner {
+    fn default() -> Self {
+        Self::None
+    }
+}
 
 /// Represent XcodeGen Project
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
     /// Project Name or rather xproj generated file name.
     pub name: String,
 
     /// The list of targets in the project mapped by name
-    pub targets: HashMap<String, ProjectTarget>,
+    pub targets: HashMap<String, Platform>,
 
-    #[serde(skip)]
     /// Root directory
+    #[serde(skip)]
     pub root: PathBuf,
 
-    #[serde(default)]
     /// Connected Clients
+    #[serde(default)]
     pub clients: Vec<i32>,
 
-    #[serde(default)]
     /// Ignore Patterns
+    #[serde(default)]
     pub ignore_patterns: Vec<String>,
 
-    #[serde(default)]
-    /// Options to override default behaviour
-    pub options: ProjectOptions,
+    /// Generator
+    pub generator: ProjectGenerator,
 
-    #[serde(default)]
-    /// Packages
-    pub packages: HashMap<String, ProjectPackage>,
+    #[serde(skip)]
+    /// XCodeProject Data
+    inner: ProjectInner,
 }
 
 impl Project {
     pub async fn new(root: &std::path::PathBuf) -> Result<Self> {
-        let path = xcodegen::config_file(root)?;
+        let mut project = Self::default();
 
-        let content = tokio::fs::read_to_string(path).await?;
-        let mut project = serde_yaml::from_str::<Project>(&content)?;
-        let gitignore_patterns = gitignore_to_glob_patterns(root).await?;
+        project.generator = ProjectGenerator::new(root);
 
-        // Note: Add extra ignore patterns to `ignore` local config requires restarting daemon.
-        project.ignore_patterns.extend(gitignore_patterns);
+        project.inner = if root.join("Package.swift").exists() {
+            tracing::debug!("[Project] Kind = Swift",);
+            project.name = "UnknownSwiftProject".into();
+            ProjectInner::Swift
+        } else {
+            tracing::debug!("[Project] Kind = XCodeProject");
+            tracing::debug!("[Project] Generator = {:?}", project.generator);
+            let matches = wax::walk("*.xcodeproj", root, 1)
+                .context("Glob")?
+                .flatten()
+                .map(|entry| entry.into_path())
+                .collect::<Vec<PathBuf>>();
+
+            let path = if matches.is_empty() {
+                return Err(Error::Register("Expected swift or xcode project".into()));
+            } else {
+                &matches[0]
+            };
+
+            let xcodeproj = XCodeProject::new(path)?;
+
+            project.name = path
+                .file_name()
+                .and_then(|name| Some(name.to_str()?.split_once(".")?.0.to_string()))
+                .unwrap();
+
+            tracing::debug!("[Project] name = {}", project.name);
+            project.targets = xcodeproj
+                .targets()
+                .into_iter()
+                .flat_map(|t| {
+                    let name = t.name?.to_string();
+                    let sdkroots = t.sdkroots();
+                    let sdkroot = sdkroots.first()?;
+                    let platform = Platform::from_sdk_root(sdkroot.as_str());
+                    Some((name, platform))
+                })
+                .collect::<HashMap<_, _>>();
+            tracing::debug!("[Project] targets = {:?}", project.targets);
+            ProjectInner::XCodeProject(xcodeproj)
+        };
+
+        project
+            .ignore_patterns
+            .extend(gitignore_to_glob_patterns(root).await?);
+
         project.ignore_patterns.extend(vec![
             "**/.git/**".into(),
             "**/*.xcodeproj/**".into(),
@@ -87,19 +144,6 @@ impl Project {
         tracing::info!("[Projects] update({:?})", self.name);
 
         Ok(())
-    }
-
-    pub fn get_target(&self, name: &String, platform: Option<Platform>) -> Result<&ProjectTarget> {
-        match self.targets.get(name) {
-            Some(value) => Ok(value),
-            None => match platform {
-                Some(platform) => {
-                    let key = platform.to_string().pipe(|s| name.replace(&s, ""));
-                    self.targets.get(&key).to_result("target", key)
-                }
-                None => Err(anyhow::anyhow!("No Target found with {name} {:#?}", platform).into()),
-            },
-        }
     }
 
     pub async fn remove_target_watchers<'a>(
