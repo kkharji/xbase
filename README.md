@@ -201,3 +201,4 @@ statusline get updated.
 [plenary.nvim]: https://github.com/nvim-lua/plenary.nvim
 [neovim]: https://github.com/neovim/neovim
 [tuist]: https://github.com/tuist/tuist
+
