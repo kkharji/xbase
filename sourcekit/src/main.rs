@@ -2,16 +2,17 @@ use bsp_server::types::{
     BuildTargetSources, BuildTargetSourcesResult, InitializeBuild, Url, WorkspaceBuildTargetsResult,
 };
 use bsp_server::{Connection, Message, Request, RequestId, Response};
+use log::Level;
 use once_cell::sync::OnceCell;
 use serde_json::{json, Value};
 use std::path::Path;
 use std::sync::Mutex;
 use std::{collections::HashMap, path::PathBuf};
-use tracing::Level;
 use xclog::{XCCompilationDatabase, XCCompileArgs, XCCompileCommand};
 mod extensions;
 mod helpers;
 use anyhow::{anyhow, Context, Result};
+use log as tracing; // hack for tracing macros
 
 use extensions::*;
 use helpers::*;
@@ -55,7 +56,7 @@ fn initialize(params: &InitializeBuild) -> Result<InitializeBuild> {
             "indexStorePath": index_store_path,
         }),
     );
-    tracing::info!("{response:#?}");
+    log::info!("{response:#?}");
 
     STATE
         .set(Mutex::new(State {
@@ -71,10 +72,10 @@ fn get_compile_args<'a>(path: impl AsRef<Path>) -> Result<XCCompileArgs> {
     let mut state = state().lock().unwrap();
     let path = path.as_ref();
     if state.file_args.contains_key(path) {
-        tracing::debug!("Using Cached file args ...");
+        log::debug!("Using Cached file args ...");
         state.file_args.get(path)
     } else {
-        tracing::debug!("Querying compile_db ...");
+        log::debug!("Querying compile_db ...");
         let file_args = state
             .compile_db
             .iter()
@@ -92,18 +93,18 @@ fn get_compile_args<'a>(path: impl AsRef<Path>) -> Result<XCCompileArgs> {
 /// Register or unregister a file options for changes. On change, must send
 /// SourceKitOptionsChanged with list of compiler options to compile the
 /// file.
-#[tracing::instrument(name = "RegisterForChanges", skip_all)]
+#[log::instrument(name = "RegisterForChanges", skip_all)]
 fn register_for_changes(conn: &Conn, id: Id, params: OptionsChangedRequest) -> Result<()> {
     // Empty response, ensure response before notification
     conn.send(Response::ok(id, Value::Null))?;
 
     if !matches!(params.action, RegisterAction::Register) {
-        tracing::error!("Unhandled params: {:?}", params);
+        log::error!("Unhandled params: {:?}", params);
         return Ok(());
     }
 
     let filepath = params.uri.path();
-    tracing::info!("{filepath}");
+    log::info!("{filepath}");
     let root_path = state().lock().unwrap().root_path.clone();
     let uri = Url::from_directory_path(root_path).ok();
     let args = get_compile_args(filepath)?.to_vec();
@@ -117,10 +118,10 @@ fn register_for_changes(conn: &Conn, id: Id, params: OptionsChangedRequest) -> R
 }
 
 /// List of compiler options necessary to compile a file.
-#[tracing::instrument(name = "SourceKitOptions", skip_all)]
+#[log::instrument(name = "SourceKitOptions", skip_all)]
 fn sourcekit_options(conn: &Conn, id: Id, params: OptionsRequest) -> Result<()> {
     let filepath = params.uri.path();
-    tracing::info!("{filepath}");
+    log::info!("{filepath}");
 
     let root_path = state().lock().unwrap().root_path.clone();
     let uri = Url::from_directory_path(root_path).ok();
@@ -133,9 +134,9 @@ fn sourcekit_options(conn: &Conn, id: Id, params: OptionsRequest) -> Result<()> 
 }
 
 /// Process Workspace BuildTarget request
-#[tracing::instrument(name = "WorkspaceBuildTargets", skip_all)]
+#[log::instrument(name = "WorkspaceBuildTargets", skip_all)]
 fn workspace_build_targets(conn: &Conn, id: Id) -> Result<()> {
-    tracing::debug!("Processing");
+    log::debug!("Processing");
     let response = WorkspaceBuildTargetsResult::new(vec![]);
 
     conn.send((id, response))?;
@@ -144,9 +145,9 @@ fn workspace_build_targets(conn: &Conn, id: Id) -> Result<()> {
 }
 
 /// Process BuildTarget output paths
-#[tracing::instrument(name = "BuildTargetsOutputPaths", skip_all)]
+#[log::instrument(name = "BuildTargetsOutputPaths", skip_all)]
 fn output_paths(conn: &Conn, id: Id, params: BuildTargetOutputPathsRequest) -> Result<()> {
-    tracing::debug!("Processing {params:#?}");
+    log::debug!("Processing {params:#?}");
     let response = BuildTargetOutputPathsResponse::new(vec![]).as_response(id);
 
     conn.send(response)?;
@@ -155,9 +156,9 @@ fn output_paths(conn: &Conn, id: Id, params: BuildTargetOutputPathsRequest) -> R
 }
 
 /// Process BuildTarget Sources Request
-#[tracing::instrument(name = "BuildTargetsSources", skip_all)]
+#[log::instrument(name = "BuildTargetsSources", skip_all)]
 fn build_target_sources(conn: &Conn, id: Id, params: BuildTargetSources) -> Result<()> {
-    tracing::debug!("Processing {params:#?}");
+    log::debug!("Processing {params:#?}");
     let response = BuildTargetSourcesResult::new(vec![]);
     conn.send((id, response))?;
     Ok(())
@@ -165,8 +166,8 @@ fn build_target_sources(conn: &Conn, id: Id, params: BuildTargetSources) -> Resu
 
 /// Return Default response for unhandled requests.
 fn default_response(conn: &Conn, id: &Id, method: &str, params: Value) -> Result<()> {
-    tracing::warn!("Unable to handle:\n\n{:#?}\n", method);
-    tracing::debug!("Got Params:\n\n{:#?}\n", params);
+    log::warn!("Unable to handle:\n\n{:#?}\n", method);
+    log::debug!("Got Params:\n\n{:#?}\n", params);
     conn.send(Response::err(
         id.clone(),
         123,
@@ -219,30 +220,30 @@ fn handle_message(conn: &Conn, msg: Message) -> Result<()> {
             }
         }
         Message::Response(_) => {
-            tracing::warn!("skipping \n\n{:?}\n", msg);
+            log::warn!("skipping \n\n{:?}\n", msg);
             Ok(())
         }
         Message::Notification(_) => {
-            tracing::warn!("skipping \n\n{:?}\n", msg);
+            log::warn!("skipping \n\n{:?}\n", msg);
             Ok(())
         }
     }
 }
 
 fn main() -> Result<()> {
-    tracing::setup("/tmp/", "xbase-server.log", Level::DEBUG, false)?;
+    log::setup("/tmp/", "xbase-server.log", Level::DEBUG, false)?;
     let (conn, io_threads) = Connection::stdio();
-    tracing::info!("Started");
+    log::info!("Started");
     conn.initialize(|params| initialize(&params).expect("Initialize"))?;
-    tracing::info!("Initialized");
+    log::info!("Initialized");
 
     for msg in &conn.receiver {
         if let Message::Request(ref req) = msg {
             match handle_shutdown(&conn, req) {
-                Err(err) => tracing::error!("Failure to shutdown server {:#?}", err),
+                Err(err) => log::error!("Failure to shutdown server {:#?}", err),
                 Ok(should_break) => {
                     if should_break {
-                        tracing::info!("Shutdown");
+                        log::info!("Shutdown");
                         break;
                     }
                 }
@@ -250,11 +251,11 @@ fn main() -> Result<()> {
         }
 
         if let Err(err) = handle_message(&conn, msg) {
-            tracing::error!("{:?}", err);
+            log::error!("{:?}", err);
         }
     }
 
     io_threads.join()?;
-    tracing::info!("Ended");
+    log::info!("Ended");
     Ok(())
 }

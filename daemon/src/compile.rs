@@ -19,7 +19,7 @@ pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
         return Ok(());
     }
 
-    tracing::info!("Creating {:?}", path);
+    log::info!("Creating {:?}", path);
 
     let mut file = tokio::fs::File::create(path).await?;
     file.write_all(

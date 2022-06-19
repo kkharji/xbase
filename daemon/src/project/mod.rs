@@ -63,7 +63,7 @@ impl Project {
         project.generator = ProjectGenerator::new(root);
 
         project.inner = if root.join("Package.swift").exists() {
-            tracing::debug!("[Project] Kind: \"Swift\"",);
+            log::debug!("[Project] Kind: \"Swift\"",);
             // TODO(project): Get swift project name
             project.name = "UnknownSwiftProject".into();
             ProjectInner::Swift
@@ -72,10 +72,10 @@ impl Project {
             project.name = xcodeproj.name().to_owned();
             project.targets = xcodeproj.targets_platform();
 
-            tracing::debug!("[New Project] name: {:?}", project.name);
-            tracing::debug!("[New Project] Kind: \"XCodeProject\"");
-            tracing::debug!("[New Project] Generator: \"{:?}\"", project.generator);
-            tracing::debug!("[New Project] targets: {:?}", project.targets);
+            log::debug!("[New Project] name: {:?}", project.name);
+            log::debug!("[New Project] Kind: \"XCodeProject\"");
+            log::debug!("[New Project] Generator: \"{:?}\"", project.generator);
+            log::debug!("[New Project] targets: {:?}", project.targets);
 
             ProjectInner::XCodeProject(xcodeproj)
         };
@@ -102,7 +102,7 @@ impl Project {
 
         self.root = root;
         self.clients = clients;
-        tracing::info!("[Projects] update({:?})", self.name);
+        log::info!("[Projects] update({:?})", self.name);
 
         Ok(())
     }
@@ -140,7 +140,7 @@ impl Project {
     pub async fn generate_compile_commands(&self) -> Result<()> {
         use xclog::{XCCompilationDatabase, XCCompileCommand};
 
-        tracing::info!("Generating compile commands ... ");
+        log::info!("Generating compile commands ... ");
         let mut compile_commands: Vec<XCCompileCommand> = vec![];
         let cache_root = get_build_cache_dir(&self.root)?;
         // Because xcodebuild clean can't remove it
@@ -161,7 +161,7 @@ impl Project {
             .into_iter()
             .for_each(|cmd| compile_commands.push(cmd));
 
-        tracing::info!("Compile Commands Generated");
+        log::info!("Compile Commands Generated");
 
         let json = serde_json::to_vec_pretty(&compile_commands)?;
         tokio::fs::write(self.root.join(".compile"), &json).await?;

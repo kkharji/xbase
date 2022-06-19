@@ -1,6 +1,5 @@
 [package]
-name = "tracing"
-
+name = "log"
 version = "0.1.0"
 edition = "2021"
 description = "Re-export of tracing setup with helper method"

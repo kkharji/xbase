@@ -12,7 +12,7 @@ impl RequestHandler for DropRequest {
         let ref mut state = state.lock().await;
 
         if state.clients.contains_key(&client.pid) {
-            tracing::info!("Drop({}: {})", client.pid, client.abbrev_root());
+            log::info!("Drop({}: {})", client.pid, client.abbrev_root());
             // NOTE: Should only be Some if no more client depend on it
             if let Some(_) = state.projects.remove(&client).await? {
                 // NOTE: Remove project watchers

@@ -78,7 +78,7 @@ impl<'a> Logger<'a> {
 
     // TODO(logger): always show current new logs in middle of the window
     pub async fn append(&mut self, msg: String) -> Result<()> {
-        tracing::trace!("{msg}");
+        log::trace!("{msg}");
         let win_info = self.win().await;
         let mut c = self.get_line_count().await?;
 
@@ -135,7 +135,7 @@ impl<'a> Logger<'a> {
             return Ok(win);
         }
 
-        tracing::info!("Openning a new window");
+        log::info!("Openning a new window");
 
         if self.open_cmd.is_none() {
             let v = self.nvim.get_window_direction(None).await?;
@@ -222,7 +222,7 @@ impl NvimClient {
         {
             Ok(open_command) => open_command,
             Err(e) => {
-                tracing::error!("Unable to convert value to string {e}");
+                log::error!("Unable to convert value to string {e}");
                 BufferDirection::Horizontal.to_nvim_command(*bufnr)
             }
         }
