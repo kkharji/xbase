@@ -1028,9 +1028,9 @@ dependencies = [
 
 [[package]]
 name = "process-stream"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49deddcbe930899fa3fe6ec8586e1ace82d286578314263bc2bf970152ebf214"
+checksum = "e40c5b4dbbb43ea9d5d8b3b79b259741fb81948bd1c953ab4ede5cf196ef112b"
 dependencies = [
  "async-stream",
  "futures 0.3.21",
