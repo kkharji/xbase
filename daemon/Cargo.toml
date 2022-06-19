@@ -32,7 +32,7 @@ process-stream        = { version = "0.2.*" }
 # Filesystem watcher
 notify                = { version = "5.0.0-pre.13" }
 dirs                  = { version = "4.0" }
-wax                   = { version = "0.4.0" }
+wax                   = { version = "0.5.0" }
 
 # Static
 lazy_static           = { version = "1.4.0" }

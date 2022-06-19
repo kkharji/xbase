@@ -97,15 +97,6 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "brownstone"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "030ea61398f34f1395ccbeb046fb68c87b631d1f34567fed0f0f11fa35d18d8d"
-dependencies = [
- "arrayvec",
-]
-
-[[package]]
-name = "brownstone"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5839ee4f953e811bfdcf223f509cb2c6a3e1447959b0bff459405575bc17f22"
@@ -813,24 +804,11 @@ dependencies = [
 
 [[package]]
 name = "nom-supreme"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aadc66631948f6b65da03be4c4cd8bd104d481697ecbb9bbd65719b1ec60bc9f"
-dependencies = [
- "brownstone 1.1.0",
- "indent_write",
- "joinery",
- "memchr",
- "nom",
-]
-
-[[package]]
-name = "nom-supreme"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bd3ae6c901f1959588759ff51c95d24b491ecb9ff91aa9c2ef4acc5b1dcab27"
 dependencies = [
- "brownstone 3.0.0",
+ "brownstone",
  "indent_write",
  "joinery",
  "memchr",
@@ -1685,24 +1663,6 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
 name = "wax"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97a4ecdf7da7e42385f844503bac3e9a2a066838e3cb66c5f28ce03bafb2f90d"
-dependencies = [
- "bstr",
- "const_format",
- "itertools",
- "nom",
- "nom-supreme 0.6.0",
- "pori",
- "regex",
- "smallvec",
- "thiserror",
- "walkdir",
-]
-
-[[package]]
-name = "wax"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06c7a3bac6110ac062b7b422a442b7ee23e07209e2784a036654cab1e71bbafc"
@@ -1711,7 +1671,7 @@ dependencies = [
  "const_format",
  "itertools",
  "nom",
- "nom-supreme 0.8.0",
+ "nom-supreme",
  "pori",
  "regex",
  "smallvec",
@@ -1833,7 +1793,7 @@ dependencies = [
  "tokio",
  "tokio-util 0.7.3",
  "tracing 0.1.0",
- "wax 0.4.0",
+ "wax",
  "which",
  "xbase-proto",
  "xclog",
@@ -1903,7 +1863,7 @@ dependencies = [
  "tracing 0.1.35",
  "tracing-appender",
  "tracing-subscriber",
- "wax 0.5.0",
+ "wax",
 ]
 
 [[package]]
