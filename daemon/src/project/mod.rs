@@ -1,30 +1,22 @@
-// mod config;
-// mod dependency;
-// mod options;
-// mod package;
 mod generator;
 mod platform;
-use crate::Error;
-use generator::ProjectGenerator;
-// mod target;
-// mod target_type;
-// pub use {
-//     config::PluginConfig, dependency::*, options::*, package::*, platform::*, target::*,
-//     target_type::*,
-// };
+
 use crate::device::Device;
 use crate::util::fs::{
     get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
 };
+use crate::Error;
 use crate::{state::State, Result};
 use anyhow::Context;
-pub use platform::*;
+use generator::ProjectGenerator;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::sync::MutexGuard;
 use xbase_proto::BuildSettings;
 use xcodeproj::XCodeProject;
+
+pub use platform::*;
 
 /// Project Inner
 #[derive(Debug)]
@@ -124,7 +116,6 @@ impl Project {
 
         project.ignore_patterns.extend(vec![
             "**/.git/**".into(),
-            "**/*.xcodeproj/**".into(),
             "**/.*".into(),
             "**/build/**".into(),
             "**/buildServer.json".into(),
