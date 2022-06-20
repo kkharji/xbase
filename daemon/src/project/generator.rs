@@ -1,4 +1,4 @@
-use crate::{Error, Result};
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tap::Pipe;
@@ -44,6 +44,10 @@ impl ProjectGenerator {
     }
 
     /// Regenerate project from given path
+    /// TODO(regenerate): return Result<Option<Stream>>
+    ///
+    /// commands like tuist does network calls. Which makes very important to have logs for
+    /// regeneration
     pub async fn regenerate(&self, root: &PathBuf) -> Result<bool> {
         match self {
             ProjectGenerator::None => Ok(false),
@@ -58,9 +62,19 @@ impl ProjectGenerator {
                 .await?
                 .success()
                 .pipe(Ok),
-            ProjectGenerator::Tuist => Err(Error::NotImplemented(
-                "Regenerating Tuist project isn not implemented yet".into(),
-            )),
+            // tuist is most likely installed in /usr/local/bin/tuist, but here to still use
+            // which in cases tuist is install in some other location.
+            ProjectGenerator::Tuist => Command::new(which::which("tuist")?)
+                .current_dir(root)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .arg("generate")
+                .arg("--no-open") // prevent xcode from being opened
+                .spawn()?
+                .wait()
+                .await?
+                .success()
+                .pipe(Ok),
         }
     }
 
