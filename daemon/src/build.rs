@@ -20,11 +20,23 @@ impl RequestHandler for BuildRequest {
         match self.ops {
             Operation::Once => self.trigger(state, &Event::default()).await?,
             _ => {
-                let watcher = state.watcher.get_mut(&self.client.root)?;
                 if self.ops.is_watch() {
-                    watcher.add(self)?;
+                    state
+                        .clients
+                        .get(&self.client.pid)?
+                        .set_watching(true)
+                        .await?;
+                    state.watcher.get_mut(&self.client.root)?.add(self)?;
                 } else {
-                    watcher.remove(&self.to_string())?;
+                    state
+                        .clients
+                        .get(&self.client.pid)?
+                        .set_watching(false)
+                        .await?;
+                    state
+                        .watcher
+                        .get_mut(&self.client.root)?
+                        .remove(&self.to_string())?;
                 }
                 state.sync_client_state().await?;
             }

@@ -85,6 +85,9 @@ M.feline_provider = function()
       elseif status == "failure" then
         icon.str = config.failure.icon
         icon.hl = { fg = config.failure.color }
+      elseif status == "watching" then
+        icon.str = config.watching.icon
+        icon.hl = { fg = config.watching.color }
       else
         icon.str = " "
       end

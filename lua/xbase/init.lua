@@ -70,7 +70,6 @@ M.toggle_log_buffer = function(vsplit)
   if win then
     vim.api.nvim_win_close(win, false)
   end
-  print "Opening log buffer"
   local cmd = vsplit and "vert sbuffer" or "sbuffer"
   local open = string.format("%s %s", cmd, bufnr)
   vim.cmd(open)
