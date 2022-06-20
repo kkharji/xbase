@@ -51,16 +51,29 @@ impl ProjectGenerator {
         root: &PathBuf,
     ) -> Result<Option<impl Stream<Item = ProcessItem> + Send>> {
         use ProjectGenerator::*;
-        let mut process: Process = match self {
+        match self {
             None => return Ok(Option::None),
-            XCodeGen => vec![which("xcodegen")?.as_str(), "generate", "-c"].into(),
+            XCodeGen => {
+                let mut process: Process =
+                    vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
+
+                process.current_dir(root);
+                Ok(Some(process.spawn_and_stream()?))
+            }
             // tuist is most likely installed in /usr/local/bin/tuist, but here to still use
             // which in cases tuist is install in some other location.
-            Tuist => vec![which("tuist")?.as_str(), "generate", "--no-open"].into(),
-        };
-
-        process.current_dir(root);
-        Ok(Some(process.spawn_and_stream()?))
+            Tuist => {
+                Process::from(vec![which("tuist")?.as_str(), "edit", "--permanent"])
+                    .current_dir(root)
+                    .spawn()?
+                    .wait()
+                    .await?;
+                let mut process: Process =
+                    vec![which("tuist")?.as_str(), "generate", "--no-open"].into();
+                process.current_dir(root);
+                Ok(Some(process.spawn_and_stream()?))
+            }
+        }
     }
 
     /// Returns `true` if the project generator is [`XCodeGen`].
