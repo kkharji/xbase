@@ -44,6 +44,18 @@ impl NvimClient {
         })
     }
 
+    pub async fn set_watching(&self, is_watching: bool) -> Result<()> {
+        if is_watching {
+            self.exec("let g:xbase_watch_build_status='watching'", false)
+                .await?;
+        } else {
+            self.exec("let g:xbase_watch_build_status=''", false)
+                .await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn sync_state(&self, update_state_script: &str) -> Result<()> {
         self.exec_lua(update_state_script, vec![]).await?;
         Ok(())

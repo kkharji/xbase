@@ -39,13 +39,20 @@ impl RequestHandler for RunRequest {
                     .echo_err("Already watching with {key}!!")
                     .await?;
             } else {
+                let pid = self.client.pid.to_owned();
                 let run_service = RunService::new(state, self).await?;
                 let watcher = state.watcher.get_mut(&client.root)?;
                 watcher.add(run_service)?;
+                state.clients.get(&pid)?.set_watching(true).await?;
             }
         } else {
             let watcher = state.watcher.get_mut(&self.client.root)?;
             let listener = watcher.remove(&self.to_string())?;
+            state
+                .clients
+                .get(&self.client.pid)?
+                .set_watching(false)
+                .await?;
             listener.discard(state).await?;
         }
 

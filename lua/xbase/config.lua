@@ -13,6 +13,7 @@ local defaults = {
   default_log_buffer_direction = "horizontal",
   --- Statusline provider configurations
   statusline = {
+    watching = { icon = "", color = "#1abc9c" },
     running = { icon = "⚙", color = "#e0af68" },
     device_running = { icon = "", color = "#4a6edb" },
     success = { icon = "", color = "#1abc9c" },
