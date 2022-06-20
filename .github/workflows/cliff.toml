@@ -9,23 +9,43 @@ body = """
 {%- set repo = "https://github.com/tami5/xbase" -%}\
 
 {% if version %}\
-    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+    ## 🎉 [{{ version }}]({{ repo }}/tree/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
 {% else %}\
-    ## [unreleased]
+  ## 🔥 [Unreleased]({{ repo }})
 {% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}\
 ### {{ group | upper_first }}
 {% for commit in commits | filter(attribute="scope") | sort(attribute="scope") %}\
-  - `({{ commit.scope | upper_first }})` <a href="{{ repo }}/commit/{{ commit.id | truncate(length=7, end="") }}"> {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message | upper_first }}</a>
+  <dl><dd><details><summary>\
+    <b><a href="{{ repo }}/commit/{{ commit.id }}">{{ commit.message | upper_first }}</a></b> <code>#{{ commit.scope }}</code> {%- if commit.body %} <u><b>....</b></u> {%- endif -%}
+    </summary>\
+      {%- if commit.body %}<br />\
+        \n\n {{ commit.body }}  {%- endif -%}\
+      {%- if commit.breaking %}<br /><br />\
+        <sup><b>BREAKING</b>: {{commit.breaking_description}}</sup>
+      {%- endif -%}
+    </details></dd></dl>\n
 {% endfor %}\n
- {%- for commit in commits %}
-         {%- if commit.scope -%}
-         {% else -%}
-          - `(General)` <a href="{{ repo }}/commit/{{ commit.id | truncate(length=7, end="") }}"> {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message | upper_first }}</a>
-         {% endif -%}
-     {% endfor -%}
+
+{%- for commit in commits %}
+   {%- if commit.scope -%}
+     {% else -%}
+      <dl><dd><details><summary>\
+        <b><a href="{{ repo }}/commit/{{ commit.id }}">{{ commit.message | upper_first }}</a></b> <code>#general</code> {%- if commit.body %} <u><b>....</b></u> {%- endif -%}
+        </summary>\
+          {%- if commit.body %}<br />\
+            \n\n{{ commit.body }}\
+          {%- endif -%}\
+          {%- if commit.breaking %}<br /><br />\
+            <sup><b>BREAKING</b>: {{commit.breaking_description}}</sup>
+          {%- endif -%}
+        </details></dd></dl>\n
+     {% endif -%}
+   {% endfor -%}
 {% endfor %}\n
 """
+
+
 # remove the leading and trailing whitespaces from the template
 trim = true
 # changelog footer
