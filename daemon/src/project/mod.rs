@@ -68,7 +68,19 @@ impl Project {
             project.name = "UnknownSwiftProject".into();
             ProjectInner::Swift
         } else {
-            let xcodeproj = XCodeProject::new(root)?;
+            let xcodeproj = match XCodeProject::new(root) {
+                Ok(p) => p,
+                Err(e) => {
+                    // most likely xcodeproj haven't yet been generated. so we
+                    if project.generator.is_none() {
+                        return Err(e.into());
+                    } else {
+                        project.generator.regenerate(root).await?;
+                        XCodeProject::new(root)?
+                    }
+                }
+            };
+
             project.name = xcodeproj.name().to_owned();
             project.targets = xcodeproj.targets_platform();
 

@@ -11,7 +11,7 @@ lint:
 	nix-shell -p lua51Packages.luacheck --command 'luacheck lua/xbase && exit 0 || exit 1'
 
 watch:
-	RUST_LOG="trace" cargo watch -x 'build' -x 'run -p xbase-daemon' -w 'sourcekit' -w 'daemon' -w 'proto' -w 'lualib' -c
+	RUST_LOG="trace" cargo watch -x 'build -p xbase-sourcekit-helper -p xbase-lualib' -x 'run -p xbase-daemon' -w 'sourcekit' -w 'daemon' -w 'proto' -w 'lualib' -c
 
 clean:
 	cargo clean
