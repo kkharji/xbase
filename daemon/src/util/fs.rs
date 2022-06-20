@@ -80,7 +80,14 @@ pub fn gitignore_content_to_glob_patterns(content: String) -> Vec<String> {
         })
         .flat_map(|(pat, s)| {
             let pattern = format!("{pat}{s}");
-            vec![pattern.clone(), format!("{pattern}/**")]
+            vec![
+                pattern.clone(),
+                if pattern.ends_with("/") {
+                    format!("{pattern}**")
+                } else {
+                    format!("{pattern}/**")
+                },
+            ]
         })
         .collect::<Vec<String>>()
 }
