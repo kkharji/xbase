@@ -1,4 +1,5 @@
 //! Module for generating Compilation Database.
+use anyhow::Context;
 use futures::StreamExt;
 use xbase_proto::Client;
 
@@ -97,7 +98,13 @@ pub async fn ensure_server_support<'a>(
         return Ok(false);
     }
 
-    if event.is_none() {
+    if event.is_none()
+        && wax::walk("*.xcodeproj", &root)
+            .context("Glob")?
+            .flatten()
+            .count()
+            == 0
+    {
         "⚙ generating xcodeproj ..."
             .pipe(|msg| state.clients.echo_msg(root, name, msg))
             .await;
