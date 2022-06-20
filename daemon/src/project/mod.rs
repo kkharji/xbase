@@ -152,7 +152,10 @@ impl Project {
             format!("SYMROOT={cache_root}"),
             "-configuration".into(),
             "Debug".into(),
-            "-allowProvisioningUpdates".into(),
+            "CODE_SIGN_IDENTITY=\"\"".into(),
+            "CODE_SIGNING_REQUIRED=\"NO\"".into(),
+            "CODE_SIGN_ENTITLEMENTS=\"\"".into(),
+            "CODE_SIGNING_ALLOWED=\"NO\"".into(),
         ];
         println!("{build_args:#?}");
         let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
