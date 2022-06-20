@@ -2111,9 +2111,9 @@ dependencies = [
 
 [[package]]
 name = "xclog"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6053a2608afa77fb746e9a4127d18318b88f345eaaecac3630069940b0f8d63"
+checksum = "f42ace4abbd3331e0313b0f853f8c4803d3a129f9e08db00dccc3360ca276bf4"
 dependencies = [
  "anyhow",
  "async-stream",
