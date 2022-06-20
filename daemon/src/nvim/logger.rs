@@ -77,14 +77,20 @@ impl<'a> Logger<'a> {
     }
 
     // TODO(logger): always show current new logs in middle of the window
-    pub async fn append(&mut self, msg: String) -> Result<()> {
+    pub async fn append<S: std::fmt::Display>(&mut self, msg: S) -> Result<()> {
         log::trace!("{msg}");
         let win_info = self.win().await;
         let mut c = self.get_line_count().await?;
+        let leading = if self.title.is_empty() {
+            "".to_string()
+        } else {
+            format!("[{}] ", self.title)
+        };
 
         let lines = msg
+            .to_string()
             .split("\n")
-            .map(|s| format!("[{}] {}", self.title, s))
+            .map(|s| format!("{leading}{s}"))
             .collect::<Vec<String>>();
 
         self.set_lines(&mut c, lines).await?;
@@ -157,6 +163,13 @@ impl<'a> Logger<'a> {
         self.nvim.exec("wincmd w", false).await?;
 
         Ok(win)
+    }
+    /// Close logger window
+    pub async fn close_win(&mut self) -> Result<()> {
+        if let Some((_, win)) = self.win().await {
+            win.close(true).await?;
+        }
+        Ok(())
     }
 
     pub async fn set_running(&mut self, is_device: bool) -> Result<()> {

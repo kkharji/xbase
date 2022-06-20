@@ -14,7 +14,7 @@ impl ProjectStore {
     pub async fn add(&mut self, client: &Client) -> Result<()> {
         let Client { root, pid, .. } = client;
 
-        let mut project = Project::new(root).await?;
+        let mut project = Project::new(client).await?;
 
         project.root = root.clone();
         project.clients.push(*pid);

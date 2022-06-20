@@ -1,14 +1,17 @@
 mod generator;
 
 use crate::device::Device;
+use crate::error::XcodeGenError;
 use crate::watch::Event;
+use crate::Error;
 use crate::{state::State, Result};
 use generator::ProjectGenerator;
+use process_stream::{ProcessItem, Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::sync::MutexGuard;
-use xbase_proto::BuildSettings;
+use xbase_proto::{BuildSettings, Client};
 use xcodeproj::pbxproj::PBXTargetPlatform;
 use xcodeproj::XCodeProject;
 
@@ -57,7 +60,8 @@ pub struct Project {
 }
 
 impl Project {
-    pub async fn new(root: &std::path::PathBuf) -> Result<Self> {
+    pub async fn new(client: &Client) -> Result<Self> {
+        let Client { root, .. } = client;
         let mut project = Self::default();
 
         project.generator = ProjectGenerator::new(root);
@@ -71,11 +75,42 @@ impl Project {
             let xcodeproj = match XCodeProject::new(root) {
                 Ok(p) => p,
                 Err(e) => {
+                    log::info!("No XCodeProject found!");
                     // most likely xcodeproj haven't yet been generated. so we
                     if project.generator.is_none() {
+                        log::error!("No Generator!!!");
                         return Err(e.into());
                     } else {
-                        project.generator.regenerate(root).await?;
+                        log::info!("Generating xcodeproj using {:?}...", project.generator);
+                        if let Some(mut stream) = project.generator.regenerate(root).await? {
+                            // let state = DAEMON_STATE.lock().await;
+                            // let mut logger = state.clients.get(pid)?.logger();
+                            // logger.open_win().await?;
+
+                            // TODO(daemon): log xcodeproj generate to nvim buffer
+                            //
+                            // This requires reworking state
+                            let mut success = true;
+                            while let Some(output) = stream.next().await {
+                                if output.is_exit() {
+                                    success = output.as_exit().unwrap().eq("0");
+                                    if !success {
+                                        log::error!(
+                                            "[ERROR] FAILED to generate xcodeproj using {:?}",
+                                            project.generator
+                                        )
+                                        // logger.append("fail to generate compile commands").await?;
+                                    };
+                                } else {
+                                    log::info!("{output}");
+                                }
+                            }
+                            if !success {
+                                return Err(Error::XcodeGen(XcodeGenError::XcodeProjUpdate(
+                                    project.name.clone(),
+                                )));
+                            }
+                        }
                         XCodeProject::new(root)?
                     }
                 }
@@ -106,11 +141,11 @@ impl Project {
         Ok(project)
     }
 
-    pub async fn update(&mut self) -> Result<()> {
+    pub async fn update(&mut self, client: &Client) -> Result<()> {
         let Self { root, clients, .. } = self;
         let (clients, root) = (clients.clone(), root.clone());
 
-        *self = Self::new(&root).await?;
+        *self = Self::new(client).await?;
 
         self.root = root;
         self.clients = clients;
@@ -127,7 +162,10 @@ impl Project {
         Ok(())
     }
 
-    pub async fn regenerate(&self, event: Option<&Event>) -> Result<bool> {
+    pub async fn regenerate(
+        &self,
+        event: Option<&Event>,
+    ) -> Result<Option<impl Stream<Item = ProcessItem> + Send>> {
         if let Some(event) = event {
             let is_generator_file = ProjectGenerator::is_genertor_file(event.path());
             if (event.is_content_update_event() && is_generator_file)
@@ -135,7 +173,7 @@ impl Project {
             {
                 self.generator.regenerate(&self.root).await
             } else {
-                Ok(false)
+                Ok(None)
             }
         } else {
             self.generator.regenerate(&self.root).await

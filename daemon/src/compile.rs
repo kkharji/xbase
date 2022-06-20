@@ -1,9 +1,10 @@
 //! Module for generating Compilation Database.
+use futures::StreamExt;
 use xbase_proto::Client;
 
 use crate::watch::Event;
 use {
-    crate::{error::XcodeGenError, state::State, util::pid, Result},
+    crate::{state::State, Result},
     std::path::PathBuf,
     tap::Pipe,
     tokio::{fs::metadata, io::AsyncWriteExt, sync::MutexGuard},
@@ -59,17 +60,39 @@ pub async fn ensure_server_support<'a>(
     }
 
     if event.is_some() {
-        let generated = match state.projects.get(root)?.regenerate(event).await {
-            Ok(generated) => generated,
+        match state.projects.get(root)?.regenerate(event).await {
+            Ok(Some(mut stream)) => {
+                let mut logger = state.clients.get(&client.pid)?.logger();
+
+                let mut success = true;
+                logger.set_running(true).await.ok();
+                while let Some(output) = stream.next().await {
+                    if output.is_exit() {
+                        success = output.as_exit().unwrap().eq("0");
+                        if !success {
+                            logger
+                                .append("[ERROR]: Unable to generate xcodeproj")
+                                .await?;
+                        };
+                    } else {
+                        logger.append(output).await?;
+                    }
+                }
+
+                if success {
+                    "setup: ⚙ generated xcodeproj ..."
+                        .pipe(|msg| state.clients.echo_msg(root, name, msg))
+                        .await;
+                    logger.close_win().await?;
+                }
+                state.projects.get_mut(root)?.update(client).await?;
+            }
+            Ok(None) => {}
             Err(e) => {
                 state.clients.echo_err(&root, name, &e.to_string()).await;
                 return Err(e);
             }
         };
-
-        if generated {
-            state.projects.get_mut(root)?.update().await?
-        }
     } else if compile_exists {
         return Ok(false);
     }
@@ -80,16 +103,36 @@ pub async fn ensure_server_support<'a>(
             .await;
 
         if let Some(err) = match state.projects.get(root)?.regenerate(event).await {
-            Ok(generated) => {
-                if generated {
-                    "setup: ⚙ generate xcodeproj ..."
+            Ok(Some(mut stream)) => {
+                let mut logger = state.clients.get(&client.pid)?.logger();
+                let mut success = true;
+
+                logger.set_running(true).await.ok();
+                logger.open_win().await?;
+
+                while let Some(output) = stream.next().await {
+                    if output.is_exit() {
+                        success = output.as_exit().unwrap().eq("0");
+                        if !success {
+                            logger
+                                .append("[ERROR]: Unable to generate xcodeproj")
+                                .await?;
+                        };
+                    } else {
+                        logger.append(output).await?;
+                    }
+                }
+
+                if success {
+                    "setup: ⚙ generated xcodeproj ..."
                         .pipe(|msg| state.clients.echo_msg(root, name, msg))
                         .await;
-                    None
-                } else {
-                    Some(XcodeGenError::XcodeProjUpdate(name.into()).into())
+                    logger.close_win().await?;
                 }
+                state.projects.get_mut(root)?.update(client).await?;
+                None
             }
+            Ok(None) => None,
             Err(e) => Some(e),
         } {
             let ref msg = format!("fail to generate xcodeproj: {err}");
@@ -97,9 +140,8 @@ pub async fn ensure_server_support<'a>(
         }
     };
 
-    // TODO(compile): check for .xcodeproj if project.yml is not generated
     if !compile_exists {
-        "⚙ generating compile database .."
+        "⚙ Generating compile database .."
             .pipe(|msg| state.clients.echo_msg(root, name, msg))
             .await;
     }
@@ -110,19 +152,14 @@ pub async fn ensure_server_support<'a>(
             .pipe(|msg| state.clients.echo_err(&root, &name, msg))
             .await;
 
-        for (pid, nvim) in state.clients.iter() {
-            if pid::exists(pid, || {}) {
-                let mut logger = nvim.logger();
+        let mut logger = state.clients.get(&client.pid)?.logger();
 
-                logger.set_title(format!("Compile:{name}"));
-                logger.set_running(false).await.ok();
+        logger.set_running(false).await.ok();
 
-                logger.open_win().await.ok();
-                logger.append(err.to_string()).await.ok();
+        logger.open_win().await.ok();
+        logger.append(err.to_string()).await.ok();
 
-                logger.set_status_end(false, true).await.ok();
-            }
-        }
+        logger.set_status_end(false, true).await.ok();
 
         return Err(err);
     }

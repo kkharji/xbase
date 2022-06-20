@@ -1,9 +1,7 @@
 use crate::Result;
+use process_stream::{Process, ProcessItem, Stream};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use tap::Pipe;
-use tokio::process::Command;
-// NOTE: use process-stream and log output from generators
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ProjectGenerator {
@@ -48,34 +46,21 @@ impl ProjectGenerator {
     ///
     /// commands like tuist does network calls. Which makes very important to have logs for
     /// regeneration
-    pub async fn regenerate(&self, root: &PathBuf) -> Result<bool> {
-        match self {
-            ProjectGenerator::None => Ok(false),
-            ProjectGenerator::XCodeGen => Command::new(which::which("xcodegen")?)
-                .current_dir(root)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .arg("generate")
-                .arg("-c")
-                .spawn()?
-                .wait()
-                .await?
-                .success()
-                .pipe(Ok),
+    pub async fn regenerate(
+        &self,
+        root: &PathBuf,
+    ) -> Result<Option<impl Stream<Item = ProcessItem> + Send>> {
+        use ProjectGenerator::*;
+        let mut process: Process = match self {
+            None => return Ok(Option::None),
+            XCodeGen => vec![which("xcodegen")?.as_str(), "generate", "-c"].into(),
             // tuist is most likely installed in /usr/local/bin/tuist, but here to still use
             // which in cases tuist is install in some other location.
-            ProjectGenerator::Tuist => Command::new(which::which("tuist")?)
-                .current_dir(root)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .arg("generate")
-                .arg("--no-open") // prevent xcode from being opened
-                .spawn()?
-                .wait()
-                .await?
-                .success()
-                .pipe(Ok),
-        }
+            Tuist => vec![which("tuist")?.as_str(), "generate", "--no-open"].into(),
+        };
+
+        process.current_dir(root);
+        Ok(Some(process.spawn_and_stream()?))
     }
 
     /// Returns `true` if the project generator is [`XCodeGen`].
@@ -101,4 +86,8 @@ impl ProjectGenerator {
     pub fn is_none(&self) -> bool {
         matches!(self, Self::None)
     }
+}
+
+fn which(cmd: &str) -> Result<String> {
+    Ok(which::which(cmd)?.to_str().unwrap().to_string())
 }
