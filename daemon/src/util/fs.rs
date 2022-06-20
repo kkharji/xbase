@@ -72,7 +72,7 @@ pub fn gitignore_content_to_glob_patterns(content: String) -> Vec<String> {
         })
         .filter(|&(_, s)| s.chars().next() != Some('/'))
         .map(|(pat, s)| {
-            if s != "/" {
+            if s != "/" && !s.starts_with("**") {
                 (pat, format!("**/{s}"))
             } else {
                 (pat, format!("{s}"))
