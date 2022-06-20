@@ -63,6 +63,14 @@ impl Project {
     pub async fn new(client: &Client) -> Result<Self> {
         let Client { root, .. } = client;
         let mut project = Self::default();
+        let xcodeproj_filter = |path: &PathBuf| {
+            let contains_manifest = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .map(|s| s.contains("Manifests"))
+                .unwrap_or_default();
+            !contains_manifest
+        };
 
         project.generator = ProjectGenerator::new(root);
 
@@ -72,7 +80,7 @@ impl Project {
             project.name = "UnknownSwiftProject".into();
             ProjectInner::Swift
         } else {
-            let xcodeproj = match XCodeProject::new(root) {
+            let xcodeproj = match XCodeProject::new(root, xcodeproj_filter) {
                 Ok(p) => p,
                 Err(e) => {
                     log::info!("No XCodeProject found!");
@@ -111,7 +119,7 @@ impl Project {
                                 )));
                             }
                         }
-                        XCodeProject::new(root)?
+                        XCodeProject::new(root, xcodeproj_filter)?
                     }
                 }
             };
@@ -189,14 +197,15 @@ impl Project {
     /// Generate compile commands for project via compiling all targets
     pub async fn generate_compile_commands(&self) -> Result<()> {
         use xclog::{XCCompilationDatabase, XCCompileCommand};
-
         log::info!("Generating compile commands ... ");
+
         let mut compile_commands: Vec<XCCompileCommand> = vec![];
         let cache_root = get_build_cache_dir(&self.root)?;
+
         // Because xcodebuild clean can't remove it
         tokio::fs::remove_dir_all(&cache_root).await.ok();
 
-        let build_args: Vec<String> = vec![
+        let mut build_args: Vec<String> = vec![
             "clean".into(),
             "build".into(),
             format!("SYMROOT={cache_root}"),
@@ -207,14 +216,41 @@ impl Project {
             "CODE_SIGN_ENTITLEMENTS=\"\"".into(),
             "CODE_SIGNING_ALLOWED=\"NO\"".into(),
         ];
-        println!("{build_args:#?}");
-        let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
 
-        compile_db
-            .into_iter()
-            .for_each(|cmd| compile_commands.push(cmd));
+        if !self.generator.is_tuist() {
+            println!("{build_args:#?}");
 
-        log::info!("Compile Commands Generated");
+            let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
+
+            compile_db
+                .into_iter()
+                .for_each(|cmd| compile_commands.push(cmd));
+
+            log::info!("Compile Commands Generated");
+        } else {
+            let mut tuist_build_args = build_args.clone();
+            tuist_build_args.remove(2);
+            tuist_build_args.insert(2, format!("SYMROOT={cache_root}_tuist"));
+            tuist_build_args.push("-project".into());
+            tuist_build_args.push("Manifests.xcodeproj".into());
+            println!("{tuist_build_args:#?}");
+
+            let compile_db = XCCompilationDatabase::generate(&self.root, &tuist_build_args).await?;
+
+            compile_db
+                .into_iter()
+                .for_each(|cmd| compile_commands.push(cmd));
+
+            build_args.push("-project".into());
+            build_args.push(format!("{}.xcodeproj", self.name));
+            println!("{build_args:#?}");
+
+            let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
+
+            compile_db
+                .into_iter()
+                .for_each(|cmd| compile_commands.push(cmd));
+        }
 
         let json = serde_json::to_vec_pretty(&compile_commands)?;
         tokio::fs::write(self.root.join(".compile"), &json).await?;
