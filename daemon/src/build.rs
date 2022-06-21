@@ -6,7 +6,6 @@ use crate::Result;
 use async_trait::async_trait;
 use tokio::sync::MutexGuard;
 use xbase_proto::{BuildRequest, Operation};
-use xclog::XCLogger;
 
 #[async_trait]
 impl RequestHandler for BuildRequest {
@@ -50,12 +49,12 @@ impl RequestHandler for BuildRequest {
 impl Watchable for BuildRequest {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
         log::info!("Building {}", self.client.abbrev_root());
+
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
-        let args = state.projects.get(root)?.build_arguments(&config, &None)?;
-
+        let (xclogger, args) = state.projects.get(root)?.build(&config, None)?;
         let nvim = state.clients.get(&self.client.pid)?;
-        let ref mut logger = nvim.logger();
+        let logger = &mut nvim.logger();
 
         logger.set_title(format!(
             "{}:{}",
@@ -64,9 +63,8 @@ impl Watchable for BuildRequest {
         ));
 
         log::trace!("building with [{}]", args.join(" "));
-        let xclogger = XCLogger::new(&root, args)?;
-        let success = logger.consume_build_logs(xclogger, false, is_once).await?;
 
+        let success = logger.consume_build_logs(xclogger, false, is_once).await?;
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(msg).await?;

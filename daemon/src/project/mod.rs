@@ -4,6 +4,7 @@ mod xcodegen;
 
 use barebone::BareboneProject;
 use tuist::TuistProject;
+use xclog::XCLogger;
 use xcodegen::XCodeGenProject;
 
 use crate::device::Device;
@@ -48,6 +49,16 @@ pub trait ProjectData: Debug {
 
 #[async_trait::async_trait]
 pub trait ProjectBuild: ProjectData {
+    /// Build Project using BuildSettings and optionally a device
+    fn build(
+        &self,
+        cfg: &BuildSettings,
+        device: Option<&Device>,
+    ) -> Result<(XCLogger, Vec<String>)> {
+        let args = self.build_arguments(&cfg, device)?;
+        let xclogger = XCLogger::new(self.root(), &args)?;
+        Ok((xclogger, args))
+    }
     /// Get build cache root
     fn build_cache_root(&self) -> Result<String> {
         let get_build_cache_dir = fs::get_build_cache_dir(self.root())?;
@@ -56,7 +67,7 @@ pub trait ProjectBuild: ProjectData {
     }
 
     /// Build project with given build settings
-    fn build_arguments(&self, cfg: &BuildSettings, device: &Option<Device>) -> Result<Vec<String>> {
+    fn build_arguments(&self, cfg: &BuildSettings, device: Option<&Device>) -> Result<Vec<String>> {
         let mut args = cfg.to_args();
 
         args.insert(0, "build".to_string());

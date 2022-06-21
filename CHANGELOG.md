@@ -18,6 +18,8 @@ profile or singing, at least for auto complaining</details></dd></dl>
 previously it was required to set custom paths to ignore in project.yml,
 now extra ignored path reads from gitignore instead.</details></dd></dl>
 
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/ba9f2976fdeccc882650b3d71a5527de753c72f5">Update status variable when watch is running</a></b> <code>#nvim</code></summary></details></dd></dl>
+
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/1f1b3ad80ec26557b0a2fd94e50de7ceecd63239">Init dependabot</a></b> <code>#general</code></summary></details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/7fb498cadc813df1941665398b5325a255d6015e">Make xcodeproj source of truth (#80)</a></b> <code>#general</code> <u><b>....</b></u></summary><br />
@@ -33,6 +35,23 @@ now extra ignored path reads from gitignore instead.</details></dd></dl>
 * chore(deps): bump wax dependency
 * chore: update readme</details></dd></dl>
 
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/79ea745d5c673f1ff717bf3f097bc661713b562a">Support tuist (#91)</a></b> <code>#general</code> <u><b>....</b></u></summary><br />
+
+* feat(tuist): support regeneration
+* feat(project): support generating xcodeproj when absent
+* feat(compile): append xcodeproj generation logs
+* ref(compile): check for xcodeproj before trying to generate it
+* feat(tuist): generate both project and manifest xcodeproj
+* feat(tuist): generate compile commands for both project and manifest
+* feat(nvim): update status variable when watch is running
+* ref(project): decompose and specialize
+* feat(tuist): lsp support for tuist files
+* chore(readme): update
+* ref: make main binary named xbase
+* feat(tuist): recompile on config files change
+* fix(xcodegen): ignoring existing xcodeproj
+* fix(compile): on file rename</details></dd></dl>
+
 ### <!-- 1 -->Bug Fixes
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/7466c267be2d848ba0314ebe2d3e700d5086772b">Error while removing non-existing cache</a></b> <code>#compile</code></summary></details></dd></dl>
 
@@ -43,11 +62,15 @@ workspace root</details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/207ea482b8c1941e9e920e68241d00444d3351c1">Avoid adding extra `/`</a></b> <code>#gitignore</code></summary></details></dd></dl>
 
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/984f94022805f1c12b1fb11af9596ee1f3320576">Avoid duplicating **</a></b> <code>#gitignore</code></summary></details></dd></dl>
+
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/7ff5e0da566f35cf60a3377c674c6e44491a6276">Xclog is not defined</a></b> <code>#lua</code></summary></details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/9a13cc88f3f79ef3c2701d42108c53e6cc19133e">Xcodegen binary not found</a></b> <code>#general</code></summary></details></dd></dl>
 
 ### <!-- 2 -->Refactor
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/5fa7449cdce99eab0108cd21d2a610ca127ca5a6">Abstract build logic into ProjectBuild</a></b> <code>#daemon</code></summary></details></dd></dl>
+
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/26ffb3291f3e6c005aede3c66a05d9c50fc7bc09">Update logging and compile commands (xclog) (#70)</a></b> <code>#general</code> <u><b>....</b></u></summary><br />
 
 - switch to new [xclog](https://github.com/tami5/xclog) api and refractor duplicated code.

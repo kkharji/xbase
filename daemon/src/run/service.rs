@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
 use xbase_proto::{Client, RunRequest};
-use xclog::{XCBuildSettings, XCLogger};
+use xclog::XCBuildSettings;
 use {super::handler::RunServiceHandler, super::medium::RunMedium};
 
 /// Run Service
@@ -30,10 +30,10 @@ impl RunService {
         let target = req.settings.target.clone();
         let ref root = req.client.root;
         let device = state.devices.from_lookup(req.device);
-        let build_args = state
+        let (xclogger, build_args) = state
             .projects
             .get(root)?
-            .build_arguments(&req.settings, &device)?;
+            .build(&req.settings, device.as_ref())?;
         let nvim = state.clients.get(&req.client.pid)?;
 
         let ref mut logger = nvim.logger();
@@ -46,7 +46,7 @@ impl RunService {
         logger.set_direction(&req.direction);
 
         let build_settings = XCBuildSettings::new(root, &build_args).await?;
-        let xclogger = XCLogger::new(&root, build_args)?;
+
         let success = logger.consume_build_logs(xclogger, false, false).await?;
 
         if !success {
@@ -77,22 +77,26 @@ impl Watchable for RunService {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
         log::info!("Running {}", self.client.abbrev_root());
 
-        let (root, config) = (&self.client.root, &self.medium.settings());
         let mut handler = self.handler.clone().lock_owned().await;
-        let mut args = state.projects.get(root)?.build_arguments(&config, &None)?;
+
+        handler.process().kill().await;
+        handler.inner().abort();
+
+        let (root, config) = (&self.client.root, &self.medium.settings());
+
+        // TODO: Change build argument to receive Option<&ref> instead of &Option<ref>
+
+        let nvim = state.clients.get(&self.client.pid)?;
+        let logger = &mut nvim.logger();
+        let device = self.medium.as_simulator().map(|sim| &sim.device);
+        let (xclogger, mut args) = state.projects.get(root)?.build(&config, device)?;
+
+        logger.set_title(format!("Run:{}", config.target));
 
         if let RunMedium::Simulator(ref sim) = self.medium {
             args.extend(sim.special_build_args())
         }
 
-        handler.process().kill().await;
-        handler.inner().abort();
-
-        let nvim = state.clients.get(&self.client.pid)?;
-        let ref mut logger = nvim.logger();
-
-        logger.set_title(format!("Run:{}", config.target));
-        let xclogger = XCLogger::new(&root, args)?;
         let success = logger.consume_build_logs(xclogger, false, false).await?;
 
         if !success {
@@ -101,6 +105,7 @@ impl Watchable for RunService {
         };
 
         let process = self.medium.run(logger).await?;
+
         *handler = RunServiceHandler::new(
             config.target.clone(),
             self.client.clone(),

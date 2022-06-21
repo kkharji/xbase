@@ -27,7 +27,7 @@ impl<'a> Logger<'a> {
         Ok(())
     }
 
-    /// Set open direction for looger
+    /// Set open direction for logger
     pub fn set_direction(&mut self, direction: &BufferDirection) -> &mut Self {
         self.open_cmd = Some(direction.to_nvim_command(self.nvim.log_bufnr));
         self
@@ -44,7 +44,7 @@ impl<'a> Logger<'a> {
         })
     }
 
-    /// Consume bulid logs via logging them to client
+    /// Consume build logs via logging them to client
     pub async fn consume_build_logs(
         &mut self,
         mut xclogger: XCLogger,

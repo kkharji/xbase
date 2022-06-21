@@ -14,7 +14,7 @@ use xclog::XCBuildSettings;
 #[derive(derive_deref_rs::Deref)]
 pub struct Simulator {
     #[deref]
-    device: Device,
+    pub device: Device,
     info: XCBuildSettings,
     settings: BuildSettings,
 }

@@ -66,4 +66,20 @@ impl RunMedium {
             RunMedium::Bin(_) => "Bin",
         }
     }
+
+    pub fn as_simulator(&self) -> Option<&Simulator> {
+        if let Self::Simulator(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_bin(&self) -> Option<&Bin> {
+        if let Self::Bin(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
