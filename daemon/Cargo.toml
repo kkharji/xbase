@@ -27,8 +27,8 @@ async-trait           = { version = "0.1.52" }
 async-stream          = { version = "0.3.3" }
 parity-tokio-ipc      = { version = "0.9.0" }
 process-stream        = { version = "0.2.*" }
-# xcodeproj             = { version = "0.2.*" }
-xcodeproj             = { path = "../../xcodeproj/" }
+xcodeproj             = { version = "0.2.*" }
+# xcodeproj             = { path = "../../xcodeproj/" }
 
 # Filesystem watcher
 notify                = { version = "5.0.0-pre.13" }
@@ -53,3 +53,4 @@ libc                  = { version = "0.2.126"}
 libproc               = { version = "0.12.0" }
 paste = "1.0.7"
 which = "4.2.5"
+erased-serde = "0.3.21"

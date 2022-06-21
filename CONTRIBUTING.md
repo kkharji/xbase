@@ -15,13 +15,17 @@ Client/Daemon requests and types definitions.
 
 ### [daemon] crate
 
-The main product of [xbase] reside, it handle requets and data defined in [proto] crate.
+The main product of [xbase] reside, it handle requests and data defined in [proto] crate.
 
 - [build.rs](./daemon/src/build.rs): build request handler definition.
 - [run.rs](./daemon/src/run.rs): run request handler definition.
 - [drop.rs](./daemon/src/drop.rs): drop request handler definition.
 - [register.rs](./daemon/src/register.rs): register request handler definition.
 - [nvim.rs](./daemon/src/nvim.rs): helper methods to interact with running nvim instance.
+- [project.rs](./daemon/src/project/mod.rs): traits to be implement for each supported project setup.
+  - [xcodegen.rs](./daemon/src/project/xcodegen.rs): implantation of project traits for xcodegen projects.
+  - [tuist.rs](./daemon/src/project/tuist.rs): implantation of project traits for tuist projects.
+  - [barebone.rs](./daemon/src/project/barebone.rs): implantation of project traits for barebone (i.e. no generators) projects.
 
 ### [sourcekit] crate
 

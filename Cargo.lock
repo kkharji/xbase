@@ -366,9 +366,9 @@ dependencies = [
 
 [[package]]
 name = "erased-serde"
-version = "0.3.20"
+version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad132dd8d0d0b546348d7d86cb3191aad14b34e5f979781fc005c80d4ac67ffd"
+checksum = "81d013529d5574a60caeda29e179e695125448e5de52e3874f7b4c1d7360e18e"
 dependencies = [
  "serde",
 ]
@@ -2044,6 +2044,7 @@ dependencies = [
  "async-trait",
  "derive-deref-rs",
  "dirs",
+ "erased-serde",
  "futures 0.3.21",
  "lazy_static",
  "libc",
@@ -2111,9 +2112,9 @@ dependencies = [
 
 [[package]]
 name = "xclog"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6053a2608afa77fb746e9a4127d18318b88f345eaaecac3630069940b0f8d63"
+checksum = "f42ace4abbd3331e0313b0f853f8c4803d3a129f9e08db00dccc3360ca276bf4"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -2140,7 +2141,9 @@ dependencies = [
 
 [[package]]
 name = "xcodeproj"
-version = "0.2.8"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e62654e4048f173341546cfe626d38f9c46b32bb89b7799ff6a88d67ec93e20"
 dependencies = [
  "anyhow",
  "derive-deref-rs",

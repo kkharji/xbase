@@ -1,15 +1,6 @@
 use super::WatchService;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::fmt::Debug;
-
-impl<'de> Deserialize<'de> for WatchService {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        unimplemented!()
-    }
-}
 
 impl Serialize for WatchService {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

@@ -39,7 +39,7 @@ M.is_watching = function(config, command, device)
   local root = vim.loop.cwd()
   local watching = vim.g.xbase.watcher[root]
 
-  local base_key = string.format("xcodebuild -configuration %s", config.configuration)
+  local base_key = string.format("-configuration %s", config.configuration)
   local key
 
   if command == "Run" then

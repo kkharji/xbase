@@ -52,8 +52,7 @@ impl Watchable for BuildRequest {
         log::info!("Building {}", self.client.abbrev_root());
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
-        // let args = state.projects.get(root)?.build_args(&config, &None)?;
-        let args: Vec<String> = vec![];
+        let args = state.projects.get(root)?.build_arguments(&config, &None)?;
 
         let nvim = state.clients.get(&self.client.pid)?;
         let ref mut logger = nvim.logger();

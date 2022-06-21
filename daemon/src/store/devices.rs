@@ -1,10 +1,10 @@
 use crate::device::Device;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use simctl::Simctl;
 use std::collections::HashMap;
 use xbase_proto::DeviceLookup;
 
-#[derive(Debug, Serialize, Deserialize, derive_deref_rs::Deref)]
+#[derive(Debug, Serialize, derive_deref_rs::Deref)]
 pub struct Devices(#[deref] HashMap<String, Device>);
 
 impl Default for Devices {
