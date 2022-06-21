@@ -2,32 +2,33 @@
 <img src="./media/logo.png" alt="drawing" style="width:400px;"/>
 </P>
 
-## 👁 Overview
-
 An XCode replacement-ish *development environment* that aims to be your reliable XCode alternative to develop exciting new [apple] software products 🚀.
-
-[XBase] enables you to build, watch, and run xcode products from within your favorite editor. It supports running products on iOS, watchOS and tvOS simulators, along with real-time logging, and some lsp features such as auto-completion and code navigation. (for a complete list of features, see [🌟 Features](#-features)).
-
-Furthermore, [XBase] has built-in support for a variety of XCode project generators, which allow you to avoid launching XCode or manually editing '*.xcodeproj' anytime you add or remove files. We strongly advise you to use one ... at least till [XBase] supports adding/removing files and folders, along with other requirements. (For further information, see [💆 Generators](#-generators))
-
-- Watch [XBase] repo to remain up to date on fresh improvements and exciting new features.
-- Checkout [Milestones](https://github.com/tami5/xbase/milestones) for planned future features and releases.
-- Visit [CONTRIBUTING.md](./CONTRIBUTING.md) to have your setup to start contributing and support the project.
-
-Please be aware that [XBase] is still **WIP**, so don't hesitate to report bugs, ask questions or suggest new exciting features.
-
 
 ## Table of Content
 
-- [🌝 Motivation](#-motivation)
-- [🌟 Features](#-features)
-- [🛠 Requirements](#-requirements)
-- [🎮 Usage](#-usage)
-- [🦾 Installation](#-installation)
-- [⚙️ Defaults](#-defaults)
-- [🩺 Debugging](#-debugging)
-- [💆 Generators](#-generators)
-- [🎥 Preview](#-preview)
+- [👁  Overview]
+- [🌝 Motivation]
+- [🌟 Features]
+- [💆 Generators]
+- [🛠 Requirements]
+- [🦾 Installation]
+- [🎮 Usage]
+- [⚙️ Defaults]
+- [🩺 Debugging]
+- [🎥 Preview]
+
+## 👁 Overview
+
+[XBase] enables you to build, watch, and run xcode products from within your favorite editor. It supports running products on iOS, watchOS and tvOS simulators, along with real-time logging, and some lsp features such as auto-completion and code navigation. ([🌟 Features](#-features)).
+
+Furthermore, [XBase] has built-in support for a variety of XCode project generators, which allow you to avoid launching XCode or manually editing '*.xcodeproj' anytime you add or remove files. We strongly advise you to use one ... at least till [XBase] supports adding/removing files and folders, along with other requirements. ([💆 Generators](#-generators))
+
+- Watch [XBase] repo to remain up to date on fresh improvements and exciting new features.
+- Checkout [Milestones](https://github.com/tami5/xbase/milestones) for planned future features and releases.
+- Visit [CONTRIBUTING.md] to have your setup to start contributing and support the project.
+
+Please be aware that [XBase] is still **WIP**, so don't hesitate to report bugs, ask questions or suggest new exciting features.
+
 
 ## 🌝 Motivation
 
@@ -38,23 +39,51 @@ As a long-time vim user who has previously developed a several lua/nvim plugins,
 ## 🌟 Features
 
 * **Auto-Completion and Code navigation**\
-   [sourcekit-lsp] does not support auto-indexing. As a result, [XBase] contains a method for regenerating compilation instructions on directory changes (i.e. file removal/addition), as well as a custom build server that assists [sourcekit-lsp] in providing code navigation and auto complation for project symbols.
+    Auto-generate compilation database on directory changes + a custom build server that assists [sourcekit-lsp] in providing code navigation and auto-completion for project symbols.
 * **Multi-nvim instance support**\
-    Thanks to having a single daemon running and simple client/server architecture, users can have and use multiple nvim instance running without process duplications and shared state. For instance, stop a watch service that was being run from a different instance.
+    Multiple nvim instance support without process duplications and shared state. For instance, you can stop a watch service that was being run from a different instance.
 * **Auto-start/stop main background daemon**\
-    There is no need to manually start/stop the daemon background. The daemon will start and end automatically based on the number of connected client instances.
+    Daemon will start and stop automatically based on the number of connected client instances.
 * **Multi Target/Project Support**\
-    Users can work on many projects at the same time and build/run on root directory changes or once. TODO
+    Work on multiple projects at one nvim instance at the same time. TODO
 * **Simulator Support**\
-    Pick a simulator device that is close to the target's platform and run the target only once or whenever a file changes. Furthermore, if the simulator is not already running, the service will launch the simulator before installing and running your app.
-* **Logging buffer**\
-    Real-time recording of 'print()' commands and real-time build logs Currently, logs are unique to the requested client; if you want shared logs, please submit an issue.
+    Run your products on simulators relative to your target's platform. (+ watch build and ran on change)
+* **Runtime/Build Logging**\
+    Real-time logging of build logs and 'print()' commands
 * **Statusline Support**\
-    Global variable to update statusline with build/run commands + [feline] provider. Other statusline plugins support are welcomed.
+    Global variable to update statusline with build/run commands, see [Statusline](#statusline)
 * **Zero Footprint**\
     Light resource usage. I've been using [XBase] for a while; it typically uses 0.1 percent RAM and 0 percent CPU.
-* **XcodeGen Support**\
-    Automatically generate new xcodeproj when you edit
+* **Multi XCodeProj Support**\
+    Auto-generate xcodeproj, when it doesn't exists, generator config files a updated or new files/directories added or removed.
+
+## 💆 Generators
+
+[XBase] primarily supports two project generators: [XcodeGen] and [Tuist].
+
+[XCodeGen] is **recommended** if you are just starting started with `xcodeproj generators`
+since it is considerably simpler with a yml-based configuration language. Having said that,
+[Tuist] is more powerful and packed with features, of which `xcodeproj generation` is but one.
+
+[XBase]'s support for generators is available in the following forms:
+
+- Identification.
+- Auto-generate xcodeproj if you haven't haven't generate it by hand.
+- Auto-generate xcodeproj when you edit the generator config files.
+- Auto-compile project when xcodeproj get regenerated.
+- Code Completion and navigation (#tuist)
+
+### Limitations
+
+#### [XCodeGen]
+
+- No support for custom named yml config files, only `project.yml`.
+
+#### Other Generators
+
+With current [XBase] architecture, it should be pretty easy to add support for yet another
+awesome xcodeproj generator. feel free to get started with [CONTRIBUTING.md] or open a github
+issue
 
 ## 🛠 Requirements
 
@@ -62,22 +91,6 @@ As a long-time vim user who has previously developed a several lua/nvim plugins,
 - [rust] 1.60.0 or up (see [rust getting started])
 - [telescope.nvim]
 - [plenary.nvim]
-
-## 🎮 Usage
-
-TLDR:
-- [Install XBase](#-installation)
-- run `require'xbase'.setup({ --[[ see default configuration ]]  })`
-- Open xcodeproj codebase.
-- Wait for first time project setup finish.
-- Start coding
-- Use available actions which can be configure with shortcuts bellow
-
-When you start a neovim instance with a root that contains `project.yml,` `Project.swift,` or
-`*.xcodeproj,` the daemon server will auto-start if no instance is running, and register the
-project once for recompile-watch. To communicate with your deamon, checkout the configurable
-shortcuts.
-
 
 ## 🦾 Installation
 
@@ -117,6 +130,29 @@ call dein#add('tami5/xbase', { 'build': 'make install' })
 lua require'xbase'.setup()
 ```
 
+## 🎮 Usage
+
+TLDR:
+- [Install XBase](#-installation)
+- run `require'xbase'.setup({ --[[ see default configuration ]]  })`
+- Open xcodeproj codebase.
+- Wait for first time project setup finish.
+- Start coding
+- Use available actions which can be configure with shortcuts bellow
+
+When you start a neovim instance with a root that contains `project.yml,` `Project.swift,` or
+`*.xcodeproj,` the daemon server will auto-start if no instance is running, and register the
+project once for recompile-watch. To communicate with your deamon, checkout the configurable
+shortcuts.
+
+### Statusline
+
+[XBase] provide [feline] provider, other statusline plugins support are welcomed. However,
+using `vim.g.xbase_watch_build_status` you can easily setup statusline indicators.
+
+```lua
+require("xbase.util").feline_provider() -- append to feline setup function
+```
 
 ## ⚙️ Defaults
 ```lua
@@ -161,11 +197,6 @@ lua require'xbase'.setup()
 }
 ```
 
-## 💆 Generators
-
-Currently, [XBase] supports two project generators: [XcodeGen] and [Tuist]. Support is compes
-in form of recompiling the project and regenerating 'xcodeproj' everytime the generator config file is
-modified.
 
 ## 🩺 Debugging
 
@@ -202,4 +233,15 @@ statusline get updated.
 [plenary.nvim]: https://github.com/nvim-lua/plenary.nvim
 [neovim]: https://github.com/neovim/neovim
 [tuist]: https://github.com/tuist/tuist
+[CONTRIBUTING.md]: ./CONTRIBUTING.md
 
+[👁  Overview]: #-motivation
+[🌝 Motivation]: #-motivation
+[🌟 Features]: #-features
+[💆 Generators]: #-generators
+[🛠 Requirements]: #-requirements
+[🎮 Usage]: #-usage
+[🦾 Installation]: #-installation
+[⚙️ Defaults]: #-defaults
+[🩺 Debugging]: #-debugging
+[🎥 Preview]: #-preview
