@@ -7,15 +7,15 @@ use std::{net::Shutdown, os::unix::net::UnixStream, process::Command, str::FromS
 use tap::Pipe;
 use xbase_proto::*;
 
-static DAEMON_SOCKET_PATH: &str = "/tmp/xbase-daemon.socket";
+static DAEMON_SOCKET_PATH: &str = "/tmp/xbase.socket";
 
 lazy_static::lazy_static! {
     static ref DAEMON_BINARY_PATH: PathBuf = {
         let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
         if cfg!(debug_assertions) {
-            root.extend(&["target", "debug", "xbase-daemon"]);
+            root.extend(&["target", "debug", "xbase"]);
         } else {
-            root.extend(&["bin", "xbase-daemon"]);
+            root.extend(&["bin", "xbase"]);
         }
         root
     };

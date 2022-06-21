@@ -1,5 +1,5 @@
 [package]
-name = "xbase-daemon"
+name = "xbase"
 version = "0.1.2"
 edition = "2021"
 

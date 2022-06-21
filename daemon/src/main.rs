@@ -3,9 +3,9 @@ use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
-use xbase_daemon::util::pid;
-use xbase_daemon::Result;
-use xbase_daemon::{constants::*, RequestHandler};
+use xbase::util::pid;
+use xbase::Result;
+use xbase::{constants::*, RequestHandler};
 use xbase_proto::{Message, Request};
 
 #[tokio::main]
@@ -14,9 +14,10 @@ async fn main() -> Result<()> {
 
     let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
 
-    log::setup("/tmp", "xbase-daemon.log", Level::TRACE, true)?;
+    log::setup("/tmp", "xbase-daemon.log", Level::DEBUG, true)?;
 
     log::info!("Started");
+
     loop {
         if let Ok((mut s, _)) = listener.accept().await {
             tokio::spawn(async move {
