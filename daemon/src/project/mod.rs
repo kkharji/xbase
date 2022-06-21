@@ -3,26 +3,19 @@ mod swift;
 mod tuist;
 mod xcodegen;
 
-use barebone::BareboneProject;
-use swift::SwiftProject;
-use tuist::TuistProject;
-use xclog::XCLogger;
-use xcodegen::XCodeGenProject;
-
-use crate::device::Device;
-use crate::util::consume_and_log;
-use crate::util::fs;
-use crate::watch::Event;
 use crate::Result;
+use crate::{device::*, run::*, util::*, watch::*};
 use anyhow::Context;
+use barebone::BareboneProject;
 use std::collections::HashMap;
-use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use xbase_proto::{BuildSettings, Client};
+use xclog::{XCBuildSettings, XCLogger};
 use xcodeproj::pbxproj::PBXTargetPlatform;
+use {swift::*, tuist::*, xcodegen::*};
 
 /// Project Data
-pub trait ProjectData: Debug {
+pub trait ProjectData: std::fmt::Debug {
     /// Project root
     fn root(&self) -> &PathBuf;
     /// Project name
@@ -74,7 +67,10 @@ pub trait ProjectBuild: ProjectData {
             format!("{}.xcodeproj", self.name()),
         ]);
 
+        log::trace!("building with [{}]", args.join(" "));
+
         let xclogger = XCLogger::new(self.root(), &args)?;
+
         Ok((xclogger, args))
     }
 
@@ -83,6 +79,26 @@ pub trait ProjectBuild: ProjectData {
         let get_build_cache_dir = fs::get_build_cache_dir(self.root())?;
         std::fs::remove_dir_all(&get_build_cache_dir).ok();
         Ok(get_build_cache_dir)
+    }
+}
+
+#[async_trait::async_trait]
+pub trait ProjectRun: ProjectData + ProjectBuild {
+    fn get_runner(
+        &self,
+        cfg: &BuildSettings,
+        device: Option<&Device>,
+    ) -> Result<(Box<dyn Runner + Send + Sync>, XCLogger)> {
+        log::info!("Running {}", self.name());
+
+        let (xclogger, args) = self.build(cfg, device)?;
+        let info = XCBuildSettings::new_sync(self.root(), &args)?;
+        let runner: Box<dyn Runner + Send + Sync> = match device {
+            Some(device) => Box::new(SimulatorRunner::new(device.clone(), &info)),
+            None => Box::new(BinRunner::from_build_info(&info)),
+        };
+
+        Ok((runner, xclogger))
     }
 }
 
@@ -124,6 +140,7 @@ pub trait ProjectGenerate: ProjectData {
 pub trait Project:
     ProjectData
     + ProjectBuild
+    + ProjectRun
     + ProjectCompile
     + ProjectGenerate
     + Sync

@@ -1,15 +1,23 @@
 mod bin;
 mod handler;
-mod medium;
 mod service;
 mod simulator;
 
 use crate::constants::DAEMON_STATE;
-use crate::RequestHandler;
-use crate::Result;
+use crate::nvim::Logger;
+use crate::{RequestHandler, Result};
 use async_trait::async_trait;
-pub use service::RunService;
+use process_stream::Process;
 use xbase_proto::RunRequest;
+
+pub use service::RunService;
+pub use {bin::*, simulator::*};
+
+#[async_trait::async_trait]
+pub trait Runner {
+    /// Run Project
+    async fn run<'a>(&self, logger: &mut Logger<'a>) -> Result<Process>;
+}
 
 #[async_trait]
 impl RequestHandler for RunRequest {

@@ -12,7 +12,13 @@ pub struct RunServiceHandler {
 
 impl RunServiceHandler {
     // Change the status of the process to running
-    pub fn new(target: String, client: Client, mut process: Process, key: String) -> Result<Self> {
+    pub fn new(
+        key: &String,
+        target: &String,
+        client: &Client,
+        mut process: Process,
+    ) -> Result<Self> {
+        let (key, target, client) = (key.clone(), target.clone(), client.clone());
         let mut stream = process.spawn_and_stream()?;
         let kill_send = process.clone_kill_sender().unwrap();
 

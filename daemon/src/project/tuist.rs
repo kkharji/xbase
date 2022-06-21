@@ -57,6 +57,9 @@ impl ProjectData for TuistProject {
 impl ProjectBuild for TuistProject {}
 
 #[async_trait::async_trait]
+impl ProjectRun for TuistProject {}
+
+#[async_trait::async_trait]
 impl ProjectCompile for TuistProject {
     async fn update_compile_database(&self) -> Result<()> {
         use xclog::XCCompilationDatabase as CC;

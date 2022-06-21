@@ -49,6 +49,9 @@ impl ProjectData for XCodeGenProject {
 impl ProjectBuild for XCodeGenProject {}
 
 #[async_trait::async_trait]
+impl ProjectRun for XCodeGenProject {}
+
+#[async_trait::async_trait]
 impl ProjectCompile for XCodeGenProject {
     async fn update_compile_database(&self) -> Result<()> {
         use xclog::XCCompilationDatabase as CC;

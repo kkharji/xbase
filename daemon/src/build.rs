@@ -5,7 +5,7 @@ use crate::RequestHandler;
 use crate::Result;
 use async_trait::async_trait;
 use tokio::sync::MutexGuard;
-use xbase_proto::{BuildRequest, Operation};
+use xbase_proto::BuildRequest;
 
 #[async_trait]
 impl RequestHandler for BuildRequest {
@@ -16,30 +16,30 @@ impl RequestHandler for BuildRequest {
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
-        match self.ops {
-            Operation::Once => self.trigger(state, &Event::default()).await?,
-            _ => {
-                if self.ops.is_watch() {
-                    state
-                        .clients
-                        .get(&self.client.pid)?
-                        .set_watching(true)
-                        .await?;
-                    state.watcher.get_mut(&self.client.root)?.add(self)?;
-                } else {
-                    state
-                        .clients
-                        .get(&self.client.pid)?
-                        .set_watching(false)
-                        .await?;
-                    state
-                        .watcher
-                        .get_mut(&self.client.root)?
-                        .remove(&self.to_string())?;
-                }
-                state.sync_client_state().await?;
-            }
+        if self.ops.is_once() {
+            return self.trigger(state, &Event::default()).await;
         }
+
+        if self.ops.is_watch() {
+            state
+                .clients
+                .get(&self.client.pid)?
+                .set_watching(true)
+                .await?;
+            state.watcher.get_mut(&self.client.root)?.add(self)?;
+        } else {
+            state
+                .clients
+                .get(&self.client.pid)?
+                .set_watching(false)
+                .await?;
+            state
+                .watcher
+                .get_mut(&self.client.root)?
+                .remove(&self.to_string())?;
+        }
+
+        state.sync_client_state().await?;
 
         Ok(())
     }
@@ -52,7 +52,7 @@ impl Watchable for BuildRequest {
 
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
-        let (xclogger, args) = state.projects.get(root)?.build(&config, None)?;
+        let (xclogger, _) = state.projects.get(root)?.build(&config, None)?;
         let nvim = state.clients.get(&self.client.pid)?;
         let logger = &mut nvim.logger();
 
@@ -61,8 +61,6 @@ impl Watchable for BuildRequest {
             if is_once { "Build" } else { "Rebuild" },
             config.target
         ));
-
-        log::trace!("building with [{}]", args.join(" "));
 
         let success = logger.consume_build_logs(xclogger, false, is_once).await?;
         if !success {

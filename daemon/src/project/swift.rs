@@ -5,7 +5,7 @@ use futures::StreamExt;
 use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use tap::Pipe;
+// use tap::Pipe;
 use tokio::process::Command;
 use xbase_proto::Client;
 use xcodeproj::pbxproj::PBXTargetPlatform;
@@ -48,18 +48,21 @@ impl ProjectData for SwiftProject {
 
 #[async_trait::async_trait]
 impl ProjectBuild for SwiftProject {
-    fn build(
-        &self,
-        cfg: &BuildSettings,
-        _device: Option<&Device>,
-    ) -> Result<(XCLogger, Vec<String>)> {
-        let mut process: Process = vec!["/usr/bin/swift", "build", "--target", &cfg.target].into();
+    // async fn build(
+    //     &self,
+    //     cfg: &BuildSettings,
+    //     _device: Option<&Device>,
+    // ) -> Result<(XCLogger, Vec<String>, Option<XCBuildSettings>)> {
+    //     let mut process: Process = vec!["/usr/bin/swift", "build", "--target", &cfg.target].into();
 
-        process.current_dir(self.root());
+    //     process.current_dir(self.root());
 
-        (XCLogger::try_from(process)?, vec![]).pipe(Ok)
-    }
+    //     (XCLogger::try_from(process)?, vec![], None).pipe(Ok)
+    // }
 }
+
+#[async_trait::async_trait]
+impl ProjectRun for SwiftProject {}
 
 #[async_trait::async_trait]
 impl ProjectCompile for SwiftProject {
