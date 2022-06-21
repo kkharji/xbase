@@ -75,7 +75,7 @@ impl ProjectCompile for BareboneProject {
 #[async_trait::async_trait]
 impl ProjectGenerate for BareboneProject {
     fn should_generate(&self, event: &Event) -> bool {
-        event.is_create_event() || event.is_remove_event()
+        event.is_create_event() || event.is_remove_event() || event.is_rename_event()
     }
 
     async fn generate(&mut self) -> Result<()> {

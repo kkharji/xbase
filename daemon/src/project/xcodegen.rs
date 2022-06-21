@@ -78,7 +78,10 @@ impl ProjectGenerate for XCodeGenProject {
         let is_content_update = event.is_content_update_event();
         let is_config_file_update = is_content_update && is_config_file;
 
-        is_config_file_update || event.is_create_event() || event.is_remove_event()
+        is_config_file_update
+            || event.is_create_event()
+            || event.is_remove_event()
+            || event.is_rename_event()
     }
 
     /// Generate xcodeproj

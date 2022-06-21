@@ -59,7 +59,7 @@ impl WatchService {
             let recompiled = (event.is_create_event()
                 || event.is_remove_event()
                 || event.is_content_update_event()
-                || event.is_rename_event() && !(!event.path().exists() || event.is_seen()))
+                || event.is_rename_event() && !event.is_seen())
                 && ensure_server_support(state, client, Some(event)).await?;
 
             if recompiled {
@@ -100,6 +100,12 @@ impl WatchService {
                     Some(e) => e,
                     None => continue,
                 };
+
+                // IGNORE EVENTS OF RENAME FOR PATHS THAT NO LONGER EXISTS
+                if !event.path().exists() && event.is_rename_event() {
+                    log::debug!("Ignoring {}", event);
+                    continue;
+                }
 
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
