@@ -76,16 +76,18 @@ impl Simulator {
     pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
         logger.append(self.launching_msg()).await?;
         let mut process = Process::new("xcrun");
-
-        process.args(&[
+        let args = &[
             "simctl",
             "launch",
             "--terminate-running-process",
-            "--console",
-        ]);
-        process.arg(&self.device.udid);
-        process.arg(&self.info.product_bundle_identifier);
-        process.kill_on_drop(true);
+            "--console-pty",
+            &self.device.udid,
+            &self.info.product_bundle_identifier,
+        ];
+
+        log::debug!("Launching app with {args:?}");
+
+        process.args(args);
 
         logger.append(self.connected_msg()).await?;
         logger.append(fmt::separator()).await?;
