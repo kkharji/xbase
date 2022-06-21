@@ -17,7 +17,6 @@ pub struct XCodeGenProject {
     watchignore: Vec<String>,
     #[serde(skip)]
     xcodeproj: xcodeproj::XCodeProject,
-    xcodeproj_paths: Vec<PathBuf>,
 }
 
 impl ProjectData for XCodeGenProject {
@@ -118,8 +117,6 @@ impl Project for XCodeGenProject {
     async fn new(client: &Client) -> Result<Self> {
         let Client { root, pid, .. } = client;
 
-        log::info!("Project Type: XcodeGen");
-
         let mut watchignore = generate_watchignore(root).await;
         watchignore.extend(["**/*.xcodeproj/**".into(), "**/*.xcworkspace/**".into()]);
 
@@ -139,7 +136,7 @@ impl Project for XCodeGenProject {
             );
         }
 
-        if !project.xcodeproj_paths.is_empty() {
+        if !xcodeproj_paths.is_empty() {
             project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
             project.targets = project.xcodeproj.targets_platform();
         } else {

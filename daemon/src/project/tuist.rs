@@ -113,7 +113,7 @@ impl ProjectCompile for TuistProject {
 #[async_trait::async_trait]
 impl ProjectGenerate for TuistProject {
     fn should_generate(&self, event: &Event) -> bool {
-        log::info!("{:?}", self.manifest_files);
+        log::trace!("manifest files {:?}", self.manifest_files);
         let is_config_file = self.manifest_files.contains(event.file_name());
         let is_content_update = event.is_content_update_event();
         let is_config_file_update = is_content_update && is_config_file;

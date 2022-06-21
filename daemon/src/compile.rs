@@ -56,10 +56,6 @@ pub async fn ensure_server_support<'a>(
     }
 
     if let Some(event) = event {
-        "⚙ Generating compile database (may take few seconds) .."
-            .pipe(|msg| state.clients.echo_msg(root, name, msg))
-            .await;
-
         let project = state.projects.get_mut(root)?;
         if project.should_generate(event) {
             if let Err(e) = project.generate().await {
