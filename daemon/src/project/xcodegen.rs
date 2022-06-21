@@ -147,9 +147,11 @@ impl Project for XCodeGenProject {
             project.generate().await?;
         }
 
-        log::debug!("Project Name: {}", project.name());
-        log::debug!("Project Targets: {:?}", project.targets());
-
+        log::info!(
+            "(name: {:?}, targets: {:?})",
+            project.name(),
+            project.targets()
+        );
         Ok(project)
     }
 }

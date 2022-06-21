@@ -23,6 +23,8 @@ pub struct TuistProject {
     manifest: XCodeProject,
     #[serde(skip)]
     manifest_path: PathBuf,
+    #[serde(skip)]
+    manifest_files: Vec<String>,
 }
 
 impl ProjectData for TuistProject {
@@ -74,11 +76,6 @@ impl ProjectCompile for TuistProject {
             arguments.push("-project".into());
             arguments.push("Manifests.xcodeproj".into());
 
-            log::debug!(
-                "Getting compile commands from : `xcodebuild {}`",
-                arguments.join(" ")
-            );
-
             for target in self
                 .manifest
                 .targets()
@@ -88,6 +85,7 @@ impl ProjectCompile for TuistProject {
                 let mut args = arguments.clone();
                 args.push("-target".into());
                 args.push(target);
+                log::info!("xcodebuild {}", args.join(" "));
                 compile_commands.extend(CC::generate(&root, &args).await?.to_vec());
             }
         }
@@ -99,6 +97,8 @@ impl ProjectCompile for TuistProject {
             arguments.push(format!("SYMROOT={cache_root}"));
             arguments.push("-project".into());
             arguments.push(format!("{name}.xcodeproj"));
+
+            log::info!("xcodebuild {}", arguments.join(" "));
 
             compile_commands.extend(CC::generate(&root, &arguments).await?.to_vec());
         }
@@ -113,8 +113,8 @@ impl ProjectCompile for TuistProject {
 #[async_trait::async_trait]
 impl ProjectGenerate for TuistProject {
     fn should_generate(&self, event: &Event) -> bool {
-        // TODO(tuist): support regenrating on all manifest files
-        let is_config_file = event.file_name() == "Project.swift";
+        log::info!("{:?}", self.manifest_files);
+        let is_config_file = self.manifest_files.contains(event.file_name());
         let is_content_update = event.is_content_update_event();
         let is_config_file_update = is_content_update && is_config_file;
 
@@ -194,8 +194,6 @@ impl Project for TuistProject {
     async fn new(client: &Client) -> Result<Self> {
         let Client { root, pid, .. } = client;
 
-        log::debug!("Project Type: Tuist");
-
         let mut watchignore = generate_watchignore(root).await;
 
         watchignore.extend([
@@ -231,9 +229,13 @@ impl Project for TuistProject {
                 project.generate().await?;
 
                 project.targets = project.xcodeproj.targets_platform();
+                project.manifest_files = project.manifest.build_file_names();
 
-                log::debug!("Project Name: {}", project.name());
-                log::debug!("Project Targets: {:?}", project.targets());
+                log::info!(
+                    "(name: {:?}, targets: {:?})",
+                    project.name(),
+                    project.targets()
+                );
 
                 return Ok(project);
             }
@@ -241,14 +243,17 @@ impl Project for TuistProject {
 
         project.manifest = XCodeProject::new(&manifest_path)?;
         project.manifest_path = manifest_path;
+        project.manifest_files = project.manifest.build_file_names();
+
         project.xcodeproj = XCodeProject::new(&xcodeproj_path)?;
         project.xcodeproj_path = xcodeproj_path;
         project.targets = project.xcodeproj.targets_platform();
 
-        // TODO(tuist): generate build arguments for all manifest targets
-        log::error!("{:?}", project.manifest.targets_platform());
-        log::debug!("Project Name: {}", project.name());
-        log::debug!("Project Targets: {:?}", project.targets());
+        log::info!(
+            "(name: {:?}, targets: {:?})",
+            project.name(),
+            project.targets()
+        );
 
         Ok(project)
     }

@@ -16,7 +16,7 @@ pub async fn consume_and_log(mut stream: OutputStream) -> (bool, Vec<String>) {
         if let ProcessItem::Exit(v) = output {
             success = v.eq("0");
         } else {
-            log::info!("{output}");
+            log::debug!("{output}");
             items.push(output.to_string())
         }
     }

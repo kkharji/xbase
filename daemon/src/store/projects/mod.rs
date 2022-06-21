@@ -12,7 +12,7 @@ pub struct ProjectStore(HashMap<PathBuf, Box<dyn Project + Send>>);
 // TODO(projects): pressist a list of projects paths and information
 impl ProjectStore {
     pub async fn add(&mut self, client: &Client) -> Result<()> {
-        log::info!("[Projects] add({})", client.abbrev_root());
+        log::info!("Add: {:?}", client.abbrev_root());
 
         let key = client.root.to_path_buf();
         let project = project(client).await?;
@@ -50,7 +50,7 @@ impl ProjectStore {
 
         // Remove project only when no more client using that data.
         if project.clients().is_empty() {
-            log::info!("[Projects] remove({:?})", client.abbrev_root());
+            log::info!("Remove: {:?}", client.abbrev_root());
             return Ok(self.0.remove(root));
         }
 

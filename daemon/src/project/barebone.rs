@@ -61,6 +61,8 @@ impl ProjectCompile for BareboneProject {
             format!("{name}.xcodeproj"),
         ]);
 
+        log::info!("xcodebuild {}", arguments.join(" "));
+
         let compile_commands = CC::generate(&root, &arguments).await?.to_vec();
         let json = serde_json::to_vec_pretty(&compile_commands)?;
 
@@ -88,8 +90,6 @@ impl Project for BareboneProject {
     async fn new(client: &Client) -> Result<Self> {
         let Client { root, pid, .. } = client;
 
-        log::info!("Project Type: Barebone");
-
         let mut project = Self {
             root: root.clone(),
             watchignore: generate_watchignore(root).await,
@@ -112,8 +112,11 @@ impl Project for BareboneProject {
         project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
         project.targets = project.xcodeproj.targets_platform();
 
-        log::debug!("Project Name: {}", project.name());
-        log::debug!("Project Targets: {:?}", project.targets());
+        log::info!(
+            "(name: {:?}, targets: {:?})",
+            project.name(),
+            project.targets()
+        );
 
         Ok(project)
     }

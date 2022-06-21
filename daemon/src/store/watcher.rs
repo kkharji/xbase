@@ -11,7 +11,7 @@ pub struct WatchStore(HashMap<PathBuf, WatchService>);
 
 impl WatchStore {
     pub async fn add(&mut self, client: &Client, ignore_pattern: Vec<String>) -> Result<()> {
-        log::info!("[Watcher] add(\"{}\")", client.abbrev_root());
+        log::info!("Add: {:?}", client.abbrev_root());
         let handler = WatchService::new(client.to_owned(), ignore_pattern).await?;
         self.0.insert(client.root.clone(), handler);
         Ok(())
@@ -22,7 +22,7 @@ impl WatchStore {
             handle.handler.abort();
         };
 
-        log::info!("[Watcher] remove(\"{}\")", client.abbrev_root());
+        log::info!("Remove: {:?}", client.abbrev_root());
 
         self.0.remove(&client.root);
     }
