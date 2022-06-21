@@ -74,14 +74,22 @@ impl ProjectCompile for TuistProject {
             arguments.push("-project".into());
             arguments.push("Manifests.xcodeproj".into());
 
-            // TODO(tuist): generate build arguments for all manifest targets
-
             log::debug!(
                 "Getting compile commands from : `xcodebuild {}`",
                 arguments.join(" ")
             );
 
-            compile_commands.extend(CC::generate(&root, &arguments).await?.to_vec());
+            for target in self
+                .manifest
+                .targets()
+                .into_iter()
+                .flat_map(|t| Some(t.name?.to_string()))
+            {
+                let mut args = arguments.clone();
+                args.push("-target".into());
+                args.push(target);
+                compile_commands.extend(CC::generate(&root, &args).await?.to_vec());
+            }
         }
 
         // Compile Project
@@ -237,6 +245,8 @@ impl Project for TuistProject {
         project.xcodeproj_path = xcodeproj_path;
         project.targets = project.xcodeproj.targets_platform();
 
+        // TODO(tuist): generate build arguments for all manifest targets
+        log::error!("{:?}", project.manifest.targets_platform());
         log::debug!("Project Name: {}", project.name());
         log::debug!("Project Targets: {:?}", project.targets());
 
