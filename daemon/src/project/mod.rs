@@ -1,204 +1,162 @@
-mod generator;
+mod barebone;
+mod tuist;
+mod xcodegen;
+
+use barebone::BareboneProject;
+use tuist::TuistProject;
+use xcodegen::XCodeGenProject;
 
 use crate::device::Device;
+use crate::util::consume_and_log;
+use crate::util::fs;
 use crate::watch::Event;
-use crate::{state::State, Result};
-use generator::ProjectGenerator;
-use serde::{Deserialize, Serialize};
+use crate::Result;
+use anyhow::Context;
 use std::collections::HashMap;
-use std::path::PathBuf;
-use tokio::sync::MutexGuard;
-use xbase_proto::BuildSettings;
+use std::fmt::Debug;
+use std::path::{Path, PathBuf};
+use xbase_proto::{BuildSettings, Client};
 use xcodeproj::pbxproj::PBXTargetPlatform;
-use xcodeproj::XCodeProject;
 
-/// Project Inner
-#[derive(Debug)]
-pub enum ProjectInner {
-    None,
-    XCodeProject(XCodeProject),
-    Swift,
-}
-
-impl Default for ProjectInner {
-    fn default() -> Self {
-        Self::None
+/// Project Data
+pub trait ProjectData: Debug {
+    /// Project root
+    fn root(&self) -> &PathBuf;
+    /// Project name
+    fn name(&self) -> &str;
+    /// Project targets
+    fn targets(&self) -> &HashMap<String, PBXTargetPlatform>;
+    /// Project clients
+    fn clients(&self) -> &Vec<i32>;
+    /// Get mut clients
+    fn clients_mut(&mut self) -> &mut Vec<i32>;
+    /// Add client to project
+    fn add_client(&mut self, pid: i32) {
+        self.clients_mut().push(pid)
+    }
+    /// Get Ignore patterns
+    fn watchignore(&self) -> &Vec<String>;
+    /// read dir and get xcodeproj paths
+    fn get_xcodeproj_paths(&self) -> Result<Vec<PathBuf>> {
+        Ok(wax::walk("*.xcodeproj", &self.root())
+            .context("Glob")?
+            .flatten()
+            .map(|entry| entry.into_path())
+            .collect::<Vec<PathBuf>>())
     }
 }
 
-/// Represent XcodeGen Project
-#[derive(Default, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Project {
-    /// Project Name or rather xproj generated file name.
-    pub name: String,
-
-    /// The list of targets in the project mapped by name
-    pub targets: HashMap<String, PBXTargetPlatform>,
-
-    /// Root directory
-    #[serde(skip)]
-    pub root: PathBuf,
-
-    /// Connected Clients
-    #[serde(default)]
-    pub clients: Vec<i32>,
-
-    /// Ignore Patterns
-    #[serde(default)]
-    pub ignore_patterns: Vec<String>,
-
-    /// Generator
-    pub generator: ProjectGenerator,
-
-    #[serde(skip)]
-    /// XCodeProject Data
-    inner: ProjectInner,
-}
-
-impl Project {
-    pub async fn new(root: &std::path::PathBuf) -> Result<Self> {
-        let mut project = Self::default();
-
-        project.generator = ProjectGenerator::new(root);
-
-        project.inner = if root.join("Package.swift").exists() {
-            log::debug!("[Project] Kind: \"Swift\"",);
-            // TODO(project): Get swift project name
-            project.name = "UnknownSwiftProject".into();
-            ProjectInner::Swift
-        } else {
-            let xcodeproj = XCodeProject::new(root)?;
-            project.name = xcodeproj.name().to_owned();
-            project.targets = xcodeproj.targets_platform();
-
-            log::debug!("[New Project] name: {:?}", project.name);
-            log::debug!("[New Project] Kind: \"XCodeProject\"");
-            log::debug!("[New Project] Generator: \"{:?}\"", project.generator);
-            log::debug!("[New Project] targets: {:?}", project.targets);
-
-            ProjectInner::XCodeProject(xcodeproj)
-        };
-
-        project
-            .ignore_patterns
-            .extend(gitignore_to_glob_patterns(root).await?);
-
-        project.ignore_patterns.extend(vec![
-            "**/.git/**".into(),
-            "**/.*".into(),
-            "**/build/**".into(),
-            "**/buildServer.json".into(),
-        ]);
-
-        Ok(project)
+#[async_trait::async_trait]
+pub trait ProjectBuild: ProjectData {
+    /// Get build cache root
+    fn build_cache_root(&self) -> Result<String> {
+        let get_build_cache_dir = fs::get_build_cache_dir(self.root())?;
+        std::fs::remove_dir_all(&get_build_cache_dir).ok();
+        Ok(get_build_cache_dir)
     }
 
-    pub async fn update(&mut self) -> Result<()> {
-        let Self { root, clients, .. } = self;
-        let (clients, root) = (clients.clone(), root.clone());
+    /// Build project with given build settings
+    fn build_arguments(&self, cfg: &BuildSettings, device: &Option<Device>) -> Result<Vec<String>> {
+        let mut args = cfg.to_args();
 
-        *self = Self::new(&root).await?;
-
-        self.root = root;
-        self.clients = clients;
-        log::info!("[Projects] update({:?})", self.name);
-
-        Ok(())
-    }
-
-    pub async fn remove_target_watchers<'a>(
-        &self,
-        state: &'a mut MutexGuard<'_, State>,
-    ) -> Result<()> {
-        state.watcher.get_mut(&self.root)?.listeners.clear();
-        Ok(())
-    }
-
-    pub async fn regenerate(&self, event: Option<&Event>) -> Result<bool> {
-        if let Some(event) = event {
-            let is_generator_file = ProjectGenerator::is_genertor_file(event.path());
-            if (event.is_content_update_event() && is_generator_file)
-                || (event.is_create_event() || event.is_remove_event())
-            {
-                self.generator.regenerate(&self.root).await
-            } else {
-                Ok(false)
-            }
-        } else {
-            self.generator.regenerate(&self.root).await
-        }
-    }
-}
-
-use crate::util::fs::{
-    get_build_cache_dir, get_build_cache_dir_with_config, gitignore_to_glob_patterns,
-};
-
-impl Project {
-    /// Generate compile commands for project via compiling all targets
-    pub async fn generate_compile_commands(&self) -> Result<()> {
-        use xclog::{XCCompilationDatabase, XCCompileCommand};
-
-        log::info!("Generating compile commands ... ");
-        let mut compile_commands: Vec<XCCompileCommand> = vec![];
-        let cache_root = get_build_cache_dir(&self.root)?;
-        // Because xcodebuild clean can't remove it
-        tokio::fs::remove_dir_all(&cache_root).await.ok();
-
-        let build_args: Vec<String> = vec![
-            "clean".into(),
-            "build".into(),
-            format!("SYMROOT={cache_root}"),
-            "-configuration".into(),
-            "Debug".into(),
-            "CODE_SIGN_IDENTITY=\"\"".into(),
-            "CODE_SIGNING_REQUIRED=\"NO\"".into(),
-            "CODE_SIGN_ENTITLEMENTS=\"\"".into(),
-            "CODE_SIGNING_ALLOWED=\"NO\"".into(),
-        ];
-        println!("{build_args:#?}");
-        let compile_db = XCCompilationDatabase::generate(&self.root, &build_args).await?;
-
-        compile_db
-            .into_iter()
-            .for_each(|cmd| compile_commands.push(cmd));
-
-        log::info!("Compile Commands Generated");
-
-        let json = serde_json::to_vec_pretty(&compile_commands)?;
-        tokio::fs::write(self.root.join(".compile"), &json).await?;
-
-        Ok(())
-    }
-
-    pub fn build_args(
-        &self,
-        build_settings: &BuildSettings,
-        device: &Option<Device>,
-    ) -> Result<Vec<String>> {
-        let mut args = build_settings
-            .to_string()
-            .split_whitespace()
-            .map(ToString::to_string)
-            .collect::<Vec<String>>();
-
-        args.remove(0);
         args.insert(0, "build".to_string());
 
         if let Some(device) = device {
             args.extend(device.special_build_args())
         }
 
+        let cache_build_root = fs::get_build_cache_dir_with_config(self.root(), cfg)?;
         // TODO: check if scheme isn't already defined!
         args.extend_from_slice(&[
-            format!(
-                "SYMROOT={}",
-                get_build_cache_dir_with_config(&self.root, build_settings)?
-            ),
+            format!("SYMROOT={cache_build_root}",),
             "-allowProvisioningUpdates".into(),
+            "-project".into(),
+            format!("{}.xcodeproj", self.name()),
         ]);
 
         Ok(args)
     }
+}
+
+#[async_trait::async_trait]
+pub trait ProjectCompile: ProjectData {
+    /// Generate compile database in project root
+    async fn update_compile_database(&self) -> Result<()>;
+
+    /// Get compile arguments
+    fn compile_arguments(&self) -> Vec<String> {
+        vec![
+            "clean",
+            "build",
+            "-configuration",
+            "Debug",
+            "CODE_SIGN_IDENTITY=\"\"",
+            "CODE_SIGNING_REQUIRED=\"NO\"",
+            "CODE_SIGN_ENTITLEMENTS=\"\"",
+            "CODE_SIGNING_ALLOWED=\"NO\"",
+        ]
+        .iter()
+        .map(ToString::to_string)
+        .collect()
+    }
+}
+
+#[async_trait::async_trait]
+pub trait ProjectGenerate: ProjectData {
+    /// Whether the project should be generated
+    fn should_generate(&self, _event: &Event) -> bool {
+        false
+    }
+    /// Generate xcodeproj
+    async fn generate(&mut self) -> Result<()>;
+}
+
+#[async_trait::async_trait]
+/// Project Extension that can be built, ran and regenerated
+pub trait Project:
+    ProjectData
+    + ProjectBuild
+    + ProjectCompile
+    + ProjectGenerate
+    + Sync
+    + Send
+    + erased_serde::Serialize
+{
+    /// Create new project
+    async fn new(client: &Client) -> Result<Self>
+    where
+        Self: Sized;
+}
+
+erased_serde::serialize_trait_object!(Project);
+
+/// Create a project from given client
+pub async fn project(client: &Client) -> Result<Box<dyn Project + Send + Sync>> {
+    let Client { root, .. } = client;
+    if root.join("project.yml").exists() {
+        Ok(Box::new(XCodeGenProject::new(client).await?))
+    } else if root.join("Project.swift").exists() {
+        Ok(Box::new(TuistProject::new(client).await?))
+    } else {
+        Ok(Box::new(BareboneProject::new(client).await?))
+    }
+}
+
+async fn generate_watchignore<P: AsRef<Path>>(root: P) -> Vec<String> {
+    let mut default = vec![
+        "**/.git/**".into(),
+        "**/.*".into(),
+        "**/.compile".into(),
+        "**/build/**".into(),
+        "**/buildServer.json".into(),
+        "**/DerivedData/**".into(),
+        "**/Derived/**".into(),
+    ];
+
+    default.extend(
+        fs::gitignore_to_glob_patterns(root)
+            .await
+            .unwrap_or_default(),
+    );
+    default
 }

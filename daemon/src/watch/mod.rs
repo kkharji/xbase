@@ -7,7 +7,7 @@ use crate::compile::ensure_server_support;
 use crate::error::EnsureOptional;
 use crate::{constants::DAEMON_STATE, state::State, Result};
 use async_trait::async_trait;
-use log::{debug, error, info, trace};
+use log::{error, info, trace};
 use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -55,29 +55,23 @@ impl WatchService {
             event: &Event,
             client: &Client,
             state: &mut MutexGuard<'a, State>,
-        ) {
-            let recompile = event.is_create_event()
+        ) -> Result<()> {
+            let recompiled = (event.is_create_event()
                 || event.is_remove_event()
-                || (event.is_content_update_event() && event.file_name().eq("project.yml"))
-                || event.is_rename_event() && !(event.path().exists() || event.is_seen());
+                || event.is_content_update_event()
+                || event.is_rename_event() && !event.is_seen())
+                && ensure_server_support(state, client, Some(event)).await?;
 
-            if recompile {
+            if recompiled {
                 let ref name = client.abbrev_root();
-
                 state
                     .clients
-                    .echo_msg(&client.root, name, "recompiling ... (may take few seconds)")
+                    .echo_msg(&client.root, name, "new compilation database generated ✅")
                     .await;
-
-                let ensure = ensure_server_support(state, client, Some(event));
-                if ensure.await.is_ok() {
-                    state
-                        .clients
-                        .echo_msg(&client.root, name, "recompiled successfully!")
-                        .await;
-                    debug!("[WatchService] project {name:?} recompiled successfully");
-                }
+                info!("Recompiled: {name:?}");
             };
+
+            Ok(())
         }
 
         let handler = tokio::spawn(async move {
@@ -107,16 +101,22 @@ impl WatchService {
                     None => continue,
                 };
 
+                // IGNORE EVENTS OF RENAME FOR PATHS THAT NO LONGER EXISTS
+                if !event.path().exists() && event.is_rename_event() {
+                    log::debug!("Ignoring {}", event);
+                    continue;
+                }
+
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
 
-                try_to_recompile(event, &client, state).await;
+                try_to_recompile(event, &client, state).await?;
 
                 let watcher = match state.watcher.get(root) {
                     Ok(w) => w,
                     Err(err) => {
-                        error!(r#"[WatchService] unable to get watcher for {root:?}: {err}"#);
-                        info!(r#"[WatchService] dropping watcher for {root:?}: {err}"#);
+                        error!(r#"Unable to get watcher for {root:?}: {err}"#);
+                        info!(r#"Dropping watcher for {root:?}: {err}"#);
                         break;
                     }
                 };
@@ -124,29 +124,29 @@ impl WatchService {
                 for (key, listener) in watcher.listeners.iter() {
                     if listener.should_discard(state, event).await {
                         if let Err(err) = listener.discard(state).await {
-                            error!("[WatchService] `{key}` discard errored!: {err}");
+                            error!(" discard errored for `{key}`!: {err}");
                         }
                         discards.push(key.to_string());
                     } else if listener.should_trigger(state, event).await {
                         if let Err(err) = listener.trigger(state, event).await {
-                            error!("[WatchService] `{key}` trigger errored!: {err}");
+                            error!("trigger errored for `{key}`!: {err}");
                         }
                     }
                 }
                 let watcher = state.watcher.get_mut(root).unwrap();
 
                 for key in discards.iter() {
-                    info!("[WatchService] remove(\"{key}\")");
+                    info!("Remove {key:?}");
                     watcher.listeners.remove(key);
                 }
 
                 discards.clear();
                 internal_state.update_debounce();
 
-                info!("[WatchService] processed ({event})");
+                info!("Processed: {event}");
             }
 
-            info!("[WatchService] {:?} dropped", client.root);
+            info!("Dropped {:?}!!", client.root);
 
             Ok(())
         });
@@ -156,19 +156,19 @@ impl WatchService {
 
     pub fn add<W: Watchable>(&mut self, watchable: W) -> Result<()> {
         let key = watchable.to_string();
-        info!(r#"[WatchService] add("{key}")"#);
+        info!(r#"Add: {key:?}"#);
 
         let other = self.listeners.insert(key, Box::new(watchable));
         if let Some(watchable) = other {
             let key = watchable.to_string();
-            error!("[WatchService] Watchable with key `{key}` already exists!")
+            error!("Watchable with `{key}` already exists!")
         }
 
         Ok(())
     }
 
     pub fn remove(&mut self, key: &String) -> Result<Box<dyn Watchable>> {
-        info!("[WatchService] remove `{key}`");
+        info!("Remove: `{key}`");
         let item = self.listeners.remove(key).to_result("Watchable", key)?;
         Ok(item)
     }
@@ -187,7 +187,7 @@ impl InternalState {
     pub fn update_debounce(&self) {
         let mut debounce = self.debounce.lock().unwrap();
         *debounce = SystemTime::now();
-        trace!("[WatchService] debounce updated!");
+        trace!("Debounce updated!!!");
     }
 
     pub fn last_run(&self) -> u128 {

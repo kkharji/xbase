@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 /// Where the daemon socket path will be located
-pub static DAEMON_SOCKET_PATH: &str = "/tmp/xbase-daemon.socket";
+pub static DAEMON_SOCKET_PATH: &str = "/tmp/xbase.socket";
 
 /// Where the daemon pid will be located
-pub static DAEMON_PID_PATH: &str = "/tmp/xbase-daemon-pid";
+pub static DAEMON_PID_PATH: &str = "/tmp/xbase.pid";
 
 pub type DaemonSharedState = std::sync::Arc<tokio::sync::Mutex<crate::state::State>>;
 

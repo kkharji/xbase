@@ -70,14 +70,21 @@ impl Default for Operation {
 
 impl Display for BuildSettings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "xcodebuild")?;
-        write!(f, " -configuration {}", self.configuration)?;
+        write!(f, "-configuration {}", self.configuration)?;
 
         if let Some(ref scheme) = self.scheme {
             write!(f, " -scheme {scheme}")?;
         }
         write!(f, " -target {}", self.target)?;
         Ok(())
+    }
+}
+impl BuildSettings {
+    pub fn to_args(&self) -> Vec<String> {
+        self.to_string()
+            .split_whitespace()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>()
     }
 }
 

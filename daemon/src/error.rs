@@ -33,8 +33,6 @@ pub enum Error {
     Split(#[from] shell_words::ParseError),
     #[error("[Error] (Build) {0}")]
     Build(String),
-    #[error("[Error] (XcodeGen) {0}")]
-    XcodeGen(#[from] XcodeGenError),
     #[error("[Error] (Run) {0}")]
     Run(String),
     #[error("[Error] (Message) {0}")]
@@ -43,6 +41,10 @@ pub enum Error {
     NotifyWatch(#[from] notify::Error),
     #[error("[Error] (Which) {0}")]
     WhichError(#[from] which::Error),
+    #[error("[Error]`{0}.Xcodeproj` Generate\n\n{1}")]
+    XCodeProjectGenerate(String, String),
+    #[error("[Error] {0}")]
+    ProjectError(String),
 }
 
 #[derive(ThisError, Debug)]
@@ -57,14 +59,6 @@ pub enum LoopError {
     NoClient(i32),
     #[error("No project found with {0:?}")]
     NoProject(PathBuf),
-}
-
-#[derive(ThisError, Debug)]
-pub enum XcodeGenError {
-    #[error("project.yml is not found")]
-    NoProjectConfig,
-    #[error("Fail to `{0}.Xcodeproj`")]
-    XcodeProjUpdate(String),
 }
 
 impl From<String> for Error {

@@ -1,13 +1,10 @@
 //! Module for generating Compilation Database.
-use xbase_proto::Client;
-
 use crate::watch::Event;
-use {
-    crate::{error::XcodeGenError, state::State, util::pid, Result},
-    std::path::PathBuf,
-    tap::Pipe,
-    tokio::{fs::metadata, io::AsyncWriteExt, sync::MutexGuard},
-};
+use crate::{state::State, Result};
+use std::path::PathBuf;
+use tap::Pipe;
+use tokio::{io::AsyncWriteExt, sync::MutexGuard};
+use xbase_proto::Client;
 
 /// Ensure that buildServer.json exists in root directory.
 pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
@@ -50,7 +47,7 @@ pub async fn ensure_server_support<'a>(
     let ref name = client.abbrev_root();
 
     let compile_path = root.join(".compile");
-    let compile_exists = metadata(compile_path).await.is_ok();
+    let compile_exists = compile_path.exists();
 
     if ensure_server_config(root).await.is_err() {
         "fail to ensure build server configuration!"
@@ -58,74 +55,42 @@ pub async fn ensure_server_support<'a>(
             .await;
     }
 
-    if event.is_some() {
-        let generated = match state.projects.get(root)?.regenerate(event).await {
-            Ok(generated) => generated,
-            Err(e) => {
+    if let Some(event) = event {
+        let project = state.projects.get_mut(root)?;
+        if project.should_generate(event) {
+            if let Err(e) = project.generate().await {
                 state.clients.echo_err(&root, name, &e.to_string()).await;
                 return Err(e);
-            }
-        };
+            };
 
-        if generated {
-            state.projects.get_mut(root)?.update().await?
+            project.update_compile_database().await?;
+            return Ok(true);
         }
-    } else if compile_exists {
-        return Ok(false);
     }
 
-    if event.is_none() {
-        "⚙ generating xcodeproj ..."
-            .pipe(|msg| state.clients.echo_msg(root, name, msg))
-            .await;
-
-        if let Some(err) = match state.projects.get(root)?.regenerate(event).await {
-            Ok(generated) => {
-                if generated {
-                    "setup: ⚙ generate xcodeproj ..."
-                        .pipe(|msg| state.clients.echo_msg(root, name, msg))
-                        .await;
-                    None
-                } else {
-                    Some(XcodeGenError::XcodeProjUpdate(name.into()).into())
-                }
-            }
-            Err(e) => Some(e),
-        } {
-            let ref msg = format!("fail to generate xcodeproj: {err}");
-            state.clients.echo_err(root, name, msg).await;
-        }
-    };
-
-    // TODO(compile): check for .xcodeproj if project.yml is not generated
     if !compile_exists {
-        "⚙ generating compile database .."
+        "⚙ Generating compile database (may take few seconds) .."
             .pipe(|msg| state.clients.echo_msg(root, name, msg))
             .await;
-    }
 
-    // The following command won't successed if this file doesn't exists
-    if let Err(err) = state.projects.get(&root)?.generate_compile_commands().await {
-        "setup: fail to regenerate compilation database!"
-            .pipe(|msg| state.clients.echo_err(&root, &name, msg))
-            .await;
+        if let Err(err) = state.projects.get(&root)?.update_compile_database().await {
+            "setup: fail to regenerate compilation database!"
+                .pipe(|msg| state.clients.echo_err(&root, &name, msg))
+                .await;
 
-        for (pid, nvim) in state.clients.iter() {
-            if pid::exists(pid, || {}) {
-                let mut logger = nvim.logger();
+            let mut logger = state.clients.get(&client.pid)?.logger();
 
-                logger.set_title(format!("Compile:{name}"));
-                logger.set_running(false).await.ok();
+            logger.set_running(false).await.ok();
 
-                logger.open_win().await.ok();
-                logger.append(err.to_string()).await.ok();
+            logger.open_win().await.ok();
+            logger.append(err.to_string()).await.ok();
 
-                logger.set_status_end(false, true).await.ok();
-            }
+            logger.set_status_end(false, true).await.ok();
+
+            return Err(err);
         }
-
-        return Err(err);
+        Ok(true)
+    } else {
+        Ok(false)
     }
-
-    Ok(true)
 }

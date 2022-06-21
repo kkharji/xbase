@@ -49,6 +49,11 @@ pub fn get_build_cache_dir_with_config<P: AsRef<Path> + Debug>(
     _get_build_cache_dir(root_path, Some(config))
 }
 
+/// Get path to binary by name
+pub fn which(cmd: &str) -> Result<String> {
+    Ok(which::which(cmd)?.to_str().unwrap().to_string())
+}
+
 /// Read .gitignore from root and return vec of glob patterns if the .gitignore eixists.
 pub async fn gitignore_to_glob_patterns<P: AsRef<Path>>(path: P) -> Result<Vec<String>> {
     let gitignore_path = path.as_ref().join(".gitignore");

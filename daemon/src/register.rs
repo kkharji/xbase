@@ -15,14 +15,14 @@ impl RequestHandler for RegisterRequest {
 
         state.clients.add(&client).await?;
         if let Ok(project) = state.projects.get_mut(&client.root) {
-            project.clients.push(client.pid);
+            project.add_client(client.pid);
         } else {
             state.projects.add(client).await?;
             let ignore_pattern = state
                 .projects
                 .get(&client.root)
                 .unwrap()
-                .ignore_patterns
+                .watchignore()
                 .clone();
 
             state.watcher.add(client, ignore_pattern).await?;

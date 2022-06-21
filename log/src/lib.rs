@@ -25,7 +25,8 @@ pub fn setup(
     default_level: Level,
     with_stdout: bool,
 ) -> Result<(), TracingError> {
-    let default_filter = EnvFilter::from_default_env().add_directive(default_level.into());
+    let default_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::from_default_env().add_directive(default_level.into()));
     let fmt_file = fmt::Layer::new()
         .with_writer(rolling::never(root, filename))
         .with_target(true)

@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::hash::Hash;
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
-#[derive(Clone, Debug, Serialize, Deserialize, derive_deref_rs::Deref)]
+#[derive(Clone, Debug, Serialize, derive_deref_rs::Deref)]
 pub struct Device {
     pub platform: PBXTargetPlatform,
     #[serde(flatten)]

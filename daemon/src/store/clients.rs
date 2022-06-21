@@ -1,17 +1,17 @@
 use crate::nvim::NvimClient;
 use crate::{LoopError, Result};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tap::Pipe;
 use xbase_proto::Client;
 
-#[derive(Default, Debug, Deserialize, Serialize, derive_deref_rs::Deref)]
+#[derive(Default, Debug, Serialize, derive_deref_rs::Deref)]
 pub struct ClientStore(HashMap<i32, NvimClient>);
 
 impl ClientStore {
     pub async fn add(&mut self, client: &Client) -> Result<()> {
-        log::info!("[Clients] add({})", client.pid);
+        log::info!("Add: {:?}", client.pid);
         NvimClient::new(client)
             .await?
             .pipe(|client| self.insert(client.pid, client))
@@ -19,7 +19,7 @@ impl ClientStore {
     }
 
     pub fn remove(&mut self, client: &Client) {
-        log::debug!("[Clients] remove({})", client.pid);
+        log::debug!("Remove: {:?}", client.pid);
         self.0.remove(&client.pid);
     }
 
