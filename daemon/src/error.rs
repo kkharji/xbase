@@ -43,6 +43,10 @@ pub enum Error {
     WhichError(#[from] which::Error),
     #[error("[Error]`{0}.Xcodeproj` Generate\n\n{1}")]
     XCodeProjectGenerate(String, String),
+    #[error("[Error] Build SwiftProject {0} For compilation\n\n{1}")]
+    SwiftBuildForComplilation(String, String),
+    #[error("[Error] Read SwiftProject {0}\n\n{1}")]
+    SwiftPackageRead(String, String),
     #[error("[Error] {0}")]
     ProjectError(String),
 }

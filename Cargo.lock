@@ -2068,7 +2068,7 @@ dependencies = [
  "wax",
  "which",
  "xbase-proto",
- "xclog",
+ "xclog 0.2.7",
  "xcodeproj",
 ]
 
@@ -2107,7 +2107,34 @@ dependencies = [
  "serde",
  "serde_json",
  "tap",
- "xclog",
+ "xclog 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "xclog"
+version = "0.2.7"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "async-trait",
+ "derive-deref-rs",
+ "derive_is_enum_variant",
+ "lazy-regex",
+ "lazy_static",
+ "parity-tokio-ipc",
+ "paste",
+ "process-stream",
+ "regex",
+ "serde",
+ "serde_json",
+ "shell-words",
+ "tap",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "wax",
 ]
 
 [[package]]

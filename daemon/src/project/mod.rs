@@ -1,8 +1,10 @@
 mod barebone;
+mod swift;
 mod tuist;
 mod xcodegen;
 
 use barebone::BareboneProject;
+use swift::SwiftProject;
 use tuist::TuistProject;
 use xclog::XCLogger;
 use xcodegen::XCodeGenProject;
@@ -55,19 +57,6 @@ pub trait ProjectBuild: ProjectData {
         cfg: &BuildSettings,
         device: Option<&Device>,
     ) -> Result<(XCLogger, Vec<String>)> {
-        let args = self.build_arguments(&cfg, device)?;
-        let xclogger = XCLogger::new(self.root(), &args)?;
-        Ok((xclogger, args))
-    }
-    /// Get build cache root
-    fn build_cache_root(&self) -> Result<String> {
-        let get_build_cache_dir = fs::get_build_cache_dir(self.root())?;
-        std::fs::remove_dir_all(&get_build_cache_dir).ok();
-        Ok(get_build_cache_dir)
-    }
-
-    /// Build project with given build settings
-    fn build_arguments(&self, cfg: &BuildSettings, device: Option<&Device>) -> Result<Vec<String>> {
         let mut args = cfg.to_args();
 
         args.insert(0, "build".to_string());
@@ -85,7 +74,15 @@ pub trait ProjectBuild: ProjectData {
             format!("{}.xcodeproj", self.name()),
         ]);
 
-        Ok(args)
+        let xclogger = XCLogger::new(self.root(), &args)?;
+        Ok((xclogger, args))
+    }
+
+    /// Get build cache root
+    fn build_cache_root(&self) -> Result<String> {
+        let get_build_cache_dir = fs::get_build_cache_dir(self.root())?;
+        std::fs::remove_dir_all(&get_build_cache_dir).ok();
+        Ok(get_build_cache_dir)
     }
 }
 
@@ -148,6 +145,8 @@ pub async fn project(client: &Client) -> Result<Box<dyn Project + Send + Sync>> 
         Ok(Box::new(XCodeGenProject::new(client).await?))
     } else if root.join("Project.swift").exists() {
         Ok(Box::new(TuistProject::new(client).await?))
+    } else if root.join("Package.swift").exists() {
+        Ok(Box::new(SwiftProject::new(client).await?))
     } else {
         Ok(Box::new(BareboneProject::new(client).await?))
     }
@@ -159,6 +158,7 @@ async fn generate_watchignore<P: AsRef<Path>>(root: P) -> Vec<String> {
         "**/.*".into(),
         "**/.compile".into(),
         "**/build/**".into(),
+        "**/.build/**".into(),
         "**/buildServer.json".into(),
         "**/DerivedData/**".into(),
         "**/Derived/**".into(),
@@ -169,5 +169,8 @@ async fn generate_watchignore<P: AsRef<Path>>(root: P) -> Vec<String> {
             .await
             .unwrap_or_default(),
     );
+
+    default.dedup();
+
     default
 }

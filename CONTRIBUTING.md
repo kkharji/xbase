@@ -26,6 +26,7 @@ The main product of [xbase] reside, it handle requests and data defined in [prot
   - [xcodegen.rs](./daemon/src/project/xcodegen.rs): implantation of project traits for xcodegen projects.
   - [tuist.rs](./daemon/src/project/tuist.rs): implantation of project traits for tuist projects.
   - [barebone.rs](./daemon/src/project/barebone.rs): implantation of project traits for barebone (i.e. no generators) projects.
+  - [swift.rs](./daemon/src/project/swift.rs): implantation of project traits for swift (i.e. package.swift) projects.
 
 ### [sourcekit] crate
 
