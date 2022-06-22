@@ -226,10 +226,17 @@ impl SwiftProject {
             .into_iter()
             .flat_map(|v| v.as_object())
             .flat_map(|target_info| {
-                Some((
-                    target_info.get("name")?.as_str()?.to_string(),
-                    PBXTargetPlatform::MacOS,
-                ))
+                let name = target_info.get("name")?.as_str()?.to_string();
+                if !target_info
+                    .get("type")
+                    .and_then(|s| s.as_str())
+                    .map(|s| s == "test")
+                    .unwrap_or_default()
+                {
+                    Some((name, PBXTargetPlatform::MacOS))
+                } else {
+                    None
+                }
             })
             .collect();
 

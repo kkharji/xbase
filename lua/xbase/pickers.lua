@@ -60,7 +60,12 @@ local get_selections = function(picker)
   local targets = util.get_targets_runners(project)
 
   -- TOOD(core): Support custom project configurations and schemes
-  local configurations = { "Debug", "Release" }
+  local configurations
+  if vim.loop.fs_stat(vim.loop.cwd() .. "/Package.swift") then
+    configurations = { "Debug" }
+  else
+    configurations = { "Debug", "Release" }
+  end
 
   local results = {}
 
