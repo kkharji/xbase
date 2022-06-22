@@ -1,12 +1,16 @@
-name: release
+name: Release
 on:
   push:
-    tags: "v*"
+    tags: "v*.*.*"
+    branches:
+      - 'master'
 
 jobs:
-  release:
+  Release:
     name: Publish release note
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: Checkout
       uses: actions/checkout@v2.4.0
@@ -15,12 +19,12 @@ jobs:
     - name: Show Tag
       id: tag
       run: echo ::set-output name=TAG::${GITHUB_REF##*/}
-    - name: Generate Changelog
+    - name: Generate Release Changelog
       uses: orhun/git-cliff-action@v1
       id: git-cliff
       with:
         config: .github/workflows/cliff.toml
-        args: -v --strip all --current
+        args: -v --strip all --latest
       env:
         OUTPUT: CHANGELOG.md
     - name: Create GitHub release
@@ -29,3 +33,37 @@ jobs:
         body_path: ${{ steps.git-cliff.outputs.changelog }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Update Changelog
+      uses: orhun/git-cliff-action@v1
+      id: changelog
+      with:
+        config: .github/workflows/cliff.toml
+        args: -v
+      env:
+        OUTPUT: CHANGELOG.md
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+    - name: Bump Version
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COMMIT_MSG: |
+          chore(release): ${{ steps.tag.outputs.TAG }}
+
+          See: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.TAG }}
+      run: |
+        version="${{ steps.tag.outputs.TAG }}"
+        version="${version//v/}"
+        sed -i'' "s/^version.*$/version = \"$version\"/g" daemon/Cargo.toml
+        sed -i'' "s/^version.*$/version = \"$version\"/g" sourcekit/Cargo.toml
+        sed -i'' "s/^version.*$/version = \"$version\"/g" lualib/Cargo.toml
+        cargo update --workspace
+        git add CHANGELOG.md lualib/Cargo.toml sourcekit/Cargo.toml daemon/Cargo.toml Cargo.lock
+        git config --global user.name 'release[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+        git commit -m "${COMMIT_MSG}"
+        git push origin HEAD:master
+
