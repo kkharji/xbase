@@ -19,6 +19,7 @@ use std::pin::Pin;
 
 pub type Result<T> = std::result::Result<T, Error>;
 pub type OutputStream = Pin<Box<dyn Stream<Item = ProcessItem> + Send>>;
+pub type StringStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 
 #[async_trait::async_trait]
 pub trait RequestHandler {

@@ -1,30 +1,35 @@
-use crate::{
-    device::Device,
-    nvim::Logger,
-    util::{fmt, pid},
-    Error, Result,
-};
+use crate::device::Device;
+use crate::nvim::Logger;
+use crate::run::Runner;
+use crate::util::{fmt, pid};
+use crate::{Error, Result};
 use process_stream::Process;
 use std::path::PathBuf;
 use tap::Pipe;
-use xbase_proto::BuildSettings;
 use xclog::XCBuildSettings;
 
 /// Simulator Device runner
-#[derive(derive_deref_rs::Deref)]
-pub struct Simulator {
-    #[deref]
+pub struct SimulatorRunner {
     pub device: Device,
-    info: XCBuildSettings,
-    settings: BuildSettings,
+    pub app_id: String,
+    pub output_dir: PathBuf,
 }
 
-impl Simulator {
-    pub fn new(device: Device, info: XCBuildSettings, settings: BuildSettings) -> Self {
+#[async_trait::async_trait]
+impl Runner for SimulatorRunner {
+    async fn run<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
+        self.boot(logger).await?;
+        self.install(logger).await?;
+        self.launch(logger).await
+    }
+}
+
+impl SimulatorRunner {
+    pub fn new(device: Device, info: &XCBuildSettings) -> Self {
         Self {
             device,
-            settings,
-            info,
+            app_id: info.product_bundle_identifier.clone(),
+            output_dir: info.metal_library_output_dir.clone(),
         }
     }
 
@@ -67,7 +72,7 @@ impl Simulator {
     pub async fn install<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
         logger.append(self.installing_msg()).await?;
         self.device
-            .install(&self.output_dir())
+            .install(&self.output_dir)
             .pipe(|res| self.ok_or_abort(res, logger))
             .await?;
         Ok(())
@@ -82,7 +87,7 @@ impl Simulator {
             "--terminate-running-process",
             "--console-pty",
             &self.device.udid,
-            &self.info.product_bundle_identifier,
+            &self.app_id,
         ];
 
         log::debug!("Launching app with {args:?}");
@@ -110,40 +115,16 @@ impl Simulator {
         }
     }
 
-    /// Get application identifier
-    pub fn app_id(&self) -> &String {
-        &self.info.product_bundle_identifier
-    }
-
-    /// Get directory path to where the build output
-    pub fn output_dir(&self) -> &PathBuf {
-        &self.info.metal_library_output_dir
-    }
-
-    /// Get a reference to the simulator's info.
-    #[must_use]
-    pub fn info(&self) -> &XCBuildSettings {
-        &self.info
-    }
-
-    /// Get a reference to the simulator's config.
-    #[must_use]
-    pub fn settings(&self) -> &BuildSettings {
-        &self.settings
-    }
-}
-
-impl Simulator {
     fn booting_msg(&self) -> String {
         format!("Booting {}", self.device.name)
     }
 
     fn installing_msg(&self) -> String {
-        format!("Installing {}", self.app_id())
+        format!("Installing {}", self.app_id)
     }
 
     fn launching_msg(&self) -> String {
-        format!("Launching {}", self.app_id())
+        format!("Launching {}", self.app_id)
     }
 
     fn connected_msg(&self) -> String {

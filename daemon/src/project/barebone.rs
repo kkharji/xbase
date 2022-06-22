@@ -47,6 +47,9 @@ impl ProjectData for BareboneProject {
 impl ProjectBuild for BareboneProject {}
 
 #[async_trait::async_trait]
+impl ProjectRun for BareboneProject {}
+
+#[async_trait::async_trait]
 impl ProjectCompile for BareboneProject {
     async fn update_compile_database(&self) -> Result<()> {
         use xclog::XCCompilationDatabase as CC;

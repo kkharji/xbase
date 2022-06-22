@@ -1,26 +1,23 @@
 mod barebone;
+mod swift;
 mod tuist;
 mod xcodegen;
 
-use barebone::BareboneProject;
-use tuist::TuistProject;
-use xclog::XCLogger;
-use xcodegen::XCodeGenProject;
-
-use crate::device::Device;
-use crate::util::consume_and_log;
-use crate::util::fs;
-use crate::watch::Event;
-use crate::Result;
+use crate::{device::*, run::*, util::*, watch::*};
+use crate::{Result, StringStream};
 use anyhow::Context;
+use async_stream::stream;
+use barebone::BareboneProject;
+use futures::StreamExt;
 use std::collections::HashMap;
-use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use xbase_proto::{BuildSettings, Client};
+use xclog::{XCBuildSettings, XCLogger};
 use xcodeproj::pbxproj::PBXTargetPlatform;
+use {swift::*, tuist::*, xcodegen::*};
 
 /// Project Data
-pub trait ProjectData: Debug {
+pub trait ProjectData: std::fmt::Debug {
     /// Project root
     fn root(&self) -> &PathBuf;
     /// Project name
@@ -54,20 +51,7 @@ pub trait ProjectBuild: ProjectData {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-    ) -> Result<(XCLogger, Vec<String>)> {
-        let args = self.build_arguments(&cfg, device)?;
-        let xclogger = XCLogger::new(self.root(), &args)?;
-        Ok((xclogger, args))
-    }
-    /// Get build cache root
-    fn build_cache_root(&self) -> Result<String> {
-        let get_build_cache_dir = fs::get_build_cache_dir(self.root())?;
-        std::fs::remove_dir_all(&get_build_cache_dir).ok();
-        Ok(get_build_cache_dir)
-    }
-
-    /// Build project with given build settings
-    fn build_arguments(&self, cfg: &BuildSettings, device: Option<&Device>) -> Result<Vec<String>> {
+    ) -> Result<(StringStream, Vec<String>)> {
         let mut args = cfg.to_args();
 
         args.insert(0, "build".to_string());
@@ -85,7 +69,49 @@ pub trait ProjectBuild: ProjectData {
             format!("{}.xcodeproj", self.name()),
         ]);
 
-        Ok(args)
+        log::trace!("building with [{}]", args.join(" "));
+
+        let mut xclogger = XCLogger::new(self.root(), &args)?;
+        let stream = stream! {
+            while let Some(output) =  xclogger.next().await {
+                if output.is_result() && output.starts_with("[Exit]") {
+                    if !output.strip_prefix("[Exit] ").map(|s| s == "0").unwrap_or_default() {
+                        yield String::from("FAILED")
+                    }
+                } else {
+                    yield output.to_string()
+                }
+            }
+        };
+
+        Ok((stream.boxed(), args))
+    }
+
+    /// Get build cache root
+    fn build_cache_root(&self) -> Result<String> {
+        let get_build_cache_dir = fs::get_build_cache_dir(self.root())?;
+        std::fs::remove_dir_all(&get_build_cache_dir).ok();
+        Ok(get_build_cache_dir)
+    }
+}
+
+#[async_trait::async_trait]
+pub trait ProjectRun: ProjectData + ProjectBuild {
+    fn get_runner(
+        &self,
+        cfg: &BuildSettings,
+        device: Option<&Device>,
+    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream)> {
+        log::info!("Running {}", self.name());
+
+        let (build_stream, args) = self.build(cfg, device)?;
+        let info = XCBuildSettings::new_sync(self.root(), &args)?;
+        let runner: Box<dyn Runner + Send + Sync> = match device {
+            Some(device) => Box::new(SimulatorRunner::new(device.clone(), &info)),
+            None => Box::new(BinRunner::from_build_info(&info)),
+        };
+
+        Ok((runner, build_stream))
     }
 }
 
@@ -127,6 +153,7 @@ pub trait ProjectGenerate: ProjectData {
 pub trait Project:
     ProjectData
     + ProjectBuild
+    + ProjectRun
     + ProjectCompile
     + ProjectGenerate
     + Sync
@@ -148,6 +175,8 @@ pub async fn project(client: &Client) -> Result<Box<dyn Project + Send + Sync>> 
         Ok(Box::new(XCodeGenProject::new(client).await?))
     } else if root.join("Project.swift").exists() {
         Ok(Box::new(TuistProject::new(client).await?))
+    } else if root.join("Package.swift").exists() {
+        Ok(Box::new(SwiftProject::new(client).await?))
     } else {
         Ok(Box::new(BareboneProject::new(client).await?))
     }
@@ -159,6 +188,7 @@ async fn generate_watchignore<P: AsRef<Path>>(root: P) -> Vec<String> {
         "**/.*".into(),
         "**/.compile".into(),
         "**/build/**".into(),
+        "**/.build/**".into(),
         "**/buildServer.json".into(),
         "**/DerivedData/**".into(),
         "**/Derived/**".into(),
@@ -169,5 +199,8 @@ async fn generate_watchignore<P: AsRef<Path>>(root: P) -> Vec<String> {
             .await
             .unwrap_or_default(),
     );
+
+    default.dedup();
+
     default
 }

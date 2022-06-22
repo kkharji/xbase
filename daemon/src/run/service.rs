@@ -1,21 +1,23 @@
+use super::handler::RunServiceHandler;
 use crate::{
+    device::Device,
     state::State,
     watch::{Event, Watchable},
     Error, Result,
 };
 use std::sync::Arc;
+use tap::Pipe;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
-use xbase_proto::{Client, RunRequest};
-use xclog::XCBuildSettings;
-use {super::handler::RunServiceHandler, super::medium::RunMedium};
+use xbase_proto::{BuildSettings, Client, RunRequest};
 
 /// Run Service
 pub struct RunService {
     pub key: String,
     pub client: Client,
     pub handler: Arc<Mutex<RunServiceHandler>>,
-    pub medium: RunMedium,
+    pub settings: BuildSettings,
+    pub device: Option<Device>,
 }
 
 impl std::fmt::Display for RunService {
@@ -30,43 +32,41 @@ impl RunService {
         let target = req.settings.target.clone();
         let ref root = req.client.root;
         let device = state.devices.from_lookup(req.device);
-        let (xclogger, build_args) = state
-            .projects
-            .get(root)?
-            .build(&req.settings, device.as_ref())?;
         let nvim = state.clients.get(&req.client.pid)?;
+        let logger = &mut nvim.logger();
 
-        let ref mut logger = nvim.logger();
+        logger.set_direction(&req.direction);
+
         if !req.ops.is_watch() {
             logger.open_win().await?;
             logger.set_running(false).await?;
         }
 
+        let (runner, stream) = state
+            .projects
+            .get(root)?
+            .get_runner(&req.settings, device.as_ref())?;
+
         logger.set_title(format!("Build:{target}"));
-        logger.set_direction(&req.direction);
-
-        let build_settings = XCBuildSettings::new(root, &build_args).await?;
-
-        let success = logger.consume_build_logs(xclogger, false, false).await?;
-
+        let success = logger.consume_build_logs(stream, false, false).await?;
         if !success {
-            let msg = format!("Failed: {}", req.settings);
-            nvim.echo_err(&msg).await?;
+            let msg = format!("Build failed {}", &req.settings);
+            logger.nvim.echo_err(&msg).await?;
             return Err(Error::Build(msg));
         }
-
         logger.set_title(format!("Run:{target}"));
-
-        let medium = RunMedium::from_device_or_settings(device, build_settings, req.settings)?;
-        let process = medium.run(logger).await?;
-        let handler = RunServiceHandler::new(target, req.client.clone(), process, key.clone())?;
-
         logger.set_running(true).await?;
 
+        let process = runner.run(logger).await?;
+        let handler = RunServiceHandler::new(&key, &target, &req.client, process)?
+            .pipe(Mutex::new)
+            .pipe(Arc::new);
+
         Ok(Self {
+            device,
+            handler,
             client: req.client,
-            handler: Arc::new(Mutex::new(handler)),
-            medium,
+            settings: req.settings,
             key,
         })
     }
@@ -75,42 +75,33 @@ impl RunService {
 #[async_trait::async_trait]
 impl Watchable for RunService {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
-        log::info!("Running {}", self.client.abbrev_root());
-
+        let (root, config, pid) = (&self.client.root, &self.settings, &self.client.pid);
         let mut handler = self.handler.clone().lock_owned().await;
 
         handler.process().kill().await;
         handler.inner().abort();
 
-        let (root, config) = (&self.client.root, &self.medium.settings());
-
-        // TODO: Change build argument to receive Option<&ref> instead of &Option<ref>
-
-        let nvim = state.clients.get(&self.client.pid)?;
+        let nvim = state.clients.get(pid)?;
         let logger = &mut nvim.logger();
-        let device = self.medium.as_simulator().map(|sim| &sim.device);
-        let (xclogger, mut args) = state.projects.get(root)?.build(&config, device)?;
 
-        logger.set_title(format!("Run:{}", config.target));
+        let (runner, stream) = state
+            .projects
+            .get(root)?
+            .get_runner(config, self.device.as_ref())?;
 
-        if let RunMedium::Simulator(ref sim) = self.medium {
-            args.extend(sim.special_build_args())
+        logger.set_title(format!("Build:{}", self.settings.target));
+        let success = logger.consume_build_logs(stream, false, false).await?;
+        if !success {
+            let msg = format!("Build failed {}", &self.settings);
+            logger.nvim.echo_err(&msg).await?;
+            return Err(Error::Build(msg));
         }
 
-        let success = logger.consume_build_logs(xclogger, false, false).await?;
-
-        if !success {
-            let ref msg = format!("Failed: {} ", config.to_string());
-            nvim.echo_err(msg).await?;
-        };
-
-        let process = self.medium.run(logger).await?;
-
         *handler = RunServiceHandler::new(
-            config.target.clone(),
-            self.client.clone(),
-            process,
-            self.key.clone(),
+            &self.key,
+            &config.target,
+            &self.client,
+            runner.run(logger).await?,
         )?;
 
         Ok(())

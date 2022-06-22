@@ -48,8 +48,9 @@ pub async fn ensure_server_support<'a>(
 
     let compile_path = root.join(".compile");
     let compile_exists = compile_path.exists();
+    let is_swift_project = root.join("Package.swift").exists();
 
-    if ensure_server_config(root).await.is_err() {
+    if !is_swift_project && ensure_server_config(root).await.is_err() {
         "fail to ensure build server configuration!"
             .pipe(|msg| state.clients.echo_err(root, name, msg))
             .await;
@@ -68,7 +69,7 @@ pub async fn ensure_server_support<'a>(
         }
     }
 
-    if !compile_exists {
+    if !is_swift_project && !compile_exists {
         "⚙ Generating compile database (may take few seconds) .."
             .pipe(|msg| state.clients.echo_msg(root, name, msg))
             .await;
