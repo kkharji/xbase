@@ -34,7 +34,7 @@ The Helper build server implementing [BSP] protocol required because [sourcekit-
 
 ### [lualib] crate
 
-The lua neovim client library is defined. It is mainly used for convenience as it provide access to [proto] types. This is temporary as in the future, I'd would like to switch to grpc and have grpc code generated for lua.
+The lua neovim client library is defined. It is mainly used for convenience as it provide access to [proto] types.
 
 [sourcekit]: ./sourcekit/
 [daemon]: ./daemon/
@@ -60,7 +60,6 @@ Do all the setup required to watch and develop
 make install_debug
 ```
 
-
 #### Start watchers
 
 Watch all the products and trigger recompile when the source code changes.
@@ -68,5 +67,3 @@ Watch all the products and trigger recompile when the source code changes.
 ```sh
 make watch
 ```
-
-

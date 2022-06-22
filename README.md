@@ -211,7 +211,9 @@ require("xbase.util").feline_provider() -- append to feline setup function
 
 ## 🩺 Debugging
 
-### Read logs
+Sometimes xcodebuild acts up and things might break, the first step to find the root cause is
+to check logs. The following is how you can have a stream of logs in your terminal.
+
 ```bash
 # Daemon logs
 tail -f /tmp/xbase-daemon.log
@@ -247,6 +249,7 @@ statusline get updated.
 [CONTRIBUTING.md]: ./CONTRIBUTING.md
 [lspconfig]: https://github.com/neovim/nvim-lspconfig
 [sourcekit-setup]: https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#sourcekit
+[apple]: https://github.com/apple
 
 [👁  Overview]: #-motivation
 [🌝 Motivation]: #-motivation
