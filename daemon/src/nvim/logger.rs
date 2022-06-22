@@ -4,7 +4,6 @@ use crate::{util::fmt, StringStream};
 use futures::StreamExt;
 use nvim_rs::{Buffer, Window};
 use xbase_proto::BufferDirection;
-use xclog::XCLogger;
 
 pub struct Logger<'a> {
     pub nvim: &'a NvimClient,

@@ -5,7 +5,6 @@ use futures::StreamExt;
 use process_stream::{Process, ProcessItem};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use tap::Pipe;
 use tokio::process::Command;
 use xbase_proto::Client;
 use xcodeproj::pbxproj::PBXTargetPlatform;

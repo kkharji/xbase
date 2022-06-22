@@ -28,7 +28,6 @@ async-stream          = { version = "0.3.3" }
 parity-tokio-ipc      = { version = "0.9.0" }
 process-stream        = { version = "0.2.*" }
 xcodeproj             = { version = "0.2.*" }
-# xcodeproj             = { path = "../../xcodeproj/" }
 
 # Filesystem watcher
 notify                = { version = "5.0.0-pre.13" }
@@ -43,8 +42,7 @@ nvim-rs               = { version = "0.4.0", features = ["use_tokio"] }
 
 # Other
 tap                   = "1.0.1"
-# xclog                 = { version  = "0.2.*",  features = ["with_tracing"] }
-xclog                 = { path = "../../../rust/xclog"}
+xclog                 = { version  = "0.2.*",  features = ["with_tracing"] }
 simctl                = { git = "https://github.com/tami5/simctl" }
 derive-deref-rs       = { version = "0.1.1"}
 shell-words           = { version  = "1.1.0" }
