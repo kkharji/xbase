@@ -1,5 +1,5 @@
 # Changelog
-## 🔥 [Unreleased](https://github.com/tami5/xbase)
+## 🎉 [v0.2.0](https://github.com/tami5/xbase/tree/v0.2.0) - 2022-06-22
 ### <!-- 0 -->Features
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/64f75911500ccce0d2771d0095a3e03189a2d99c">Always allow provisioning updates</a></b> <code>#build</code> <u><b>....</b></u></summary><br />
 
@@ -19,6 +19,12 @@ previously it was required to set custom paths to ignore in project.yml,
 now extra ignored path reads from gitignore instead.</details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/ba9f2976fdeccc882650b3d71a5527de753c72f5">Update status variable when watch is running</a></b> <code>#nvim</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/ef92912acc2f4ea0c8dbc719b2b18cba6f12a24a">Reload sourcekit server on compile</a></b> <code>#nvim</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/7fdcfef313c9500cac38ebec1135b5e0bc329f24">Clear state on .compile change</a></b> <code>#sourcekit</code> <u><b>....</b></u></summary><br />
+
+Doesn't seem critical now that the sourcekit lsp server is reloaded on compile.</details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/1f1b3ad80ec26557b0a2fd94e50de7ceecd63239">Init dependabot</a></b> <code>#general</code></summary></details></dd></dl>
 
@@ -52,6 +58,17 @@ now extra ignored path reads from gitignore instead.</details></dd></dl>
 * fix(xcodegen): ignoring existing xcodeproj
 * fix(compile): on file rename</details></dd></dl>
 
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/a3703a05d876e8516a285186d5f8aaf55f07a26b">Support swift projects (#97)</a></b> <code>#general</code> <u><b>....</b></u></summary><br />
+
+* feat(swift): initial support 
+closes #66 
+* ref(daemon): abstract run logic
+* feat(swift): run project
+* fix(swift): logger
+* chore(readme): update
+* chore(ci): update ci command
+* feat(swift): ignore tests target for build and run</details></dd></dl>
+
 ### <!-- 1 -->Bug Fixes
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/7466c267be2d848ba0314ebe2d3e700d5086772b">Error while removing non-existing cache</a></b> <code>#compile</code></summary></details></dd></dl>
 
@@ -60,16 +77,22 @@ now extra ignored path reads from gitignore instead.</details></dd></dl>
 CARGO_MANIFEST_DIR unfortunately points to package root instead of
 workspace root</details></dd></dl>
 
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/bdd0e6ce03fcd76c29cd418755d8f9c68174cf63">Crashing on multiline message nvim print</a></b> <code>#daemon</code> <u><b>....</b></u></summary><br />
+
+only print the first line and the rest redirect to log buffer</details></dd></dl>
+
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/207ea482b8c1941e9e920e68241d00444d3351c1">Avoid adding extra `/`</a></b> <code>#gitignore</code></summary></details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/984f94022805f1c12b1fb11af9596ee1f3320576">Avoid duplicating **</a></b> <code>#gitignore</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/a9b034201ee69c5a6d649ad0d7c682d060e9f550">Fix simulator latency</a></b> <code>#logging</code></summary></details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/7ff5e0da566f35cf60a3377c674c6e44491a6276">Xclog is not defined</a></b> <code>#lua</code></summary></details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/9a13cc88f3f79ef3c2701d42108c53e6cc19133e">Xcodegen binary not found</a></b> <code>#general</code></summary></details></dd></dl>
 
 ### <!-- 2 -->Refactor
-<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/5fa7449cdce99eab0108cd21d2a610ca127ca5a6">Abstract build logic into ProjectBuild</a></b> <code>#daemon</code></summary></details></dd></dl>
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/8e5e4e5f62ede9c5596708ad4ed2f906dc678981">Abstract build logic into ProjectBuild</a></b> <code>#daemon</code></summary></details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/26ffb3291f3e6c005aede3c66a05d9c50fc7bc09">Update logging and compile commands (xclog) (#70)</a></b> <code>#general</code> <u><b>....</b></u></summary><br />
 
