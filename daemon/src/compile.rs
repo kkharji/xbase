@@ -43,7 +43,7 @@ pub async fn ensure_server_support<'a>(
     client: &Client,
     event: Option<&Event>,
 ) -> Result<bool> {
-    let Client { root, .. } = client;
+    let Client { root, pid, .. } = client;
     let ref name = client.abbrev_root();
 
     let compile_path = root.join(".compile");
@@ -58,10 +58,27 @@ pub async fn ensure_server_support<'a>(
 
     if let Some(event) = event {
         let project = state.projects.get_mut(root)?;
+        let name = project.name().to_string();
         if project.should_generate(event) {
             if let Err(e) = project.generate().await {
-                state.clients.echo_err(&root, name, &e.to_string()).await;
-                return Err(e);
+                let mut lines = e
+                    .to_string()
+                    .split("\n")
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>();
+                if lines.len() == 1 {
+                    state.clients.get(&pid)?.echo_err(&lines[0]).await?;
+                } else {
+                    let first = lines.remove(0);
+                    state.clients.get(&pid)?.echo_err(&first).await?;
+                    let mut logger = state.clients.get(&pid)?.logger();
+                    logger.set_status_end(false, true).await?;
+                    logger.set_title(name);
+                    logger.append(first).await?;
+                    logger.append(lines.join("\n")).await?;
+                }
+
+                return Ok(false);
             };
 
             project.update_compile_database().await?;
@@ -88,7 +105,7 @@ pub async fn ensure_server_support<'a>(
 
             logger.set_status_end(false, true).await.ok();
 
-            return Err(err);
+            return Ok(false);
         }
         Ok(true)
     } else {

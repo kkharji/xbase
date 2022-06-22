@@ -56,19 +56,27 @@ impl WatchService {
             client: &Client,
             state: &mut MutexGuard<'a, State>,
         ) -> Result<()> {
-            let recompiled = (event.is_create_event()
+            let recompiled = event.is_create_event()
                 || event.is_remove_event()
                 || event.is_content_update_event()
-                || event.is_rename_event() && !event.is_seen())
-                && ensure_server_support(state, client, Some(event)).await?;
+                || event.is_rename_event() && !event.is_seen();
 
             if recompiled {
-                let ref name = client.abbrev_root();
-                state
-                    .clients
-                    .echo_msg(&client.root, name, "new compilation database generated ✅")
-                    .await;
-                info!("Recompiled: {name:?}");
+                let ensure = ensure_server_support(state, client, Some(event)).await;
+                match ensure {
+                    Err(err) => {
+                        log::error!("Ensure server support Errored!! {err:?} ");
+                    }
+                    Ok(true) => {
+                        let ref name = client.abbrev_root();
+                        state
+                            .clients
+                            .echo_msg(&client.root, name, "new compilation database generated ✅")
+                            .await;
+                        info!("Recompiled: {name:?}");
+                    }
+                    _ => (),
+                }
             };
 
             Ok(())
