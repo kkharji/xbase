@@ -2141,9 +2141,9 @@ dependencies = [
 
 [[package]]
 name = "xcodeproj"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0aa73343afd6e8a9c71ff69dc2c2f5ad8889449eb4bcea61cfd90d801478f56"
+checksum = "7e16d3029e424f36c7a8cc5a0e5c548de40c6f7e4e7f0f1a0b3bbff85b4095af"
 dependencies = [
  "anyhow",
  "derive-deref-rs",

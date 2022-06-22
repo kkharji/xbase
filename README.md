@@ -107,7 +107,7 @@ moved to `path/to/repo/bin` and the lua library will be moved to
 ```lua
 use {
   'tami5/xbase',
-    run = 'make install',
+    run = 'make install', -- make free_space (not recommended, longer build time)
     requires = {
       "nvim-lua/plenary.nvim",
       "nvim-telescope/telescope.nvim"
