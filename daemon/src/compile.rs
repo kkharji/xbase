@@ -77,11 +77,15 @@ pub async fn ensure_server_support<'a>(
                     logger.append(first).await?;
                     logger.append(lines.join("\n")).await?;
                 }
-
                 return Ok(false);
             };
 
             project.update_compile_database().await?;
+            state
+                .clients
+                .get(&pid)?
+                .exec_lua("require'xbase.util'.reload_lsp_servers()", vec![])
+                .await?;
             return Ok(true);
         }
     }

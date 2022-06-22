@@ -35,6 +35,19 @@ M.get_targets_runners = function(project)
   return targets
 end
 
+M.reload_lsp_servers = function()
+  local clients = require("lspconfig.util").get_managed_clients()
+  local ids = ""
+  for _, client in ipairs(clients) do
+    if client.name == "sourcekit" then
+      ids = ids .. client.id
+    end
+  end
+
+  print "Restarting Sourcekit Server"
+  vim.cmd("LspRestart " .. ids)
+end
+
 M.is_watching = function(config, command, device)
   local root = vim.loop.cwd()
   local watching = vim.g.xbase.watcher[root]

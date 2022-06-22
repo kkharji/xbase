@@ -90,6 +90,7 @@ issue
 ## 🛠 Requirements
 
 - [neovim] v0.7.0 or nightly
+- [lspconfig]
 - [rust] 1.60.0 or up (see [rust getting started])
 - [telescope.nvim]
 - [plenary.nvim]
@@ -101,6 +102,7 @@ To install [XBase] on your system you need run `make install`. This will run `ca
 moved to `path/to/repo/bin` and the lua library will be moved to
 `path/to/repo/lua/libxbase.so`.
 
+
 #### With [packer]
 ```lua
 use {
@@ -109,6 +111,7 @@ use {
     requires = {
       "nvim-lua/plenary.nvim",
       "nvim-telescope/telescope.nvim"
+      "neovim/nvim-lspconfig"
     },
     config = function()
       require'xbase'.setup({})  -- see default configuration bellow
@@ -120,6 +123,7 @@ use {
 ```vim
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
+Plug 'neovim/nvim-lspconfig'
 Plug 'tami5/xbase', { 'do': 'make install' }
 lua require'xbase'.setup()
 ```
@@ -128,9 +132,12 @@ lua require'xbase'.setup()
 ```vim
 call dein#add('nvim-lua/plenary.nvim')
 call dein#add('nvim-telescope/telescope.nvim')
+call dein#add('neovim/nvim-lspconfig')
 call dein#add('tami5/xbase', { 'build': 'make install' })
 lua require'xbase'.setup()
 ```
+
+**NOTE:** You need to setup sourcekit-lsp (see [sourcekit-setup])
 
 ## 🎮 Usage
 
@@ -236,6 +243,8 @@ statusline get updated.
 [neovim]: https://github.com/neovim/neovim
 [tuist]: https://github.com/tuist/tuist
 [CONTRIBUTING.md]: ./CONTRIBUTING.md
+[lspconfig]: https://github.com/neovim/nvim-lspconfig
+[sourcekit-setup]: https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#sourcekit
 
 [👁  Overview]: #-motivation
 [🌝 Motivation]: #-motivation
