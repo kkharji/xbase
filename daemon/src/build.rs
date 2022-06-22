@@ -52,7 +52,7 @@ impl Watchable for BuildRequest {
 
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
-        let (xclogger, _) = state.projects.get(root)?.build(&config, None)?;
+        let (stream, _) = state.projects.get(root)?.build(&config, None)?;
         let nvim = state.clients.get(&self.client.pid)?;
         let logger = &mut nvim.logger();
 
@@ -62,7 +62,7 @@ impl Watchable for BuildRequest {
             config.target
         ));
 
-        let success = logger.consume_build_logs(xclogger, false, is_once).await?;
+        let success = logger.consume_build_logs(stream, false, is_once).await?;
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(msg).await?;

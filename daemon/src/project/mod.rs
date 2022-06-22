@@ -3,10 +3,12 @@ mod swift;
 mod tuist;
 mod xcodegen;
 
-use crate::Result;
 use crate::{device::*, run::*, util::*, watch::*};
+use crate::{Result, StringStream};
 use anyhow::Context;
+use async_stream::stream;
 use barebone::BareboneProject;
+use futures::StreamExt;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use xbase_proto::{BuildSettings, Client};
@@ -49,7 +51,7 @@ pub trait ProjectBuild: ProjectData {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-    ) -> Result<(XCLogger, Vec<String>)> {
+    ) -> Result<(StringStream, Vec<String>)> {
         let mut args = cfg.to_args();
 
         args.insert(0, "build".to_string());
@@ -69,9 +71,20 @@ pub trait ProjectBuild: ProjectData {
 
         log::trace!("building with [{}]", args.join(" "));
 
-        let xclogger = XCLogger::new(self.root(), &args)?;
+        let mut xclogger = XCLogger::new(self.root(), &args)?;
+        let stream = stream! {
+            while let Some(output) =  xclogger.next().await {
+                if output.is_result() && output.starts_with("[Exit]") {
+                    if !output.strip_prefix("[Exit] ").map(|s| s == "0").unwrap_or_default() {
+                        yield String::from("FAILED")
+                    }
+                } else {
+                    yield output.to_string()
+                }
+            }
+        };
 
-        Ok((xclogger, args))
+        Ok((stream.boxed(), args))
     }
 
     /// Get build cache root
@@ -88,17 +101,17 @@ pub trait ProjectRun: ProjectData + ProjectBuild {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, XCLogger)> {
+    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream)> {
         log::info!("Running {}", self.name());
 
-        let (xclogger, args) = self.build(cfg, device)?;
+        let (build_stream, args) = self.build(cfg, device)?;
         let info = XCBuildSettings::new_sync(self.root(), &args)?;
         let runner: Box<dyn Runner + Send + Sync> = match device {
             Some(device) => Box::new(SimulatorRunner::new(device.clone(), &info)),
             None => Box::new(BinRunner::from_build_info(&info)),
         };
 
-        Ok((runner, xclogger))
+        Ok((runner, build_stream))
     }
 }
 

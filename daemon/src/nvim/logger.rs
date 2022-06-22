@@ -1,6 +1,6 @@
 use super::{NvimClient, NvimConnection, NvimWindow};
-use crate::util::fmt;
 use crate::Result;
+use crate::{util::fmt, StringStream};
 use futures::StreamExt;
 use nvim_rs::{Buffer, Window};
 use xbase_proto::BufferDirection;
@@ -47,12 +47,11 @@ impl<'a> Logger<'a> {
     /// Consume build logs via logging them to client
     pub async fn consume_build_logs(
         &mut self,
-        mut xclogger: XCLogger,
+        mut stream: StringStream,
         clear: bool,
         open: bool,
     ) -> Result<bool> {
         let mut success = true;
-        // TODO(nvim): close log buffer if it is open for new direction
         // Currently the buffer direction will be ignored if the buffer is opened already
         if clear {
             self.clear_content().await?;
@@ -65,7 +64,8 @@ impl<'a> Logger<'a> {
 
         self.set_running(false).await?;
 
-        while let Some(line) = xclogger.next().await {
+        while let Some(line) = stream.next().await {
+            // HELP: Find another way to check if error happend
             line.contains("FAILED").then(|| success = false);
 
             self.append(line.to_string()).await?;
