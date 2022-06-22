@@ -137,7 +137,8 @@ call dein#add('tami5/xbase', { 'build': 'make install' })
 lua require'xbase'.setup()
 ```
 
-**NOTE:** You need to setup sourcekit-lsp (see [sourcekit-setup])
+> **NOTE:** You need to setup sourcekit-lsp (see [sourcekit-setup]) and consider adding more
+> file to root patterns
 
 ## 🎮 Usage
 
@@ -151,7 +152,7 @@ TLDR:
 
 When you start a neovim instance with a root that contains `project.yml,` `Project.swift,` or
 `*.xcodeproj,` the daemon server will auto-start if no instance is running, and register the
-project once for recompile-watch. To communicate with your deamon, checkout the configurable
+project once for recompile-watch. To communicate with your daemon, checkout the configurable
 shortcuts.
 
 ### Statusline
@@ -162,6 +163,7 @@ using `vim.g.xbase_watch_build_status` you can easily setup statusline indicator
 ```lua
 require("xbase.util").feline_provider() -- append to feline setup function
 ```
+
 
 ## ⚙️ Defaults
 ```lua

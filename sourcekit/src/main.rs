@@ -7,6 +7,7 @@ use once_cell::sync::OnceCell;
 use serde_json::{json, Value};
 use std::path::Path;
 use std::sync::Mutex;
+use std::time::SystemTime;
 use std::{collections::HashMap, path::PathBuf};
 use xclog::{XCCompilationDatabase, XCCompileArgs, XCCompileCommand};
 mod extensions;
@@ -29,6 +30,8 @@ pub struct State {
     compile_db: XCCompilationDatabase,
     file_args: HashMap<PathBuf, XCCompileArgs>,
     root_path: PathBuf,
+    compile_filepath: PathBuf,
+    last_modified: SystemTime,
 }
 
 fn state() -> &'static Mutex<State> {
@@ -43,7 +46,10 @@ fn initialize(params: &InitializeBuild) -> Result<InitializeBuild> {
     let compile_filepath = get_compile_filepath(root_uri).unwrap();
     let cache_path = get_build_cache_dir(&root_path)?;
     let index_store_path = get_index_store_path(&cache_path, &config_filepath);
-    let compile_db = XCCompilationDatabase::try_from_filepath(compile_filepath)?;
+    let compile_db = XCCompilationDatabase::try_from_filepath(&compile_filepath)?;
+
+    let attr = std::fs::metadata(&compile_filepath)?;
+    let last_modified = attr.modified()?;
 
     let response = InitializeBuild::new(
         SERVER_NAME,
@@ -62,7 +68,9 @@ fn initialize(params: &InitializeBuild) -> Result<InitializeBuild> {
         .set(Mutex::new(State {
             root_path,
             file_args: Default::default(),
+            compile_filepath,
             compile_db,
+            last_modified,
         }))
         .unwrap();
     Ok(response)
@@ -71,6 +79,12 @@ fn initialize(params: &InitializeBuild) -> Result<InitializeBuild> {
 fn get_compile_args<'a>(path: impl AsRef<Path>) -> Result<XCCompileArgs> {
     let mut state = state().lock().unwrap();
     let path = path.as_ref();
+
+    if state.last_modified != std::fs::metadata(&state.compile_filepath)?.modified()? {
+        state.compile_db = XCCompilationDatabase::try_from_filepath(&state.compile_filepath)?;
+        state.file_args = Default::default();
+    }
+
     if state.file_args.contains_key(path) {
         log::debug!("Using Cached file args ...");
         state.file_args.get(path)
