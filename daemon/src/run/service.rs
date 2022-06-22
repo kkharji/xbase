@@ -42,20 +42,18 @@ impl RunService {
             logger.set_running(false).await?;
         }
 
-        logger.set_title(format!("Build:{target}"));
-
         let (runner, xclogger) = state
             .projects
             .get(root)?
             .get_runner(&req.settings, device.as_ref())?;
 
+        logger.set_title(format!("Build:{target}"));
         let success = logger.consume_build_logs(xclogger, false, false).await?;
         if !success {
             let msg = format!("Build failed {}", &req.settings);
             logger.nvim.echo_err(&msg).await?;
             return Err(Error::Build(msg));
         }
-
         logger.set_title(format!("Run:{target}"));
         logger.set_running(true).await?;
 
@@ -91,6 +89,7 @@ impl Watchable for RunService {
             .get(root)?
             .get_runner(config, self.device.as_ref())?;
 
+        logger.set_title(format!("Build:{}", self.settings.target));
         let success = logger.consume_build_logs(xclogger, false, false).await?;
         if !success {
             let msg = format!("Build failed {}", &self.settings);

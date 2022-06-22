@@ -5,7 +5,7 @@ use futures::StreamExt;
 use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-// use tap::Pipe;
+use tap::Pipe;
 use tokio::process::Command;
 use xbase_proto::Client;
 use xcodeproj::pbxproj::PBXTargetPlatform;
@@ -48,21 +48,53 @@ impl ProjectData for SwiftProject {
 
 #[async_trait::async_trait]
 impl ProjectBuild for SwiftProject {
-    // async fn build(
-    //     &self,
-    //     cfg: &BuildSettings,
-    //     _device: Option<&Device>,
-    // ) -> Result<(XCLogger, Vec<String>, Option<XCBuildSettings>)> {
-    //     let mut process: Process = vec!["/usr/bin/swift", "build", "--target", &cfg.target].into();
+    fn build(
+        &self,
+        cfg: &BuildSettings,
+        _device: Option<&Device>,
+    ) -> Result<(XCLogger, Vec<String>)> {
+        log::info!("Building {}", cfg.target);
 
-    //     process.current_dir(self.root());
+        let args = vec!["build", "--target", &cfg.target];
+        let mut process = Process::new("/usr/bin/swift");
 
-    //     (XCLogger::try_from(process)?, vec![], None).pipe(Ok)
-    // }
+        process.args(&args);
+        process.current_dir(self.root());
+
+        (XCLogger::try_from(process)?, vec![]).pipe(Ok)
+    }
 }
 
 #[async_trait::async_trait]
-impl ProjectRun for SwiftProject {}
+impl ProjectRun for SwiftProject {
+    fn get_runner(
+        &self,
+        cfg: &BuildSettings,
+        _device: Option<&Device>,
+    ) -> Result<(Box<dyn Runner + Send + Sync>, XCLogger)> {
+        let (xclogger, _) = self.build(cfg, None)?;
+
+        let output = std::process::Command::new("/usr/bin/swift")
+            .args(["build", "--show-bin-path"])
+            .current_dir(self.root())
+            .output()?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            return Err(Error::Run(format!(
+                "Getting target bin path failed {stderr}"
+            )));
+        }
+
+        // WARN: THIS MIGHT FAIL BECAUSE BUILD IS NOT YET RAN
+        let output = String::from_utf8(output.stdout).unwrap();
+        let bin_path = PathBuf::from(output.trim()).join(&cfg.target);
+
+        log::info!("Running {:?} via {bin_path:?}", self.name());
+
+        Ok((Box::new(BinRunner::from_path(&bin_path)), xclogger))
+    }
+}
 
 #[async_trait::async_trait]
 impl ProjectCompile for SwiftProject {
