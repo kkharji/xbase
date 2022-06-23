@@ -56,17 +56,26 @@ impl ProjectCompile for BareboneProject {
 
         let (name, root) = (self.name(), self.root());
         let cache_root = self.build_cache_root()?;
-        let mut arguments = self.compile_arguments();
+        let mut args = self.compile_arguments();
 
-        arguments.extend([
-            format!("SYMROOT={cache_root}"),
-            "-project".into(),
-            format!("{name}.xcodeproj"),
-        ]);
+        args.push(format!("SYMROOT={cache_root}"));
 
-        log::info!("xcodebuild {}", arguments.join(" "));
+        let xcworkspace = format!("{name}.xcworkspace");
 
-        let compile_commands = CC::generate(&root, &arguments).await?.to_vec();
+        if self.root().join(&xcworkspace).exists() {
+            args.extend_from_slice(&[
+                "-workspace".into(),
+                xcworkspace,
+                "-scheme".into(),
+                name.into(),
+            ]);
+        } else {
+            args.extend_from_slice(&["-project".into(), format!("{name}.xcodeproj")]);
+        }
+
+        log::info!("xcodebuild {}", args.join(" "));
+
+        let compile_commands = CC::generate(&root, &args).await?.to_vec();
         let json = serde_json::to_vec_pretty(&compile_commands)?;
 
         tokio::fs::write(root.join(".compile"), &json).await?;

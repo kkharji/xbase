@@ -75,31 +75,29 @@ impl ProjectCompile for TuistProject {
         {
             let mut arguments = arguments.clone();
 
-            arguments.push(format!("SYMROOT={cache_root}_tuist"));
-            arguments.push("-project".into());
-            arguments.push("Manifests.xcodeproj".into());
+            arguments.extend_from_slice(&[
+                format!("SYMROOT={cache_root}_tuist"),
+                "-workspace".into(),
+                "Manifests.xcworkspace".into(),
+                "-scheme".into(),
+                "Manifests".into(),
+            ]);
 
-            for target in self
-                .manifest
-                .targets()
-                .into_iter()
-                .flat_map(|t| Some(t.name?.to_string()))
-            {
-                let mut args = arguments.clone();
-                args.push("-target".into());
-                args.push(target);
-                log::info!("xcodebuild {}", args.join(" "));
-                compile_commands.extend(CC::generate(&root, &args).await?.to_vec());
-            }
+            log::info!("xcodebuild {}", arguments.join(" "));
+            compile_commands.extend(CC::generate(&root, &arguments).await?.to_vec());
         }
 
         // Compile Project
         {
             let mut arguments = arguments.clone();
 
-            arguments.push(format!("SYMROOT={cache_root}"));
-            arguments.push("-project".into());
-            arguments.push(format!("{name}.xcodeproj"));
+            arguments.extend_from_slice(&[
+                format!("SYMROOT={cache_root}"),
+                "-workspace".into(),
+                format!("{name}.xcworkspace"),
+                "-scheme".into(),
+                format!("{name}"),
+            ]);
 
             log::info!("xcodebuild {}", arguments.join(" "));
 
