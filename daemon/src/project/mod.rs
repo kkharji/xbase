@@ -61,13 +61,22 @@ pub trait ProjectBuild: ProjectData {
         }
 
         let cache_build_root = fs::get_build_cache_dir_with_config(self.root(), cfg)?;
-        // TODO: check if scheme isn't already defined!
-        args.extend_from_slice(&[
-            format!("SYMROOT={cache_build_root}",),
-            "-allowProvisioningUpdates".into(),
-            "-project".into(),
-            format!("{}.xcodeproj", self.name()),
-        ]);
+
+        args.push(format!("SYMROOT={cache_build_root}",));
+        args.push("-allowProvisioningUpdates".into());
+
+        let name = self.name().to_owned();
+        let xcworkspace = format!("{}.xcworkspace", &name);
+        if self.root().join(&xcworkspace).exists() {
+            args.iter_mut().for_each(|arg| {
+                if arg == "-target" {
+                    *arg = "-scheme".into()
+                }
+            });
+            args.extend_from_slice(&["-workspace".into(), xcworkspace]);
+        } else {
+            args.extend_from_slice(&["-project".into(), format!("{}.xcodeproj", name)]);
+        }
 
         log::trace!("building with [{}]", args.join(" "));
 
