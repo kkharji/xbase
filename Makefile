@@ -23,7 +23,7 @@ install: clean
 	cargo build --release
 	mv target/release/xbase                        ./bin/xbase
 	mv target/release/xbase-sourcekit-helper       ./bin/xbase-sourcekit-helper
-	mv ../target/debug/libxbase_editor_lib.dylib   ./lua/xbase_editor_lib.so
+	mv target/release/libxbase_editor_lib.dylib   ./lua/xbase_editor_lib.so
 	echo "DONE"
 
 install_debug: clean
