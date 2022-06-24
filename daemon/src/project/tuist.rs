@@ -183,10 +183,7 @@ impl TuistProject {
 
         let (success, logs) = consume_and_log(Box::pin(process.spawn_and_stream()?)).await;
         if !success {
-            return Err(Error::XCodeProjectGenerate(
-                "Project".into(),
-                logs.join("\n"),
-            ));
+            return Err(Error::Generate(logs.join("\n")));
         }
 
         Ok(())

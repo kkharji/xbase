@@ -1,4 +1,5 @@
 local M = {}
+M.server = require "libxbase"
 
 vim.g.xbase = {
   ---@type Project[]
@@ -10,7 +11,6 @@ vim.g.xbase = {
 }
 
 ---Check whether the vim instance should be registered to xbase server.
----NOTE: Only support project.yml
 ---@param root string: current working directory
 ---@param _ table: options to influence the result.
 ---@return boolean
@@ -29,32 +29,34 @@ end
 
 --- Register current neovim client
 M.register = function(root)
-  local root = root or vim.loop.cwd()
-  local _ = require("libxbase").ensure()
-  require("libxbase").register(root)
+  M.server.ensure()
+  M.server.register(root)
+end
+
+M.drop = function(root)
+  M.server.drop(root)
+end
+
+M.build = function(opts)
+  -- I(opts)
+  M.server.build(opts)
+end
+
+M.run = function(opts)
+  M.server.run(opts)
 end
 
 ---Tries to register vim instance as client for xbase server.
 ---Only register the vim instance when `xbase.should_attach`
 ---@see xbase.should_attach
-M.try_register = function(root, opts)
+M.try_register = function(root, opts, first)
   opts = opts or {}
   if M.should_register(root, opts) then
-    M.register()
-    vim.cmd [[ autocmd VimLeavePre * lua require'xbase'.drop(true)]]
+    M.register(root)
+    if first then
+      vim.cmd [[ autocmd VimLeavePre * lua require'xbase'.drop()]]
+    end
   end
-end
-
-M.drop = function(remove_client)
-  require("libxbase").drop { remove_client = remove_client }
-end
-
-M.build = function(opts)
-  require("libxbase").build(opts)
-end
-
-M.run = function(opts)
-  require("libxbase").run(opts)
 end
 
 local function try_map(key, fun)
@@ -112,15 +114,12 @@ M.setup = function(opts)
   vim.schedule(function()
     opts = opts or {}
     local root = vim.loop.cwd()
-    -- Mutate xbase configuration
     local config = require "xbase.config"
-
     config.set(opts)
-
     local config = config.values
-    -- Try to register current vim instance
-    -- NOTE: Should this register again on cwd change?
-    M.try_register(root, opts)
+
+    -- TODO: run try register on switch directories
+    M.try_register(root, opts, true)
 
     vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
       pattern = { "*.m", "*.swift", "*.c", "*.yml" },

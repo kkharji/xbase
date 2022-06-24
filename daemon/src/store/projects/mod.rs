@@ -1,10 +1,10 @@
-use crate::error::{EnsureOptional, LoopError};
 use crate::project::{project, Project};
 use crate::Result;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use xbase_proto::Client;
+use xbase_proto::IntoResult;
 
 #[derive(Default, Debug, derive_deref_rs::Deref, Serialize)]
 pub struct ProjectStore(HashMap<PathBuf, Box<dyn Project + Send>>);
@@ -23,15 +23,11 @@ impl ProjectStore {
     }
 
     pub fn get_mut(&mut self, root: &PathBuf) -> Result<&mut Box<dyn Project + Send>> {
-        self.0
-            .get_mut(root)
-            .ok_or_else(|| LoopError::NoProject(root.into()).into())
+        self.0.get_mut(root).into_result("Project".into(), root)
     }
 
     pub fn get(&self, root: &PathBuf) -> Result<&Box<dyn Project + Send>> {
-        self.0
-            .get(root)
-            .ok_or_else(|| LoopError::NoProject(root.into()).into())
+        self.0.get(root).into_result("Project", root)
     }
 
     /// Remove project using root and pid.
@@ -43,7 +39,7 @@ impl ProjectStore {
         let Client { root, pid, .. } = client;
 
         // Get project with root
-        let project = self.0.get_mut(root).to_result("project", root)?;
+        let project = self.get_mut(root)?;
 
         // Remove client pid from project.
         project.clients_mut().retain(|p| p != pid);

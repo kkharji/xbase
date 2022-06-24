@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::PathBuf};
 use strum::{Display as EnumDisplay, EnumString};
 
+#[cfg(feature = "neovim")]
+use mlua::prelude::*;
+
 /// Client data
 #[derive(Clone, Default, Debug, Deserialize, Serialize)]
 pub struct Client {
@@ -10,22 +13,64 @@ pub struct Client {
     pub address: String,
 }
 
+#[cfg(feature = "neovim")]
+impl<'a> FromLua<'a> for Client {
+    fn from_lua(value: LuaValue<'a>, lua: &'a Lua) -> LuaResult<Self> {
+        Self::new(lua, {
+            if let LuaValue::String(ref root) = value {
+                Some(root.to_string_lossy().to_string())
+            } else {
+                None
+            }
+        })
+    }
+}
+
 /// Build Configuration to run
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
+#[serde(untagged)]
 pub enum BuildConfiguration {
     Debug,
     Release,
     Custom(String),
 }
 
+#[cfg(feature = "neovim")]
+impl<'a> FromLua<'a> for BuildConfiguration {
+    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
+        if let LuaValue::String(ref value) = value {
+            Self::from_str(value.to_str()?).to_lua_err()
+        } else {
+            Err(LuaError::external(
+                "Expected a string value for BuildConfiguration",
+            ))
+        }
+    }
+}
+
 /// Operation
 ///
 /// Should request be executed once, stoped (if watched) or start new watch service?
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
+#[serde(untagged)]
 pub enum Operation {
     Watch,
     Stop,
     Once,
+}
+
+#[cfg(feature = "neovim")]
+impl<'a> FromLua<'a> for Operation {
+    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
+        if let LuaValue::String(value) = value {
+            let value = value.to_string_lossy();
+            Self::from_str(&*value).to_lua_err()
+        } else {
+            Ok(Operation::default())
+        }
+    }
 }
 
 /// Fields required to build a project
@@ -39,9 +84,27 @@ pub struct BuildSettings {
     pub scheme: Option<String>,
 }
 
+#[cfg(feature = "neovim")]
+impl<'a> FromLua<'a> for BuildSettings {
+    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+        if let LuaValue::Table(table) = value {
+            Ok(Self {
+                target: table.get("target")?,
+                configuration: table.get("configuration")?,
+                scheme: table.get("scheme")?,
+            })
+        } else {
+            Err(LuaError::external(
+                "Expected a table value for BuildSettings",
+            ))
+        }
+    }
+}
+
 /// Log Buffer open direction
 #[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
 #[strum(ascii_case_insensitive)]
+#[serde(untagged)]
 pub enum BufferDirection {
     Default,
     Vertical,
@@ -49,11 +112,38 @@ pub enum BufferDirection {
     TabEdit,
 }
 
+#[cfg(feature = "neovim")]
+impl<'a> FromLua<'a> for BufferDirection {
+    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
+        if let LuaValue::String(value) = value {
+            let value = value.to_string_lossy();
+            Self::from_str(&*value).to_lua_err()
+        } else {
+            Ok(Self::Default)
+        }
+    }
+}
+
 /// Device Lookup information to run built project with
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DeviceLookup {
     pub name: Option<String>,
     pub udid: Option<String>,
+}
+
+#[cfg(feature = "neovim")]
+impl<'a> FromLua<'a> for DeviceLookup {
+    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+        if let LuaValue::Table(table) = value {
+            Ok(Self {
+                name: table.get("name").ok(),
+                udid: table.get("udid").ok(),
+            })
+        } else {
+            Ok(Self::default())
+        }
+    }
 }
 
 impl Default for BufferDirection {
@@ -115,6 +205,17 @@ impl Operation {
 }
 
 impl Client {
+    #[cfg(feature = "neovim")]
+    pub fn new(lua: &Lua, root: Option<String>) -> LuaResult<Self> {
+        use crate::util::address;
+        use crate::util::cwd;
+        Ok(Self {
+            pid: std::process::id() as i32,
+            address: address(lua)?,
+            root: if let Some(v) = root { v } else { cwd(lua)? }.into(),
+        })
+    }
+
     pub fn abbrev_root(&self) -> String {
         let dirname = || {
             let path = &self.root;

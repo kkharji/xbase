@@ -35,7 +35,7 @@ impl SimulatorRunner {
 
     pub async fn boot<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
         match pid::get_by_name("Simulator") {
-            Err(Error::NotFound(_, _)) => {
+            Err(Error::Lookup(_, _)) => {
                 let msg = format!("[Simulator] Launching");
                 log::info!("{msg}");
                 logger.append(msg).await?;

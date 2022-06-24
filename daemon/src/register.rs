@@ -1,5 +1,6 @@
 use crate::compile;
 use crate::constants::DAEMON_STATE;
+use crate::Error;
 use crate::RequestHandler;
 use crate::Result;
 use async_trait::async_trait;
@@ -13,7 +14,6 @@ impl RequestHandler for RegisterRequest {
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
-        state.clients.add(&client).await?;
         if let Ok(project) = state.projects.get_mut(&client.root) {
             project.add_client(client.pid);
         } else {
@@ -27,16 +27,26 @@ impl RequestHandler for RegisterRequest {
 
             state.watcher.add(client, ignore_pattern).await?;
         }
+        // NOTE: The following blocks register request due to nvim_rs rpc
+        let client = client.clone();
+        tokio::spawn(async move {
+            let client = &client;
+            let state = DAEMON_STATE.clone();
+            let ref mut state = state.lock().await;
+            state.clients.add(client).await?;
 
-        if compile::ensure_server_support(state, client, None).await? {
-            let ref name = client.abbrev_root();
-            state
-                .clients
-                .echo_msg(&client.root, name, "setup: ✅")
-                .await;
-        }
+            if compile::ensure_server_support(state, client, None).await? {
+                let ref name = client.abbrev_root();
+                state
+                    .clients
+                    .echo_msg(&client.root, name, "setup: ✅")
+                    .await;
+            }
 
-        state.sync_client_state().await?;
+            state.sync_client_state().await?;
+
+            Ok::<_, Error>(())
+        });
 
         Ok(())
     }

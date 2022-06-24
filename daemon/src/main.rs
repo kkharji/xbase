@@ -1,67 +1,66 @@
 use log::Level;
+use std::path::PathBuf;
 use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
-use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
 use xbase::util::pid;
-use xbase::Result;
 use xbase::{constants::*, RequestHandler};
-use xbase_proto::{Message, Request};
+use xbase_proto::*;
 
+#[derive(Clone)]
+struct Server;
+
+#[tarpc::server]
+impl xbase_proto::XBase for Server {
+    /// Register project root with a path to setup logs
+    async fn register(self, _: Context, req: RegisterRequest) -> Result<PathBuf> {
+        req.handle().await?;
+        Ok("/bin/cp".into())
+    }
+    /// Build Project and get path to where to build log will be located
+    async fn build(self, _: Context, req: BuildRequest) -> Result<PathBuf> {
+        // NOTE: Required because of nvim-rs
+        tokio::spawn(async { req.handle().await });
+        Ok(PathBuf::default())
+    }
+    /// Run Project and get path to where to Runtime log will be located
+    async fn run(self, _: Context, req: RunRequest) -> Result<PathBuf> {
+        // NOTE: Required because of nvim-rs
+        tokio::spawn(async { req.handle().await });
+        Ok(PathBuf::default())
+    }
+    /// Drop project root
+    async fn drop(self, _: Context, req: DropRequest) -> Result<()> {
+        // NOTE: Required because of nvim-rs
+        tokio::spawn(async { req.handle().await });
+        Ok(())
+    }
+}
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ensure_single_instance().await?;
 
     let listener = UnixListener::bind(DAEMON_SOCKET_PATH).unwrap();
-
+    let codec_builder = LengthDelimitedCodec::builder();
     log::setup("/tmp", "xbase-daemon.log", Level::DEBUG, true)?;
-
     log::info!("Started");
 
     loop {
-        if let Ok((mut s, _)) = listener.accept().await {
+        if let Ok((s, _)) = listener.accept().await {
             tokio::spawn(async move {
-                let msg = {
-                    let mut msg = String::default();
-                    if let Err(e) = s.read_to_string(&mut msg).await {
-                        return log::error!("[Read Error]: {:?}", e);
-                    };
-                    msg
-                };
-
-                if msg.is_empty() {
-                    return;
-                }
-
-                let req = match Request::read(msg.clone()) {
-                    Err(e) => {
-                        return log::error!("[Parse Error]: {:?} message: {msg}", e);
-                    }
-                    Ok(req) => req,
-                };
-
-                if let Err(e) = handle(req).await {
-                    return log::error!("[Failure]: Cause: ({:?})", e);
-                };
+                let framed = codec_builder.new_framed(s);
+                let transport = transport::new(framed, Json::default());
+                BaseChannel::with_defaults(transport)
+                    .execute(Server.serve())
+                    .await;
 
                 let state = DAEMON_STATE.clone();
                 let mut state = state.lock().await;
                 state.validate().await;
-
-                // update_watchers(state.clone()).await;
             });
         } else {
             log::error!("Fail to accept a connection")
         };
-    }
-}
-
-async fn handle(req: Request) -> Result<()> {
-    match req.message {
-        Message::Build(c) => RequestHandler::handle(c).await,
-        Message::Run(c) => RequestHandler::handle(c).await,
-        Message::Register(c) => RequestHandler::handle(c).await,
-        Message::Drop(c) => RequestHandler::handle(c).await,
     }
 }
 

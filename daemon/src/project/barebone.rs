@@ -118,7 +118,7 @@ impl Project for BareboneProject {
         }
 
         if xcodeproj_paths.is_empty() {
-            return Err(Error::ProjectError("No XcodeProjectFound!".into()));
+            return Err(Error::DefinitionLocating);
         };
 
         project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;

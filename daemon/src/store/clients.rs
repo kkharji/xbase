@@ -1,10 +1,10 @@
 use crate::nvim::NvimClient;
-use crate::{LoopError, Result};
+use crate::Result;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tap::Pipe;
-use xbase_proto::Client;
+use xbase_proto::{Client, IntoResult};
 
 #[derive(Default, Debug, Serialize, derive_deref_rs::Deref)]
 pub struct ClientStore(HashMap<i32, NvimClient>);
@@ -24,15 +24,11 @@ impl ClientStore {
     }
 
     pub fn get(&self, pid: &i32) -> Result<&NvimClient> {
-        self.0
-            .get(&pid)
-            .ok_or_else(|| LoopError::NoClient(*pid).into())
+        self.0.get(&pid).into_result("Client", pid)
     }
 
     pub fn get_mut(&mut self, pid: &i32) -> Result<&mut NvimClient> {
-        self.0
-            .get_mut(&pid)
-            .ok_or_else(|| LoopError::NoClient(*pid).into())
+        self.0.get_mut(&pid).into_result("Client", pid)
     }
 
     pub async fn get_clients_by_root<'a>(&'a self, root: &'a PathBuf) -> Vec<&'a NvimClient> {

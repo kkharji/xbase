@@ -140,10 +140,7 @@ impl ProjectGenerate for SwiftProject {
         let (success, logs) = consume_and_log(process.spawn_and_stream()?.boxed()).await;
 
         if !success {
-            return Err(Error::SwiftBuildForComplilation(
-                self.name().into(),
-                logs.join("\n"),
-            ));
+            return Err(Error::Generate(logs.join("\n")));
         }
 
         self.update_project_info().await?;
@@ -202,14 +199,15 @@ impl SwiftProject {
             .await?;
 
         let map = if output.status.success() {
-            serde_json::from_slice::<Map<String, Value>>(&output.stdout)?
+            serde_json::from_slice::<Map<String, Value>>(&output.stdout)
+                .map_err(|e| Error::DefinitionParsing(e.to_string()))?
         } else {
             let error = String::from_utf8(output.stderr)
                 .unwrap_or_default()
                 .split("\n")
                 .collect();
             log::error!("Fail to read swift package information {error}");
-            return Err(Error::SwiftPackageRead(self.name().into(), error));
+            return Err(Error::DefinitionParsing(error));
         };
 
         // TODO(swift-package): only provide run service for executables

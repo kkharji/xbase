@@ -1,55 +1,57 @@
 //! mlua functions and extensions
+use std::fmt::Display;
+
 use mlua::prelude::*;
 use tap::Pipe;
 
 pub trait LuaExtension {
-    fn print(&self, msg: &str);
-    fn trace(&self, msg: &str) -> LuaResult<()>;
-    fn error(&self, msg: &str) -> LuaResult<()>;
-    fn debug(&self, msg: &str) -> LuaResult<()>;
-    fn warn(&self, msg: &str) -> LuaResult<()>;
-    fn info(&self, msg: &str) -> LuaResult<()>;
+    fn print<S: Display>(&self, msg: &S);
+    fn trace<S: Display>(&self, msg: &S);
+    fn error<S: Display>(&self, msg: &S);
+    fn debug<S: Display>(&self, msg: &S);
+    fn warn<S: Display>(&self, msg: &S);
+    fn info<S: Display>(&self, msg: &S);
     fn cwd(&self) -> LuaResult<String>;
     fn nvim_address(&self) -> LuaResult<String>;
     fn global_state(&self) -> LuaResult<LuaTable>;
 }
 
-fn log(lua: &Lua, level: &str, msg: &str) -> LuaResult<()> {
-    // lua.load(mlua::chunk::chunk!(require("xbase.log").$level($msg))).exec()
+fn log<S: Display>(lua: &Lua, level: &str, msg: &S) {
     // TODO: remove _XBASELOG hack to log from rust and lua
     lua.globals()
-        .get::<_, LuaTable>("_XBASELOG")?
-        .get::<_, LuaFunction>(level)?
-        .call::<_, ()>(msg.to_lua(lua))
+        .get::<_, LuaTable>("_XBASELOG")
+        .and_then(|t| t.get::<_, LuaFunction>(level))
+        .and_then(|f| f.call(msg.to_string().to_lua(lua)))
+        .unwrap_or_else(|err| lua.print(&format!("UNABLE TO USE _XBASELOG!! {}", err.to_string())));
 }
 
 impl LuaExtension for Lua {
-    fn print(&self, msg: &str) {
+    fn print<S: Display>(&self, msg: &S) {
         self.globals()
             .get::<_, LuaFunction>("print")
             .unwrap()
-            .call::<_, ()>(format!("xbase: {}", msg).to_lua(self))
+            .call::<_, ()>(format!("{msg}").to_lua(self))
             .unwrap()
     }
 
-    fn trace(&self, msg: &str) -> LuaResult<()> {
+    fn trace<S: Display>(&self, msg: &S) {
         log(self, "trace", msg)
     }
 
-    fn error(&self, msg: &str) -> LuaResult<()> {
+    fn error<S: Display>(&self, msg: &S) {
         log(self, "error", msg)
     }
 
-    fn debug(&self, msg: &str) -> LuaResult<()> {
+    fn debug<S: Display>(&self, msg: &S) {
         log(self, "debug", msg)
     }
 
-    fn warn(&self, msg: &str) -> LuaResult<()> {
+    fn warn<S: Display>(&self, msg: &S) {
         log(self, "warn", msg)
     }
 
-    fn info(&self, msg: &str) -> LuaResult<()> {
-        log(self, "info", msg)
+    fn info<S: Display + Sized>(&self, msg: &S) {
+        self.print(msg)
     }
 
     fn global_state(&self) -> LuaResult<LuaTable> {

@@ -108,10 +108,7 @@ impl ProjectGenerate for XCodeGenProject {
             self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
             self.targets = self.xcodeproj.targets_platform();
         } else {
-            return Err(Error::XCodeProjectGenerate(
-                self.name().into(),
-                logs.join("\n"),
-            ));
+            return Err(Error::Generate(logs.join("\n")));
         }
 
         Ok(())

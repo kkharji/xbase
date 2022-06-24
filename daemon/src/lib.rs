@@ -3,7 +3,6 @@ pub mod compile;
 pub mod constants;
 pub mod device;
 pub mod drop;
-pub mod error;
 pub mod nvim;
 pub mod project;
 pub mod register;
@@ -13,11 +12,10 @@ pub mod store;
 pub mod util;
 pub mod watch;
 
-pub use error::{CompileError, Error, LoopError};
 use process_stream::{ProcessItem, Stream};
 use std::pin::Pin;
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub use xbase_proto::{Error, IntoResult, Result};
 pub type OutputStream = Pin<Box<dyn Stream<Item = ProcessItem> + Send>>;
 pub type StringStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 

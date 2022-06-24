@@ -4,7 +4,6 @@ mod serialize;
 pub use event::{Event, EventKind};
 
 use crate::compile::ensure_server_support;
-use crate::error::EnsureOptional;
 use crate::{constants::DAEMON_STATE, state::State, Result};
 use async_trait::async_trait;
 use log::{error, info, trace};
@@ -15,7 +14,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use tokio::sync::mpsc::channel;
 use tokio::{sync::MutexGuard, task::JoinHandle};
-use xbase_proto::Client;
+use xbase_proto::{Client, IntoResult};
 
 #[derive(derive_deref_rs::Deref)]
 pub struct WatchService {
@@ -92,9 +91,12 @@ impl WatchService {
                 if let Ok(event) = res {
                     tx.blocking_send(event).unwrap()
                 }
-            })?;
-            w.watch(&client.root, Recursive)?;
-            w.configure(Config::NoticeEvents(true))?;
+            })
+            .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
+            w.watch(&client.root, Recursive)
+                .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
+            w.configure(Config::NoticeEvents(true))
+                .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
 
             let ignore_pattern = ignore_pattern
                 .iter()
@@ -177,7 +179,7 @@ impl WatchService {
 
     pub fn remove(&mut self, key: &String) -> Result<Box<dyn Watchable>> {
         info!("Remove: `{key}`");
-        let item = self.listeners.remove(key).to_result("Watchable", key)?;
+        let item = self.listeners.remove(key).into_result("Watchable", key)?;
         Ok(item)
     }
 }

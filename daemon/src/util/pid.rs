@@ -24,7 +24,7 @@ pub fn exists(pid: &i32, cb: impl FnOnce()) -> bool {
 /// Get process pid by name.
 ///
 /// If an error occured during searching  an error will be returned,
-/// otherwise process with given name is not, an  Error::NotFound will be returned.
+/// otherwise process with given name is not, an  Error::Lookup will be returned.
 ///
 /// WARNNING: The first match will be returned, and duplicates will be ignored
 pub fn get_by_name<S>(name: S) -> crate::Result<i32>
@@ -44,7 +44,7 @@ where
         }
     }
 
-    Err(crate::Error::NotFound("Process".into(), format!("{name}")))
+    Err(crate::Error::Lookup("Process".into(), format!("{name}")))
 }
 
 #[test]

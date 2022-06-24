@@ -1,10 +1,9 @@
-use crate::error::EnsureOptional;
 use crate::watch::WatchService;
 use crate::Result;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use xbase_proto::Client;
+use xbase_proto::{Client, IntoResult};
 
 #[derive(Default, Debug, Serialize)]
 pub struct WatchStore(HashMap<PathBuf, WatchService>);
@@ -28,10 +27,10 @@ impl WatchStore {
     }
 
     pub fn get(&self, root: &PathBuf) -> Result<&WatchService> {
-        self.0.get(root).to_result("Watcher", root)
+        self.0.get(root).into_result("Watcher", root)
     }
 
     pub fn get_mut(&mut self, root: &PathBuf) -> Result<&mut WatchService> {
-        self.0.get_mut(root).to_result("Watcher", root)
+        self.0.get_mut(root).into_result("Watcher", root)
     }
 }
