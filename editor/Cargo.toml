@@ -1,7 +1,8 @@
 [package]
-name = "xbase-lualib"
+name = "xbase-editor-lib"
 version = "0.2.0"
 edition = "2021"
+description = "XBase Editor neovim editor library"
 
 [lib]
 crate-type = ["cdylib"]

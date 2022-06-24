@@ -116,6 +116,6 @@ impl LuaUserData for DaemonClient {
 }
 
 #[lua_module]
-fn libxbase(_: &Lua) -> LuaResult<DaemonClient> {
+fn xbase_editor_lib(_: &Lua) -> LuaResult<DaemonClient> {
     Ok(DaemonClient)
 }

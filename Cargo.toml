@@ -7,7 +7,7 @@ members = [
   # Main xbase daemon
   "daemon",
   # library to communicate with the daemon
-  "lualib",
+  "editor",
 ]
 
 [profile.dev]

@@ -1,5 +1,5 @@
 local M = {}
-M.server = require "libxbase"
+M.lib = require "xbase_editor_lib"
 
 vim.g.xbase = {
   ---@type Project[]
@@ -29,21 +29,21 @@ end
 
 --- Register current neovim client
 M.register = function(root)
-  M.server.ensure()
-  M.server.register(root)
+  M.lib.ensure()
+  M.lib.register(root)
 end
 
 M.drop = function(root)
-  M.server.drop(root)
+  M.lib.drop(root)
 end
 
 M.build = function(opts)
   -- I(opts)
-  M.server.build(opts)
+  M.lib.build(opts)
 end
 
 M.run = function(opts)
-  M.server.run(opts)
+  M.lib.run(opts)
 end
 
 ---Tries to register vim instance as client for xbase server.
@@ -87,6 +87,8 @@ M.toggle_log_buffer = function(vsplit)
   end)
 
   vim.keymap.set("n", "q", "close", { buffer = true })
+  vim.cmd "call feedkeys('G')"
+  vim.cmd "call feedkeys('zt')"
 end
 
 local function bind(config)

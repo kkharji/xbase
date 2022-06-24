@@ -2478,7 +2478,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xbase-lualib"
+name = "xbase-editor-lib"
 version = "0.2.0"
 dependencies = [
  "mlua",

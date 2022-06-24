@@ -100,7 +100,7 @@ issue
 To install [XBase] on your system you need run `make install`. This will run `cargo build
 --release` on all the required binaries in addition to a lua library. The binaries will be
 moved to `path/to/repo/bin` and the lua library will be moved to
-`path/to/repo/lua/libxbase.so`.
+`path/to/repo/lua/xbase_editor_lib.so`.
 
 
 #### With [packer]
