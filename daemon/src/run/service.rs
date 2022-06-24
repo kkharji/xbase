@@ -1,9 +1,10 @@
 use super::handler::RunServiceHandler;
+use crate::run::get_runner;
 use crate::{
     device::Device,
     state::State,
     watch::{Event, Watchable},
-    Error, Result,
+    Result,
 };
 use std::sync::Arc;
 use tap::Pipe;
@@ -29,44 +30,26 @@ impl std::fmt::Display for RunService {
 impl RunService {
     pub async fn new(state: &mut MutexGuard<'_, State>, req: RunRequest) -> Result<Self> {
         let key = req.to_string();
-        let target = req.settings.target.clone();
-        let ref root = req.client.root;
-        let device = state.devices.from_lookup(req.device);
-        let nvim = state.clients.get(&req.client.pid)?;
-        let logger = &mut nvim.logger();
+        let RunRequest {
+            client,
+            settings,
+            device,
+            ..
+        } = req;
+        let target = &settings.target;
+        let device = state.devices.from_lookup(device);
+        let is_once = req.ops.is_once();
 
-        logger.set_direction(&req.direction);
-
-        if !req.ops.is_watch() {
-            logger.open_win().await?;
-            logger.set_running(false).await?;
-        }
-
-        let (runner, stream) = state
-            .projects
-            .get(root)?
-            .get_runner(&req.settings, device.as_ref())?;
-
-        logger.set_title(format!("Build:{target}"));
-        let success = logger.consume_build_logs(stream, false, false).await?;
-        if !success {
-            let msg = format!("Build failed {}", &req.settings);
-            logger.nvim.echo_err(&msg).await?;
-            return Err(Error::Build(msg));
-        }
-        logger.set_title(format!("Run:{target}"));
-        logger.set_running(true).await?;
-
-        let process = runner.run(logger).await?;
-        let handler = RunServiceHandler::new(&key, &target, &req.client, process)?
+        let process = get_runner(state, &client, &settings, device.as_ref(), is_once).await?;
+        let handler = RunServiceHandler::new(&key, target, &client, process)?
             .pipe(Mutex::new)
             .pipe(Arc::new);
 
         Ok(Self {
             device,
             handler,
-            client: req.client,
-            settings: req.settings,
+            client,
+            settings,
             key,
         })
     }
@@ -75,33 +58,26 @@ impl RunService {
 #[async_trait::async_trait]
 impl Watchable for RunService {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
-        let (root, config, pid) = (&self.client.root, &self.settings, &self.client.pid);
+        let Self {
+            key,
+            client,
+            settings,
+            ..
+        } = self;
+
         let mut handler = self.handler.clone().lock_owned().await;
 
         handler.process().kill().await;
         handler.inner().abort();
 
-        let nvim = state.clients.get(pid)?;
-        let logger = &mut nvim.logger();
-
-        let (runner, stream) = state
-            .projects
-            .get(root)?
-            .get_runner(config, self.device.as_ref())?;
-
-        logger.set_title(format!("Build:{}", self.settings.target));
-        let success = logger.consume_build_logs(stream, false, false).await?;
-        if !success {
-            let msg = format!("Build failed {}", &self.settings);
-            logger.nvim.echo_err(&msg).await?;
-            return Err(Error::Build(msg));
-        }
+        let target = &settings.target;
+        let device = self.device.as_ref();
 
         *handler = RunServiceHandler::new(
-            &self.key,
-            &config.target,
-            &self.client,
-            runner.run(logger).await?,
+            key,
+            target,
+            client,
+            get_runner(state, client, settings, device, false).await?,
         )?;
 
         Ok(())

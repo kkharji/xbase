@@ -84,8 +84,8 @@ impl ProjectRun for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream)> {
-        let (build_stream, _) = self.build(cfg, None)?;
+    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream, Vec<String>)> {
+        let (build_stream, args) = self.build(cfg, None)?;
 
         let output = std::process::Command::new("/usr/bin/swift")
             .args(["build", "--show-bin-path"])
@@ -105,7 +105,11 @@ impl ProjectRun for SwiftProject {
 
         log::info!("Running {:?} via {bin_path:?}", self.name());
 
-        Ok((Box::new(BinRunner::from_path(&bin_path)), build_stream))
+        Ok((
+            Box::new(BinRunner::from_path(&bin_path)),
+            build_stream,
+            args,
+        ))
     }
 }
 

@@ -110,9 +110,7 @@ pub trait ProjectRun: ProjectData + ProjectBuild {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream)> {
-        log::info!("Running {}", self.name());
-
+    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream, Vec<String>)> {
         let (build_stream, args) = self.build(cfg, device)?;
         let info = XCBuildSettings::new_sync(self.root(), &args)?;
         let runner: Box<dyn Runner + Send + Sync> = match device {
@@ -120,7 +118,7 @@ pub trait ProjectRun: ProjectData + ProjectBuild {
             None => Box::new(BinRunner::from_build_info(&info)),
         };
 
-        Ok((runner, build_stream))
+        Ok((runner, build_stream, args))
     }
 }
 

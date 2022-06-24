@@ -8,11 +8,15 @@ impl RequestHandler for DropRequest {
         use crate::constants::DAEMON_STATE;
         let Self { client, .. } = self;
 
+        let (title, sep) = crate::util::handler_log_content("Drop", &client);
+        log::info!("{sep}",);
+        log::info!("{title}",);
+        log::info!("{sep}",);
+
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
         if state.clients.contains_key(&client.pid) {
-            log::info!("Drop({}: {})", client.pid, client.abbrev_root());
             // NOTE: Should only be Some if no more client depend on it
             if let Some(_) = state.projects.remove(&client).await? {
                 // NOTE: Remove project watchers

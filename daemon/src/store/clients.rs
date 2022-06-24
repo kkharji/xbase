@@ -11,24 +11,28 @@ pub struct ClientStore(HashMap<i32, NvimClient>);
 
 impl ClientStore {
     pub async fn add(&mut self, client: &Client) -> Result<()> {
-        log::info!("Add: {:?}", client.pid);
         NvimClient::new(client)
             .await?
-            .pipe(|client| self.insert(client.pid, client))
-            .pipe(|_| Ok(()))
+            .pipe(|client| self.insert(client.pid, client));
+        log::info!("[{:?}] added", client.pid);
+        Ok(())
     }
 
     pub fn remove(&mut self, client: &Client) {
-        log::debug!("Remove: {:?}", client.pid);
+        log::info!("[{:?}] removed", client.pid);
         self.0.remove(&client.pid);
     }
 
     pub fn get(&self, pid: &i32) -> Result<&NvimClient> {
-        self.0.get(&pid).into_result("Client", pid)
+        let client = self.0.get(&pid).into_result("Client", pid)?;
+        log::trace!("[{:?}] accessed", pid);
+        Ok(client)
     }
 
     pub fn get_mut(&mut self, pid: &i32) -> Result<&mut NvimClient> {
-        self.0.get_mut(&pid).into_result("Client", pid)
+        let client = self.0.get_mut(&pid).into_result("Client", pid)?;
+        log::trace!("[{:?}] accessed", pid);
+        Ok(client)
     }
 
     pub async fn get_clients_by_root<'a>(&'a self, root: &'a PathBuf) -> Vec<&'a NvimClient> {

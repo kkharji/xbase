@@ -113,3 +113,17 @@ fn test_gitignore_patterns() {
 
     println!("{gitignore_patterns:#?}");
 }
+pub fn abbrv_path<P: AsRef<Path>>(path: P) -> String {
+    let abbr = || {
+        let path = path.as_ref();
+
+        Some(
+            path.strip_prefix(path.ancestors().nth(3)?)
+                .ok()?
+                .display()
+                .to_string(),
+        )
+    };
+
+    abbr().unwrap_or_default()
+}

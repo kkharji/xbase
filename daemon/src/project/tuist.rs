@@ -83,7 +83,7 @@ impl ProjectCompile for TuistProject {
                 "Manifests".into(),
             ]);
 
-            log::info!("xcodebuild {}", arguments.join(" "));
+            log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
             compile_commands.extend(CC::generate(&root, &arguments).await?.to_vec());
         }
 
@@ -99,11 +99,12 @@ impl ProjectCompile for TuistProject {
                 format!("{name}"),
             ]);
 
-            log::info!("xcodebuild {}", arguments.join(" "));
+            log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
 
             compile_commands.extend(CC::generate(&root, &arguments).await?.to_vec());
         }
 
+        log::debug!("[{}] compiled successfully", self.name());
         let json = serde_json::to_vec_pretty(&compile_commands)?;
         tokio::fs::write(root.join(".compile"), &json).await?;
 
@@ -127,7 +128,7 @@ impl ProjectGenerate for TuistProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self) -> Result<()> {
-        log::info!("generating xcodeproj with tuist");
+        log::info!("generating ...");
 
         self.tuist(&["edit", "--permanent"]).await?;
         self.tuist(&["generate", "--no-open"]).await?;
@@ -232,11 +233,7 @@ impl Project for TuistProject {
                 project.targets = project.xcodeproj.targets_platform();
                 project.manifest_files = project.manifest.build_file_names();
 
-                log::info!(
-                    "(name: {:?}, targets: {:?})",
-                    project.name(),
-                    project.targets()
-                );
+                log::info!("[{}] targets: {:?}", project.name(), project.targets());
 
                 return Ok(project);
             }
@@ -250,11 +247,7 @@ impl Project for TuistProject {
         project.xcodeproj_path = xcodeproj_path;
         project.targets = project.xcodeproj.targets_platform();
 
-        log::info!(
-            "(name: {:?}, targets: {:?})",
-            project.name(),
-            project.targets()
-        );
+        log::info!("[{}] targets: {:?}", project.name(), project.targets());
 
         Ok(project)
     }

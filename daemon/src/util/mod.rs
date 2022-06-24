@@ -6,6 +6,7 @@ pub mod pid;
 
 use crate::OutputStream;
 use process_stream::{ProcessItem, StreamExt};
+use xbase_proto::Client;
 
 /// Consume given stream and return whether the stream exist with 0
 /// TODO(project): log build and compile logs to client
@@ -21,4 +22,14 @@ pub async fn consume_and_log(mut stream: OutputStream) -> (bool, Vec<String>) {
         }
     }
     (success, items)
+}
+
+pub fn handler_log_content(reqname: &str, client: &Client) -> (String, String) {
+    let title = format!(
+        "{reqname} [{}:{}]..................",
+        client.abbrev_root(),
+        client.pid,
+    );
+    let sep = ".".repeat(title.len());
+    (title, sep)
 }

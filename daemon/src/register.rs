@@ -10,6 +10,10 @@ use xbase_proto::RegisterRequest;
 impl RequestHandler for RegisterRequest {
     async fn handle(self) -> Result<()> {
         let Self { client } = &self;
+        let (title, sep) = crate::util::handler_log_content("Register", &client);
+        log::info!("{sep}");
+        log::info!("{title}");
+        log::info!("{sep}");
 
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
@@ -18,15 +22,13 @@ impl RequestHandler for RegisterRequest {
             project.add_client(client.pid);
         } else {
             state.projects.add(client).await?;
-            let ignore_pattern = state
-                .projects
-                .get(&client.root)
-                .unwrap()
-                .watchignore()
-                .clone();
+            let project = state.projects.get(&client.root).unwrap();
+            let watchignore = project.watchignore().clone();
+            let name = project.name().to_string();
 
-            state.watcher.add(client, ignore_pattern).await?;
+            state.watcher.add(client, watchignore, &name).await?;
         }
+
         // NOTE: The following blocks register request due to nvim_rs rpc
         let client = client.clone();
         tokio::spawn(async move {

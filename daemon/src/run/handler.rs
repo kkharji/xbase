@@ -23,14 +23,16 @@ impl RunServiceHandler {
         let kill_send = process.clone_kill_sender().unwrap();
 
         let inner = tokio::spawn(async move {
-            // TODO:
+            // TODO: find a better way to close this!
+            //
+            // Right now it just wait till the user try print something
             while let Some(output) = stream.next().await {
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
                 let ref mut logger = match state.clients.get(&client.pid) {
                     Ok(nvim) => nvim.logger(),
                     Err(_) => {
-                        log::info!("Nvim Instance closed, closing runner ..");
+                        log::warn!("Nvim Instance closed, closing runner ..");
                         state.watcher.get_mut(&client.root)?.listeners.remove(&key);
                         kill_send.send(()).await.ok();
                         break;
@@ -52,8 +54,16 @@ impl RunServiceHandler {
                     // TODO: this should be skipped when user re-run the app
                     Exit(code) => {
                         let success = &code == "0";
-                        logger.append(format!("[Exit] {code}")).await?;
+                        if success {
+                            logger.append(format!("disconnected")).await?;
+                        } else {
+                            logger
+                                .append(format!("[Error]: disconnected, exit: {code}"))
+                                .await?;
+                        }
                         logger.set_status_end(success, !success).await?;
+
+                        log::info!("[target: {target}] runner closed");
                         break;
                     }
                 };

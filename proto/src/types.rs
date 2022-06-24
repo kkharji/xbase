@@ -217,18 +217,17 @@ impl Client {
     }
 
     pub fn abbrev_root(&self) -> String {
-        let dirname = || {
+        let abbr = || {
             let path = &self.root;
             Some(
-                path.strip_prefix(path.ancestors().nth(2)?)
+                path.strip_prefix(path.ancestors().nth(3)?)
                     .ok()?
                     .display()
-                    .to_string()
-                    .replace("/", "_"),
+                    .to_string(),
             )
         };
 
-        dirname().unwrap_or_default()
+        abbr().unwrap_or_default()
     }
 }
 

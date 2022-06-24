@@ -44,7 +44,7 @@ impl Event {
         use NotifyEventKind::*;
 
         if event.paths.len() > 1 {
-            log::error!("[FsEvent] More than one path! {:#?}", event)
+            log::error!("More than one path! {:#?}", event)
         }
 
         let kind = match event.kind {
@@ -61,7 +61,7 @@ impl Event {
         let file_name = match path.file_name() {
             Some(name) => name.to_string_lossy().to_string(),
             None => {
-                log::error!("[FsEvent] Unable to get event file path name!!! {path:?}",);
+                log::error!("Unable to get event file path name!!! {path:?}",);
                 Default::default()
             }
         };
@@ -70,13 +70,13 @@ impl Event {
 
         // Skip ignore paths
         if is_match(ignore, &*path.to_string_lossy()) {
-            log::trace!(r#"[WatchService] Ignored "{file_name}""#);
+            log::trace!(r#""{file_name}" ignored"#);
             return None;
         }
 
         // Skip if Unsupported event
         if let EventKind::Other(kind) = kind {
-            log::trace!(r#"[WatchService] Skip {:?} of "{file_name}""#, kind,);
+            log::trace!(r#"Skip {:?} of "{file_name}""#, kind,);
             return None;
         }
 
@@ -90,7 +90,7 @@ impl Event {
         // Skip when last run was less then 1 second agot
         let last_run = state.last_run();
         if !(last_run > 1) {
-            log::trace!("[WatchService] Skip [last_run: {last_run}] [{event}]");
+            log::trace!("Skip [last_run: {last_run}] [{event}]");
             return None;
         }
 
@@ -172,16 +172,16 @@ impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use EventKind::*;
         let event_name = match &self.kind {
-            FolderCreated | FileCreated => "Created",
-            FolderRemoved | FileRemoved => "Removed",
-            FileUpdated => "Updated",
-            FileRenamed => "Renamed",
+            FolderCreated | FileCreated => "created",
+            FolderRemoved | FileRemoved => "removed",
+            FileUpdated => "modified",
+            FileRenamed => "renamed",
             Other(event) => {
                 log::trace!("[FsEvent] Other: {:?}", event);
                 "other"
             }
             _ => "",
         };
-        write!(f, "{:?} [{event_name}]", self.file_name)
+        write!(f, "[{event_name}] {:?}", self.file_name)
     }
 }

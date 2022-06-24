@@ -16,6 +16,12 @@ impl RequestHandler for BuildRequest {
         let state = DAEMON_STATE.clone();
         let ref mut state = state.lock().await;
 
+        let (title, sep) = crate::util::handler_log_content("Build", &self.client);
+        log::info!("{sep}");
+        log::info!("{title}");
+        log::trace!("\n\n{:#?}\n", &self);
+        log::info!("{sep}");
+
         if self.ops.is_once() {
             return self.trigger(state, &Event::default()).await;
         }
@@ -48,11 +54,9 @@ impl RequestHandler for BuildRequest {
 #[async_trait]
 impl Watchable for BuildRequest {
     async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
-        log::info!("Building {}", self.client.abbrev_root());
-
         let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
-        let (stream, _) = state.projects.get(root)?.build(&config, None)?;
+        let (stream, args) = state.projects.get(root)?.build(&config, None)?;
         let nvim = state.clients.get(&self.client.pid)?;
         let logger = &mut nvim.logger();
 
@@ -62,10 +66,15 @@ impl Watchable for BuildRequest {
             config.target
         ));
 
-        let success = logger.consume_build_logs(stream, false, is_once).await?;
+        log::info!("[target: {}] building .....", self.settings.target);
+        let success = logger.consume_build_logs(stream, false, !is_once).await?;
         if !success {
             let ref msg = format!("Failed: {} ", config.to_string());
             nvim.echo_err(msg).await?;
+            log::error!("[target: {}] failed to be built", self.settings.target);
+            log::error!("[ran: 'xcodebuild {}']", args.join(" "));
+        } else {
+            log::info!("[target: {}] built successfully", self.settings.target);
         };
 
         Ok(())

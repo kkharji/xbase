@@ -124,12 +124,7 @@ impl Project for BareboneProject {
         project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
         project.targets = project.xcodeproj.targets_platform();
 
-        log::info!(
-            "(name: {:?}, targets: {:?})",
-            project.name(),
-            project.targets()
-        );
-
+        log::info!("targets: {:?}", project.targets());
         Ok(project)
     }
 }

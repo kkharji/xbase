@@ -140,7 +140,7 @@ impl<'a> Logger<'a> {
             return Ok(win);
         }
 
-        log::info!("Openning a new window");
+        log::trace!("Openning a new window");
 
         if self.open_cmd.is_none() {
             let v = self.nvim.get_window_direction(None).await?;

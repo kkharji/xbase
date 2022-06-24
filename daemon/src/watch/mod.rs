@@ -72,7 +72,7 @@ impl WatchService {
                             .clients
                             .echo_msg(&client.root, name, "new compilation database generated ✅")
                             .await;
-                        info!("Recompiled: {name:?}");
+                        info!("[{name}] recompiled successfully");
                     }
                     _ => (),
                 }
@@ -113,7 +113,7 @@ impl WatchService {
 
                 // IGNORE EVENTS OF RENAME FOR PATHS THAT NO LONGER EXISTS
                 if !event.path().exists() && event.is_rename_event() {
-                    log::debug!("Ignoring {}", event);
+                    log::debug!("{} [ignored]", event);
                     continue;
                 }
 
@@ -146,14 +146,14 @@ impl WatchService {
                 let watcher = state.watcher.get_mut(root).unwrap();
 
                 for key in discards.iter() {
-                    info!("Remove {key:?}");
+                    info!("[{key:?}] discarded");
                     watcher.listeners.remove(key);
                 }
 
                 discards.clear();
                 internal_state.update_debounce();
 
-                info!("Processed: {event}");
+                info!("{event} consumed successfully");
             }
 
             info!("Dropped {:?}!!", client.root);

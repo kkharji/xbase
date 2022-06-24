@@ -90,8 +90,6 @@ impl SimulatorRunner {
             &self.app_id,
         ];
 
-        log::debug!("Launching app with {args:?}");
-
         process.args(args);
 
         logger.append(self.connected_msg()).await?;

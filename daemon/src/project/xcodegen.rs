@@ -62,13 +62,11 @@ impl ProjectCompile for XCodeGenProject {
 
         arguments.push(format!("SYMROOT={cache_root}"));
 
-        log::debug!(
-            "Updating compile database with: `xcodebuild {}`",
-            arguments.join(" ")
-        );
+        log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
 
         let compile_db = CC::generate(&root, &arguments).await?;
         let json = serde_json::to_vec_pretty(&compile_db)?;
+        log::debug!("[{}] compiled successfully", self.name());
         tokio::fs::write(root.join(".compile"), &json).await?;
 
         Ok(())
@@ -89,7 +87,7 @@ impl ProjectGenerate for XCodeGenProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self) -> Result<()> {
-        log::info!("generating xcodeproj with xcodegen");
+        log::info!("generating ...");
 
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
         process.current_dir(self.root());
@@ -143,15 +141,10 @@ impl Project for XCodeGenProject {
             project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
             project.targets = project.xcodeproj.targets_platform();
         } else {
-            log::info!("no xcodeproj found at {root:?}");
             project.generate().await?;
         }
 
-        log::info!(
-            "(name: {:?}, targets: {:?})",
-            project.name(),
-            project.targets()
-        );
+        log::info!("[{}] targets: {:?}", project.name(), project.targets());
         Ok(project)
     }
 }

@@ -9,13 +9,13 @@ use xbase_proto::IntoResult;
 #[derive(Default, Debug, derive_deref_rs::Deref, Serialize)]
 pub struct ProjectStore(HashMap<PathBuf, Box<dyn Project + Send>>);
 
-// TODO(projects): pressist a list of projects paths and information
+// TODO(projects): presist a list of projects paths and information
 impl ProjectStore {
     pub async fn add(&mut self, client: &Client) -> Result<()> {
-        log::info!("Add: {:?}", client.abbrev_root());
-
         let key = client.root.to_path_buf();
         let project = project(client).await?;
+
+        log::info!("[{}] added", project.name());
 
         self.0.insert(key, project);
 
@@ -23,11 +23,15 @@ impl ProjectStore {
     }
 
     pub fn get_mut(&mut self, root: &PathBuf) -> Result<&mut Box<dyn Project + Send>> {
-        self.0.get_mut(root).into_result("Project".into(), root)
+        let project = self.0.get_mut(root).into_result("Project".into(), root)?;
+        log::trace!("[{}] accessed", project.name());
+        Ok(project)
     }
 
     pub fn get(&self, root: &PathBuf) -> Result<&Box<dyn Project + Send>> {
-        self.0.get(root).into_result("Project", root)
+        let project = self.0.get(root).into_result("Project", root)?;
+        log::trace!("[{}] accessed", project.name());
+        Ok(project)
     }
 
     /// Remove project using root and pid.
@@ -46,7 +50,7 @@ impl ProjectStore {
 
         // Remove project only when no more client using that data.
         if project.clients().is_empty() {
-            log::info!("Remove: {:?}", client.abbrev_root());
+            log::info!("[{}] removed", project.name());
             return Ok(self.0.remove(root));
         }
 
