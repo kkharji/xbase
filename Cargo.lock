@@ -1202,7 +1202,7 @@ dependencies = [
  "rmp",
  "rmpv",
  "tokio",
- "tokio-util",
+ "tokio-util 0.6.10",
 ]
 
 [[package]]
@@ -1913,7 +1913,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-serde",
- "tokio-util",
+ "tokio-util 0.6.10",
  "tracing",
  "tracing-opentelemetry",
 ]
@@ -2067,6 +2067,20 @@ dependencies = [
  "pin-project-lite",
  "slab",
  "tokio",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc463cd8deddc3770d20f9852143d50bf6094e640b485cb2e189a2099085ff45"
+dependencies = [
+ "bytes 1.1.0",
+ "futures-core",
+ "futures-sink",
+ "pin-project-lite",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2509,7 +2523,7 @@ dependencies = [
  "tarpc",
  "thiserror",
  "tokio-serde",
- "tokio-util",
+ "tokio-util 0.7.3",
  "which",
 ]
 
