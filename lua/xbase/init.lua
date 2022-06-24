@@ -29,7 +29,6 @@ end
 
 --- Register current neovim client
 M.register = function(root)
-  M.lib.ensure()
   M.lib.register(root)
 end
 

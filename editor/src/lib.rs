@@ -56,22 +56,23 @@ macro_rules! spawn {
     };
 }
 
+fn ensure(lua: &Lua) -> Result<()> {
+    if let Ok(stream) = UnixStream::connect(DAEMON_SOCKET_PATH) {
+        stream.shutdown(Shutdown::Both).ok();
+    } else {
+        Command::new(&*DAEMON_BINARY_PATH).spawn().unwrap();
+        std::thread::sleep(std::time::Duration::new(1, 0));
+        lua.info("daemon initialized")?;
+    }
+    Ok(())
+}
+
 struct DaemonClient;
 
 impl LuaUserData for DaemonClient {
     fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_function("ensure", |lua, _: ()| {
-            if let Ok(stream) = UnixStream::connect(DAEMON_SOCKET_PATH) {
-                stream.shutdown(Shutdown::Both).ok();
-            } else {
-                Command::new(&*DAEMON_BINARY_PATH).spawn().unwrap();
-                std::thread::sleep(std::time::Duration::new(1, 0));
-                lua.info(&"XBase: daemon initialized");
-            }
-            Ok(())
-        });
-
         methods.add_async_function("register", |lua, root: Option<String>| async move {
+            ensure(lua)?;
             let client = client();
             let req = RegisterRequest {
                 client: Client::new(lua, root)?,
@@ -79,7 +80,7 @@ impl LuaUserData for DaemonClient {
 
             let _path = spawn!({ client.register(context::current(), req) }).await??;
 
-            lua.info(&"XBase: ✅");
+            lua.info("Connected")?;
 
             Ok(())
         });

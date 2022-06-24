@@ -1,5 +1,4 @@
 local config = {}
-local log = require "xbase.log"
 
 _XBASECONFIG = _XBASECONFIG or {}
 
@@ -8,6 +7,7 @@ config.values = _XBASECONFIG
 ---@class xbaseOptions
 local defaults = {
   --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
+  --- TODO(nvim): Use log_level to set tracing log level
   log_level = "debug",
   --- Default log buffer direction: { "horizontal", "vertical", "float" }
   default_log_buffer_direction = "horizontal",
@@ -130,7 +130,6 @@ config.set = function(opts)
       config.values = _XBASECONFIG
     end
   end
-  log.level = opts.log_level or defaults.log_level
 end
 
 config.set()
