@@ -1,4 +1,21 @@
 # Changelog
+## 🔥 [Unreleased](https://github.com/tami5/xbase)
+### <!-- 0 -->Features
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/73801509728418db3a6a3633ed6b189766ad11c3">Support xcworkspace (#101)</a></b> <code>#general</code> <u><b>....</b></u></summary><br />
+
+- When xcworkspace exists, use it instead of xcodeproj when compiling and recompiling projects.
+- When xcworkspace exists, build target are passed with `-scheme` flag, so targets and scheme need to have the same name.
+- speed up tuist setup through compiling the Manifest scheme instead of each target</details></dd></dl>
+
+### <!-- 2 -->Refactor
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/d5b4ea1ec33d6aea4f13f869cfcdcdb6a105b86e">Switch to tarpc framework</a></b> <code>#general</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/f45bfbd40eb20cc7ced7c79943331bb0af8e2368">Rename lualib to editor-lib</a></b> <code>#general</code></summary></details></dd></dl>
+
+### <!-- 3 -->Enhancement
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/99340ce2c5185c5fa85c2c8d181e467be278f240">Formatting, display and readability</a></b> <code>#logger</code></summary></details></dd></dl>
+
+
 ## 🎉 [v0.2.0](https://github.com/tami5/xbase/tree/v0.2.0) - 2022-06-22
 ### <!-- 0 -->Features
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/64f75911500ccce0d2771d0095a3e03189a2d99c">Always allow provisioning updates</a></b> <code>#build</code> <u><b>....</b></u></summary><br />

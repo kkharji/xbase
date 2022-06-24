@@ -221,6 +221,12 @@ tail -f /tmp/xbase-daemon.log
 tail -f /tmp/xbase-server.log
 ```
 
+In case, you need to manually stop servers:
+
+```bash
+killall xbase xbase-sourcekit-helper
+```
+
 ## 🎥 Preview
 
 Watch build service.
