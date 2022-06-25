@@ -1,24 +1,10 @@
 use crate::types::*;
-use crate::util::into_request;
 use crate::util::value_or_default;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 #[cfg(feature = "neovim")]
 use mlua::prelude::*;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Message {
-    Build(BuildRequest),
-    Run(RunRequest),
-    Register(RegisterRequest),
-    Drop(DropRequest),
-}
-
-into_request!(Build);
-into_request!(Run);
-into_request!(Register);
-into_request!(Drop);
 
 /// Request to build a particular project
 #[derive(Clone, Debug, Serialize, Deserialize)]

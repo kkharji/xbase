@@ -8,20 +8,7 @@ pub use error::*;
 pub use message::*;
 pub use types::*;
 
-use serde::{Deserialize, Serialize};
-
 pub type Result<T, E = Error> = std::result::Result<T, E>;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Request {
-    pub message: Message,
-}
-
-impl Request {
-    pub fn read(value: String) -> Result<Self> {
-        Ok(serde_json::from_str(value.trim())?)
-    }
-}
 
 #[tarpc::service]
 pub trait XBase {

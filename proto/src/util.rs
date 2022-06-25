@@ -9,19 +9,6 @@ where
     Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or_default())
 }
 
-macro_rules! into_request {
-    ($type:ident) => {
-        paste::paste! {
-            impl From<[<$type Request>]> for crate::Request {
-                fn from(msg: [<$type Request>]) -> Self {
-                    let message = crate::Message::$type(msg);
-                    Self { message }
-                }
-            }
-        }
-    };
-}
-pub(crate) use into_request;
 #[cfg(feature = "neovim")]
 use mlua::prelude::*;
 
