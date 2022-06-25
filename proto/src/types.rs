@@ -242,3 +242,52 @@ impl BufferDirection {
         }
     }
 }
+
+/// Logging Task
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct LoggingTask {
+    source: PathBuf,
+    status: LoggingTaskStatus,
+    title: String,
+    description: Option<String>,
+}
+
+#[cfg(feature = "neovim")]
+impl LuaUserData for LoggingTask {}
+
+/// Logging Task Status
+///
+/// This is used to indicate the status of a logging task.
+#[derive(Clone, Debug, EnumString, EnumDisplay, Serialize, Deserialize)]
+pub enum LoggingTaskStatus {
+    /// A New Logging task that isn't yet processed
+    Created,
+    /// A Logging task that is wating for and cosuming loggs
+    Consuming,
+    /// Like [`LoggingTaskStatus::Cosuming`] but meant for a long running tasks.
+    Running,
+    /// A Logging task that ended with success stats code
+    Succeeded,
+    /// A Logging task that errored
+    Errored,
+}
+
+impl Default for LoggingTaskStatus {
+    fn default() -> Self {
+        Self::Created
+    }
+}
+
+#[cfg(feature = "neovim")]
+impl<'a> FromLua<'a> for LoggingTaskStatus {
+    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+        use std::str::FromStr;
+        if let LuaValue::String(ref value) = value {
+            Self::from_str(value.to_str()?).to_lua_err()
+        } else {
+            Err(LuaError::external(
+                "Expected a string value for BuildConfiguration",
+            ))
+        }
+    }
+}
