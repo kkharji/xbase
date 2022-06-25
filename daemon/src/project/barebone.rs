@@ -74,8 +74,12 @@ impl ProjectCompile for BareboneProject {
         }
 
         log::info!("xcodebuild {}", args.join(" "));
+        let mut xclogger = XCLogger::new(&root, &args)?;
+        let compile_commands = xclogger.compile_commands.clone();
+        xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
+        let compile_commands = compile_commands.lock().await;
+        let compile_commands = CC::new(compile_commands.to_vec());
 
-        let compile_commands = CC::generate(&root, &args).await?.to_vec();
         let json = serde_json::to_vec_pretty(&compile_commands)?;
 
         tokio::fs::write(root.join(".compile"), &json).await?;

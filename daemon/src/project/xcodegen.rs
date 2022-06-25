@@ -64,7 +64,12 @@ impl ProjectCompile for XCodeGenProject {
 
         log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
 
-        let compile_db = CC::generate(&root, &arguments).await?;
+        let mut xclogger = XCLogger::new(&root, &arguments)?;
+        let compile_commands = xclogger.compile_commands.clone();
+        xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
+        let compile_commands = compile_commands.lock().await;
+
+        let compile_db = CC::new(compile_commands.to_vec());
         let json = serde_json::to_vec_pretty(&compile_db)?;
         log::debug!("[{}] compiled successfully", self.name());
         tokio::fs::write(root.join(".compile"), &json).await?;

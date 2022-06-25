@@ -19,7 +19,7 @@ pub fn setup(
 ) -> Result<(), SetGlobalDefaultError> {
     let default_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::from_default_env().add_directive(default_level.into()))
-        .add_directive("tarpc::server=warn".parse().unwrap());
+        .add_directive("tarpc=error".parse().unwrap());
 
     let fmt_file = Layer::new()
         .with_writer(rolling::never(root, filename))

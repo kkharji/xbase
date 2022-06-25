@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use crate::{constants::DAEMON_STATE, Result};
+use process_stream::ProcessExt;
 use process_stream::{Process, StreamExt};
 use tokio::task::JoinHandle;
 use xbase_proto::Client;
@@ -20,7 +21,7 @@ impl RunServiceHandler {
     ) -> Result<Self> {
         let (key, target, client) = (key.clone(), target.clone(), client.clone());
         let mut stream = process.spawn_and_stream()?;
-        let kill_send = process.clone_kill_sender().unwrap();
+        let kill_send = process.killer().unwrap();
 
         let inner = tokio::spawn(async move {
             // TODO: find a better way to close this!

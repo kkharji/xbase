@@ -62,7 +62,6 @@ impl ProjectRun for TuistProject {}
 #[async_trait::async_trait]
 impl ProjectCompile for TuistProject {
     async fn update_compile_database(&self) -> Result<()> {
-        use xclog::XCCompilationDatabase as CC;
         use xclog::XCCompileCommand as C;
 
         let name = self.name();
@@ -84,7 +83,12 @@ impl ProjectCompile for TuistProject {
             ]);
 
             log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
-            compile_commands.extend(CC::generate(&root, &arguments).await?.to_vec());
+
+            let mut xclogger = XCLogger::new(&root, &arguments)?;
+            let xccommands = xclogger.compile_commands.clone();
+            xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
+            let xccommands = xccommands.lock().await;
+            compile_commands.extend(xccommands.to_vec());
         }
 
         // Compile Project
@@ -101,7 +105,11 @@ impl ProjectCompile for TuistProject {
 
             log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
 
-            compile_commands.extend(CC::generate(&root, &arguments).await?.to_vec());
+            let mut xclogger = XCLogger::new(&root, &arguments)?;
+            let xccommands = xclogger.compile_commands.clone();
+            xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
+            let xccommands = xccommands.lock().await;
+            compile_commands.extend(xccommands.to_vec());
         }
 
         log::debug!("[{}] compiled successfully", self.name());

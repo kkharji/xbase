@@ -9,6 +9,7 @@ use anyhow::Context;
 use async_stream::stream;
 use barebone::BareboneProject;
 use futures::StreamExt;
+use process_stream::ProcessExt;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use xbase_proto::{BuildSettings, Client};
@@ -81,9 +82,10 @@ pub trait ProjectBuild: ProjectData {
         log::trace!("building with [{}]", args.join(" "));
 
         let mut xclogger = XCLogger::new(self.root(), &args)?;
+        let mut output_stream = xclogger.spawn_and_stream()?;
         let stream = stream! {
-            while let Some(output) =  xclogger.next().await {
-                if output.is_result() && output.starts_with("[Exit]") {
+            while let Some(output) =  output_stream.next().await {
+                if output.is_exit() {
                     if !output.strip_prefix("[Exit] ").map(|s| s == "0").unwrap_or_default() {
                         yield String::from("FAILED")
                     }

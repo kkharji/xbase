@@ -6,6 +6,7 @@ use crate::{
     watch::{Event, Watchable},
     Result,
 };
+use process_stream::ProcessExt;
 use std::sync::Arc;
 use tap::Pipe;
 use tokio::sync::Mutex;
