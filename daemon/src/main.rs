@@ -1,10 +1,9 @@
 use log::Level;
-use std::path::PathBuf;
 use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::net::UnixListener;
+use xbase::constants::*;
 use xbase::util::pid;
-use xbase::{constants::*, RequestHandler};
 use xbase_proto::*;
 
 #[derive(Clone)]
@@ -12,30 +11,29 @@ struct Server;
 
 #[tarpc::server]
 impl xbase_proto::XBase for Server {
-    /// Register project root with a path to setup logs
-    async fn register(self, _: Context, req: RegisterRequest) -> Result<PathBuf> {
-        req.handle().await?;
-        Ok("/bin/cp".into())
+    async fn register(self, _: Context, req: RegisterRequest) -> Result<Vec<LoggingTask>> {
+        xbase::register::handle(req).await
     }
-    /// Build Project and get path to where to build log will be located
-    async fn build(self, _: Context, req: BuildRequest) -> Result<PathBuf> {
+
+    async fn build(self, _: Context, req: BuildRequest) -> Result<LoggingTask> {
         // NOTE: Required because of nvim-rs
-        tokio::spawn(async { req.handle().await });
-        Ok(PathBuf::default())
+        tokio::spawn(async { xbase::build::handle(req).await });
+        Ok(LoggingTask::default())
     }
-    /// Run Project and get path to where to Runtime log will be located
-    async fn run(self, _: Context, req: RunRequest) -> Result<PathBuf> {
+
+    async fn run(self, _: Context, req: RunRequest) -> Result<LoggingTask> {
         // NOTE: Required because of nvim-rs
-        tokio::spawn(async { req.handle().await });
-        Ok(PathBuf::default())
+        tokio::spawn(async { xbase::run::handle(req).await });
+        Ok(Default::default())
     }
-    /// Drop project root
+
     async fn drop(self, _: Context, req: DropRequest) -> Result<()> {
         // NOTE: Required because of nvim-rs
-        tokio::spawn(async { req.handle().await });
+        tokio::spawn(async { xbase::drop::handle(req).await });
         Ok(())
     }
 }
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ensure_single_instance().await?;

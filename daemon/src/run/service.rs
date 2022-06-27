@@ -6,7 +6,6 @@ use crate::{
     watch::{Event, Watchable},
     Result,
 };
-use process_stream::ProcessExt;
 use std::sync::Arc;
 use tap::Pipe;
 use tokio::sync::Mutex;
@@ -68,7 +67,7 @@ impl Watchable for RunService {
 
         let mut handler = self.handler.clone().lock_owned().await;
 
-        handler.process().kill().await;
+        handler.process().abort();
         handler.inner().abort();
 
         let target = &settings.target;
@@ -101,7 +100,7 @@ impl Watchable for RunService {
     /// Drop watchable for watching a given file system
     async fn discard(&self, _state: &MutexGuard<State>) -> Result<()> {
         let handler = self.handler.clone().lock_owned().await;
-        handler.process().kill().await;
+        handler.process().abort();
         handler.inner().abort();
         Ok(())
     }

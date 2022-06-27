@@ -4,13 +4,12 @@ pub mod fmt;
 pub mod fs;
 pub mod pid;
 
-use crate::OutputStream;
-use process_stream::{ProcessItem, StreamExt};
+use process_stream::{ProcessItem, ProcessStream, StreamExt};
 use xbase_proto::Client;
 
 /// Consume given stream and return whether the stream exist with 0
 /// TODO(project): log build and compile logs to client
-pub async fn consume_and_log(mut stream: OutputStream) -> (bool, Vec<String>) {
+pub async fn consume_and_log(mut stream: ProcessStream) -> (bool, Vec<String>) {
     let mut success = false;
     let mut items = vec![];
     while let Some(output) = stream.next().await {
@@ -24,7 +23,7 @@ pub async fn consume_and_log(mut stream: OutputStream) -> (bool, Vec<String>) {
     (success, items)
 }
 
-pub fn handler_log_content(reqname: &str, client: &Client) -> (String, String) {
+pub fn _log_content(reqname: &str, client: &Client) -> (String, String) {
     let title = format!(
         "{reqname} [{}:{}]..................",
         client.abbrev_root(),
@@ -33,3 +32,23 @@ pub fn handler_log_content(reqname: &str, client: &Client) -> (String, String) {
     let sep = ".".repeat(title.len());
     (title, sep)
 }
+
+macro_rules! log_request {
+    ($name:literal, $client:ident) => {{
+        let (title, sep) = crate::util::_log_content($name, &$client);
+        log::info!("{sep}",);
+        log::info!("{title}",);
+        log::info!("{sep}",);
+        sep
+    }};
+    ($name:literal, $client:ident, $req:ident) => {{
+        let (title, sep) = crate::util::_log_content($name, &$client);
+        log::info!("{sep}");
+        log::info!("{title}");
+        log::trace!("\n\n{:#?}\n", $req);
+        log::info!("{sep}");
+        sep
+    }};
+}
+
+pub(crate) use log_request;

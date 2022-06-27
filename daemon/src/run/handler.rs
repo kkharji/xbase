@@ -21,7 +21,7 @@ impl RunServiceHandler {
     ) -> Result<Self> {
         let (key, target, client) = (key.clone(), target.clone(), client.clone());
         let mut stream = process.spawn_and_stream()?;
-        let kill_send = process.killer().unwrap();
+        let abort = process.aborter().unwrap();
 
         let inner = tokio::spawn(async move {
             // TODO: find a better way to close this!
@@ -35,7 +35,7 @@ impl RunServiceHandler {
                     Err(_) => {
                         log::warn!("Nvim Instance closed, closing runner ..");
                         state.watcher.get_mut(&client.root)?.listeners.remove(&key);
-                        kill_send.send(()).await.ok();
+                        abort.notify_waiters();
                         break;
                     }
                 };

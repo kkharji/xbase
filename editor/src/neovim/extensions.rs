@@ -1,24 +1,12 @@
-use super::NvimState;
 use mlua::prelude::*;
 
 pub(crate) trait NvimGlobal {
     fn vim(&self) -> LuaResult<LuaTable>;
-    fn state(&self) -> LuaResult<NvimState>;
-    fn set_state(&self, state: NvimState) -> LuaResult<()>;
 }
 
 impl NvimGlobal for Lua {
     fn vim(&self) -> LuaResult<LuaTable> {
         self.globals().get("vim")
-    }
-
-    fn state(&self) -> LuaResult<NvimState> {
-        self.vim()?.get::<_, LuaTable>("g")?.get("xbase")
-    }
-
-    fn set_state(&self, state: NvimState) -> LuaResult<()> {
-        self.vim()?.get::<_, LuaTable>("g")?.set("xbase", state)?;
-        Ok(())
     }
 }
 

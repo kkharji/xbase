@@ -610,7 +610,7 @@ dependencies = [
  "futures-sink",
  "futures-task",
  "memchr",
- "pin-project-lite",
+ "pin-project-lite 0.2.9",
  "pin-utils",
  "slab",
  "tokio-io",
@@ -876,6 +876,18 @@ dependencies = [
  "bindgen",
  "errno",
  "libc",
+]
+
+[[package]]
+name = "linemux"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "faffd44046d5dcc8b31e76840fa2a9e975b3b6e6ad2db576cf71dca8c27945b9"
+dependencies = [
+ "futures-util",
+ "notify 5.0.0-pre.15",
+ "pin-project-lite 0.1.12",
+ "tokio",
 ]
 
 [[package]]
@@ -1418,6 +1430,12 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "257b64915a082f7811703966789728173279bdebb956b143dbcd23f6f970a777"
+
+[[package]]
+name = "pin-project-lite"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
@@ -1484,22 +1502,9 @@ dependencies = [
 
 [[package]]
 name = "process-stream"
-version = "0.2.6"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5371958d5ffe701708ab866e4d6839f7940a20b1133124959e371f7ef6c9cd84"
-dependencies = [
- "async-stream",
- "futures 0.3.21",
- "tap",
- "tokio",
- "tokio-stream",
-]
-
-[[package]]
-name = "process-stream"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "396ef89a4907712cf2542cfa475225ef7f5d2c2a6664ce7748e44c4980b9de30"
+checksum = "3393bf8403a4ca728aafcc4b7fd899c1db520c47d9273f2ab7d69e86d67c3390"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -2012,7 +2017,7 @@ dependencies = [
  "num_cpus",
  "once_cell",
  "parking_lot",
- "pin-project-lite",
+ "pin-project-lite 0.2.9",
  "signal-hook-registry",
  "socket2",
  "tokio-macros",
@@ -2064,7 +2069,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df54d54117d6fdc4e4fea40fe1e4e566b3505700e148a6827e59b34b0d2600d9"
 dependencies = [
  "futures-core",
- "pin-project-lite",
+ "pin-project-lite 0.2.9",
  "tokio",
 ]
 
@@ -2079,7 +2084,7 @@ dependencies = [
  "futures-io",
  "futures-sink",
  "log 0.4.17",
- "pin-project-lite",
+ "pin-project-lite 0.2.9",
  "slab",
  "tokio",
 ]
@@ -2092,7 +2097,7 @@ checksum = "a400e31aa60b9d44a52a8ee0343b5b18566b03a8321e0d321f695cf56e940160"
 dependencies = [
  "cfg-if 1.0.0",
  "log 0.4.17",
- "pin-project-lite",
+ "pin-project-lite 0.2.9",
  "tracing-attributes",
  "tracing-core",
 ]
@@ -2486,12 +2491,13 @@ dependencies = [
  "lazy_static",
  "libc",
  "libproc",
+ "linemux",
  "log 0.1.0",
  "notify 5.0.0-pre.15",
  "nvim-rs",
  "parity-tokio-ipc",
  "paste",
- "process-stream 0.3.2",
+ "process-stream",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2506,7 +2512,7 @@ dependencies = [
  "wax",
  "which",
  "xbase-proto",
- "xclog 0.3.0",
+ "xclog",
  "xcodeproj",
 ]
 
@@ -2515,8 +2521,10 @@ name = "xbase-editor-lib"
 version = "0.2.0"
 dependencies = [
  "async-trait",
+ "linemux",
  "mlua",
  "once_cell",
+ "process-stream",
  "serde",
  "serde_json",
  "tap",
@@ -2532,18 +2540,20 @@ dependencies = [
  "anyhow",
  "async-trait",
  "futures 0.3.21",
+ "linemux",
  "log 0.1.0",
  "mlua",
  "notify 4.0.17",
  "nvim-rs",
  "paste",
- "process-stream 0.3.2",
+ "process-stream",
  "serde",
  "serde_json",
  "simctl",
  "strum",
  "tarpc",
  "thiserror",
+ "tokio",
  "tokio-serde",
  "tokio-util",
  "which",
@@ -2561,14 +2571,14 @@ dependencies = [
  "serde",
  "serde_json",
  "tap",
- "xclog 0.2.8",
+ "xclog",
 ]
 
 [[package]]
 name = "xclog"
-version = "0.2.8"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79834c8fab2ff7019b1827ae58777f05d90123368481976a1b3e9df032662e80"
+checksum = "1c79fbd09626e697d80fba1d39b2009b2c31c540055d7e9bf23a7e83ebdc1ce4"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -2579,36 +2589,7 @@ dependencies = [
  "lazy_static",
  "parity-tokio-ipc",
  "paste",
- "process-stream 0.2.6",
- "regex",
- "serde",
- "serde_json",
- "shell-words",
- "tap",
- "tokio",
- "tokio-stream",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "wax",
-]
-
-[[package]]
-name = "xclog"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21216587d86a108b42ed44de48755a6dc50a8e0829d4102c13ad2ef4f0e73d15"
-dependencies = [
- "anyhow",
- "async-stream",
- "async-trait",
- "derive-deref-rs",
- "derive_is_enum_variant",
- "lazy-regex",
- "lazy_static",
- "parity-tokio-ipc",
- "paste",
- "process-stream 0.3.2",
+ "process-stream",
  "regex",
  "serde",
  "serde_json",

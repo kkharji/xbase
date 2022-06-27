@@ -20,4 +20,6 @@ xbase-proto     = { path = "../proto/", features = ["neovim"] }
 mlua            = { version = "0.8.0", features = ["lua51", "module", "vendored", "send", "serialize", "async", "macros"] }
 async-trait = "0.1.56"
 serde = { version = "1.0.137", features = ["derive"] }
+linemux = "0.2.3"
+process-stream = { version = "0.4.1", features = ["serde"] }
 

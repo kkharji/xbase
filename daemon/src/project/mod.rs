@@ -85,10 +85,8 @@ pub trait ProjectBuild: ProjectData {
         let mut output_stream = xclogger.spawn_and_stream()?;
         let stream = stream! {
             while let Some(output) =  output_stream.next().await {
-                if output.is_exit() {
-                    if !output.strip_prefix("[Exit] ").map(|s| s == "0").unwrap_or_default() {
-                        yield String::from("FAILED")
-                    }
+                if let Some(false) = output.is_success() {
+                    yield String::from("FAILED")
                 } else {
                     yield output.to_string()
                 }

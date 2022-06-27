@@ -24,6 +24,7 @@ impl NvimLogBuffer {
             line_count: 0,
         })
     }
+
     fn get_last_status(&self, lua: &Lua) -> Result<LoggingTaskStatus> {
         todo!()
     }

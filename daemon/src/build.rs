@@ -1,54 +1,47 @@
 use crate::constants::DAEMON_STATE;
 use crate::state::State;
+use crate::util::log_request;
 use crate::watch::{Event, Watchable};
-use crate::RequestHandler;
 use crate::Result;
 use async_trait::async_trait;
 use tokio::sync::MutexGuard;
-use xbase_proto::BuildRequest;
+use xbase_proto::{BuildRequest, LoggingTask};
 
-#[async_trait]
-impl RequestHandler for BuildRequest {
-    async fn handle(self) -> Result<()>
-    where
-        Self: Sized + std::fmt::Debug,
-    {
-        let state = DAEMON_STATE.clone();
-        let ref mut state = state.lock().await;
+/// Handle build Request
+pub async fn handle(req: BuildRequest) -> Result<LoggingTask> {
+    let state = DAEMON_STATE.clone();
+    let ref mut state = state.lock().await;
+    let client = &req.client;
 
-        let (title, sep) = crate::util::handler_log_content("Build", &self.client);
-        log::info!("{sep}");
-        log::info!("{title}");
-        log::trace!("\n\n{:#?}\n", &self);
-        log::info!("{sep}");
+    log_request!("Build", client, req);
 
-        if self.ops.is_once() {
-            return self.trigger(state, &Event::default()).await;
-        }
-
-        if self.ops.is_watch() {
-            state
-                .clients
-                .get(&self.client.pid)?
-                .set_watching(true)
-                .await?;
-            state.watcher.get_mut(&self.client.root)?.add(self)?;
-        } else {
-            state
-                .clients
-                .get(&self.client.pid)?
-                .set_watching(false)
-                .await?;
-            state
-                .watcher
-                .get_mut(&self.client.root)?
-                .remove(&self.to_string())?;
-        }
-
-        state.sync_client_state().await?;
-
-        Ok(())
+    if req.ops.is_once() {
+        req.trigger(state, &Event::default()).await?;
+        return Ok(LoggingTask::default());
     }
+
+    if req.ops.is_watch() {
+        state
+            .clients
+            .get(&req.client.pid)?
+            .set_watching(true)
+            .await?;
+        state.watcher.get_mut(&req.client.root)?.add(req)?;
+    } else {
+        state
+            .clients
+            .get(&req.client.pid)?
+            .set_watching(false)
+            .await?;
+        state
+            .watcher
+            .get_mut(&req.client.root)?
+            .remove(&req.to_string())?;
+    }
+
+    state.sync_client_state().await?;
+
+    Ok(LoggingTask::default())
 }
 
 #[async_trait]

@@ -31,6 +31,8 @@ pub enum Error {
     #[cfg(feature = "client")]
     #[error("{0}")]
     RPC(#[from] tarpc::client::RpcError),
+    #[error("{0}")]
+    JoinError(#[from] tokio::task::JoinError),
 }
 
 impl From<ErrorInner> for Error {
@@ -66,6 +68,7 @@ impl From<&Error> for ErrorInner {
             Error::Unexpected(_) => res.kind = "General".into(),
             #[cfg(feature = "client")]
             Error::RPC(_) => res.kind = "RPC".into(),
+            Error::JoinError(_) => res.kind = "JoinError".into(),
         };
         res
     }
