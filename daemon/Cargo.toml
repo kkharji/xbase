@@ -41,7 +41,7 @@ nvim-rs               = { version = "0.4.0", features = ["use_tokio"] }
 
 # Other
 tap                   = "1.0.1"
-xclog                 = { version  = "0.2.*",  features = ["with_tracing"] }
+xclog                 = { version  = "0.3.*",  features = ["with_tracing"] }
 simctl                = { git = "https://github.com/xbase-lab/simctl" }
 derive-deref-rs       = { version = "0.1.1"}
 shell-words           = { version  = "1.1.0" }

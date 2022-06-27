@@ -1496,6 +1496,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "process-stream"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3393bf8403a4ca728aafcc4b7fd899c1db520c47d9273f2ab7d69e86d67c3390"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "futures 0.3.21",
+ "tap",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "quote"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2459,7 +2473,7 @@ dependencies = [
  "nvim-rs",
  "parity-tokio-ipc",
  "paste",
- "process-stream",
+ "process-stream 0.2.3",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2530,9 +2544,9 @@ dependencies = [
 
 [[package]]
 name = "xclog"
-version = "0.2.8"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79834c8fab2ff7019b1827ae58777f05d90123368481976a1b3e9df032662e80"
+checksum = "1c79fbd09626e697d80fba1d39b2009b2c31c540055d7e9bf23a7e83ebdc1ce4"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -2543,7 +2557,7 @@ dependencies = [
  "lazy_static",
  "parity-tokio-ipc",
  "paste",
- "process-stream",
+ "process-stream 0.4.1",
  "regex",
  "serde",
  "serde_json",
