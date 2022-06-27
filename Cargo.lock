@@ -1484,11 +1484,25 @@ dependencies = [
 
 [[package]]
 name = "process-stream"
-version = "0.2.3"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e40c5b4dbbb43ea9d5d8b3b79b259741fb81948bd1c953ab4ede5cf196ef112b"
+checksum = "5371958d5ffe701708ab866e4d6839f7940a20b1133124959e371f7ef6c9cd84"
 dependencies = [
  "async-stream",
+ "futures 0.3.21",
+ "tap",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
+name = "process-stream"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3393bf8403a4ca728aafcc4b7fd899c1db520c47d9273f2ab7d69e86d67c3390"
+dependencies = [
+ "async-stream",
+ "async-trait",
  "futures 0.3.21",
  "tap",
  "tokio",
@@ -2459,7 +2473,7 @@ dependencies = [
  "nvim-rs",
  "parity-tokio-ipc",
  "paste",
- "process-stream",
+ "process-stream 0.4.1",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2543,7 +2557,7 @@ dependencies = [
  "lazy_static",
  "parity-tokio-ipc",
  "paste",
- "process-stream",
+ "process-stream 0.2.6",
  "regex",
  "serde",
  "serde_json",
