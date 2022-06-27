@@ -1,11 +1,13 @@
 use super::handler::RunServiceHandler;
+use crate::logger::Logger;
 use crate::run::get_runner;
 use crate::{
+    constants::State,
     device::Device,
-    state::State,
     watch::{Event, Watchable},
     Result,
 };
+use std::path::PathBuf;
 use std::sync::Arc;
 use tap::Pipe;
 use tokio::sync::Mutex;
@@ -29,6 +31,18 @@ impl std::fmt::Display for RunService {
 
 impl RunService {
     pub async fn new(state: &mut MutexGuard<'_, State>, req: RunRequest) -> Result<Self> {
+        let logger = Logger::new(
+            format!("Run {}", req.client.abbrev_root()),
+            format!(
+                "run_{}_{}.log",
+                req.settings.target,
+                req.client.abbrev_root().replace("/", "_")
+            ),
+            &req.client.root,
+        )
+        .await?;
+        let weak_logger = state.loggers.push(logger);
+        let logger = weak_logger.upgrade().unwrap();
         let key = req.to_string();
         let RunRequest {
             client,
@@ -40,8 +54,10 @@ impl RunService {
         let device = state.devices.from_lookup(device);
         let is_once = req.ops.is_once();
 
-        let process = get_runner(state, &client, &settings, device.as_ref(), is_once).await?;
-        let handler = RunServiceHandler::new(&key, target, &client, process)?
+        let process =
+            get_runner(state, &client, &settings, device.as_ref(), is_once, &logger).await?;
+
+        let handler = RunServiceHandler::new(&key, target, &client, process, weak_logger)?
             .pipe(Mutex::new)
             .pipe(Arc::new);
 
@@ -65,6 +81,12 @@ impl Watchable for RunService {
             ..
         } = self;
 
+        let logger = state.loggers.get(PathBuf::from(Logger::ROOT).join(format!(
+            "run_{}_{}.log",
+            self.settings.target,
+            self.client.abbrev_root().replace("/", "_")
+        )))?;
+
         let mut handler = self.handler.clone().lock_owned().await;
 
         handler.process().abort();
@@ -77,7 +99,8 @@ impl Watchable for RunService {
             key,
             target,
             client,
-            get_runner(state, client, settings, device, false).await?,
+            get_runner(state, client, settings, device, false, &logger).await?,
+            Arc::downgrade(&logger),
         )?;
 
         Ok(())

@@ -36,9 +36,6 @@ wax                   = { version = "0.5.0" }
 # Static
 lazy_static           = { version = "1.4.0" }
 
-# Nvim
-nvim-rs               = { version = "0.4.0", features = ["use_tokio"] }
-
 # Other
 tap                   = "1.0.1"
 xclog                 = { version  = "0.3.*",  features = ["with_tracing"] }

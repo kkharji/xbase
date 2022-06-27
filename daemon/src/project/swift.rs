@@ -1,8 +1,7 @@
 use super::*;
 use crate::watch::Event;
 use crate::{Error, Result};
-use futures::StreamExt;
-use process_stream::{Process, ProcessItem};
+use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
 use tokio::process::Command;
@@ -51,30 +50,17 @@ impl ProjectBuild for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-    ) -> Result<(StringStream, Vec<String>)> {
-        log::info!("Building {}", cfg.target);
-
+        logger: &Arc<Logger>,
+    ) -> Result<Vec<String>> {
+        logger.append(format!("Building {}", cfg.target));
         let args = vec!["build", "--target", &cfg.target];
         let mut process = Process::new("/usr/bin/swift");
 
         process.args(&args);
         process.current_dir(self.root());
+        logger.add_process(Box::new(process))?;
 
-        let mut stream = process.spawn_and_stream()?;
-        let stream = stream! {
-            while let Some(output) =  stream.next().await {
-                if let ProcessItem::Exit(v) = output {
-                    if !v.eq("0") {
-                        yield String::from("FAILED")
-                    }
-                } else {
-                    log::trace!("{output}");
-                    yield output.to_string()
-                }
-
-            }
-        };
-        Ok((stream.boxed(), vec![]))
+        Ok(vec![])
     }
 }
 
@@ -84,8 +70,9 @@ impl ProjectRun for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream, Vec<String>)> {
-        let (build_stream, args) = self.build(cfg, None)?;
+        logger: &Arc<Logger>,
+    ) -> Result<(Box<dyn Runner + Send + Sync>, Vec<String>)> {
+        let args = self.build(cfg, None, logger)?;
 
         let output = std::process::Command::new("/usr/bin/swift")
             .args(["build", "--show-bin-path"])
@@ -105,11 +92,7 @@ impl ProjectRun for SwiftProject {
 
         log::info!("Running {:?} via {bin_path:?}", self.name());
 
-        Ok((
-            Box::new(BinRunner::from_path(&bin_path)),
-            build_stream,
-            args,
-        ))
+        Ok((Box::new(BinRunner::from_path(&bin_path)), args))
     }
 }
 

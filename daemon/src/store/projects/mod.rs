@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use xbase_proto::Client;
 use xbase_proto::IntoResult;
 
-#[derive(Default, Debug, derive_deref_rs::Deref, Serialize)]
+#[derive(Default, Debug, derive_deref_rs::Deref)]
 pub struct ProjectStore(HashMap<PathBuf, Box<dyn Project + Send>>);
 
 // TODO(projects): presist a list of projects paths and information

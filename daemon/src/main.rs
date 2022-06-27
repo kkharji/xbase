@@ -48,14 +48,14 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 let framed = codec_builder.new_framed(s);
                 let transport = transport::new(framed, Json::default());
-                BaseChannel::with_defaults(transport)
-                    .execute(Server.serve())
-                    .await;
+                let channel = BaseChannel::with_defaults(transport);
 
-                let state = DAEMON_STATE.clone();
-                let mut state = state.lock().await;
-                state.validate().await;
+                channel.execute(Server.serve()).await;
             });
+            // TODO: re implement state validatation
+            // let state = DAEMON_STATE.clone();
+            // let mut state = state.lock().await;
+            // state.validate().await;
         } else {
             log::error!("Fail to accept a connection")
         };

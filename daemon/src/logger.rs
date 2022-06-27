@@ -12,23 +12,34 @@ use tokio::{
 };
 use xbase_proto::LoggingTask;
 
+#[derive(Debug)]
 pub struct Logger {
+    /// Logger Purpose
     purpose: String,
-    file_path: PathBuf,
+    /// Where logs will be appended to
+    log_path: PathBuf,
+    /// project root for which the logger is created for.
+    project_root: PathBuf,
+    /// Logger handler
+    pub handle: JoinHandle<()>,
+    /// Sender to be used within the server to write items to file_path
     tx: UnboundedSender<ProcessItem>,
+    /// Abort notifier to stop the logger
     abort: Arc<Notify>,
-    handle: JoinHandle<()>,
 }
 
 impl Logger {
-    pub async fn new<P: AsRef<Path>, S: AsRef<str>>(
-        new_log_file_path: P,
-        purpose: S,
+    pub const ROOT: &'static str = "/private/tmp";
+    pub async fn new(
+        purpose: String,
+        log_file_name: impl AsRef<Path>,
+        project_root: impl AsRef<Path>,
     ) -> Result<Self> {
         let (tx, mut rx) = unbounded_channel();
+        let log_path = PathBuf::from(Self::ROOT).join(log_file_name);
         let abort = Arc::new(tokio::sync::Notify::new());
         let abort1 = abort.clone();
-        let log_file_path = new_log_file_path.as_ref().to_path_buf();
+        let log_file_path = log_path.to_path_buf();
         let log_file = tokio::fs::File::create(&log_file_path).await.unwrap();
         drop(log_file);
 
@@ -72,15 +83,16 @@ impl Logger {
         });
 
         Ok(Self {
-            purpose: purpose.as_ref().to_string(),
-            file_path: new_log_file_path.as_ref().to_path_buf(),
+            purpose,
+            log_path,
+            project_root: project_root.as_ref().to_path_buf(),
             tx,
             abort,
             handle,
         })
     }
 
-    pub fn add_process(&mut self, mut process: Box<dyn ProcessExt + Send>) -> Result<()> {
+    pub fn add_process(&self, mut process: Box<dyn ProcessExt + Send>) -> Result<()> {
         let mut stream = process.spawn_and_stream()?;
         let cancel = self.abort.clone();
         let abort = process.aborter().unwrap();
@@ -108,14 +120,12 @@ impl Logger {
         Ok(())
     }
 
-    pub fn log<S: AsRef<str>>(&self, msg: S) -> Result<()> {
+    pub fn append<S: AsRef<str>>(&self, msg: S) {
         self.tx.send(ProcessItem::Output(msg.as_ref().into())).ok();
-        Ok(())
     }
 
-    pub fn error<S: AsRef<str>>(&self, msg: S) -> Result<()> {
+    pub fn error<S: AsRef<str>>(&self, msg: S) {
         self.tx.send(ProcessItem::Error(msg.as_ref().into())).ok();
-        Ok(())
     }
 
     /// Get a reference to the logger's abort.
@@ -125,18 +135,35 @@ impl Logger {
     }
 
     /// Explicitly Abort/Consume logger
-    pub async fn abort(self) -> Result<()> {
+    pub fn abort(&self) {
         self.abort.notify_waiters();
-        self.handle.await.map_err(Into::into)
     }
 
     /// Get logging task to send to client
     pub fn to_logging_task(&self) -> LoggingTask {
         LoggingTask {
-            path: self.file_path.clone(),
+            path: self.log_path.clone(),
             status: xbase_proto::LoggingTaskStatus::Consuming,
             purpose: self.purpose.clone(),
         }
+    }
+
+    /// Get a reference to the logger's log path.
+    #[must_use]
+    pub fn log_path(&self) -> &PathBuf {
+        &self.log_path
+    }
+
+    /// Get a reference to the logger's project root.
+    #[must_use]
+    pub fn project_root(&self) -> &PathBuf {
+        &self.project_root
+    }
+
+    /// Get a reference to the logger's purpose.
+    #[must_use]
+    pub fn purpose(&self) -> &str {
+        self.purpose.as_ref()
     }
 }
 
@@ -165,8 +192,8 @@ async fn stream_log_file<P: AsRef<Path>>(path: P) -> Result<ProcessStream> {
 async fn test_logger() -> Result<()> {
     log::setup("/tmp", "testsock", log::Level::DEBUG, true)?;
 
-    let address = "/private/tmp/test_process.log";
-    let mut logger = Logger::new(&address, "Testing").await?;
+    let address = "test_process.log";
+    let logger = Logger::new("Testing".to_string(), &address, &"").await?;
     let mut stream = stream_log_file(&address).await?;
 
     log::info!("Adding a process");

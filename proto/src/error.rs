@@ -174,48 +174,6 @@ impl From<simctl::Error> for Error {
     }
 }
 
-#[cfg(feature = "server")]
-use nvim_rs::error::{CallError as NvimCallError, LoopError as NvimLoopError};
-
-#[cfg(feature = "server")]
-impl From<Box<NvimCallError>> for Error {
-    fn from(e: Box<NvimCallError>) -> Self {
-        use nvim_rs::error::*;
-        Self::Unexpected(match &*e {
-            NvimCallError::SendError(e, method) => {
-                let err_msg = match e {
-                    EncodeError::BufferError(e) => e.to_string(),
-                    EncodeError::WriterError(e) => e.to_string(),
-                };
-                format!("{method}(...): {err_msg}")
-            }
-            NvimCallError::DecodeError(ref e, method) => {
-                let err_msg = e.to_string();
-                format!("{method}(...): {err_msg}")
-            }
-            NvimCallError::NeovimError(code, method) => {
-                format!("{method}(...): error code {code:?}")
-            }
-            NvimCallError::WrongValueType(v) => format!("Wrong Value Type: {v:?}"),
-            _ => e.to_string(),
-        })
-    }
-}
-
-#[cfg(feature = "server")]
-impl From<NvimLoopError> for Error {
-    fn from(e: NvimLoopError) -> Self {
-        use nvim_rs::error::*;
-        Self::Unexpected(match e {
-            LoopError::MsgidNotFound(id) => format!("Message with id not found {id}"),
-            LoopError::DecodeError(_, _) => format!("Unable to read message"),
-            LoopError::InternalSendResponseError(_, res) => {
-                format!("Unable to send message: {res:?}")
-            }
-        })
-    }
-}
-
 #[cfg(feature = "neovim")]
 impl From<Error> for mlua::Error {
     fn from(err: Error) -> Self {

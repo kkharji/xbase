@@ -3,15 +3,16 @@ mod swift;
 mod tuist;
 mod xcodegen;
 
+use crate::logger::Logger;
+use crate::Result;
 use crate::{device::*, run::*, util::*, watch::*};
-use crate::{Result, StringStream};
 use anyhow::Context;
-use async_stream::stream;
 use barebone::BareboneProject;
 use futures::StreamExt;
 use process_stream::ProcessExt;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use xbase_proto::{BuildSettings, Client};
 use xclog::{XCBuildSettings, XCLogger};
 use xcodeproj::pbxproj::PBXTargetPlatform;
@@ -52,7 +53,8 @@ pub trait ProjectBuild: ProjectData {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-    ) -> Result<(StringStream, Vec<String>)> {
+        logger: &Arc<Logger>,
+    ) -> Result<Vec<String>> {
         let mut args = cfg.to_args();
 
         args.insert(0, "build".to_string());
@@ -81,19 +83,9 @@ pub trait ProjectBuild: ProjectData {
 
         log::trace!("building with [{}]", args.join(" "));
 
-        let mut xclogger = XCLogger::new(self.root(), &args)?;
-        let mut output_stream = xclogger.spawn_and_stream()?;
-        let stream = stream! {
-            while let Some(output) =  output_stream.next().await {
-                if let Some(false) = output.is_success() {
-                    yield String::from("FAILED")
-                } else {
-                    yield output.to_string()
-                }
-            }
-        };
+        logger.add_process(Box::new(XCLogger::new(self.root(), &args)?));
 
-        Ok((stream.boxed(), args))
+        Ok(args)
     }
 
     /// Get build cache root
@@ -110,15 +102,16 @@ pub trait ProjectRun: ProjectData + ProjectBuild {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream, Vec<String>)> {
-        let (build_stream, args) = self.build(cfg, device)?;
+        logger: &Arc<Logger>,
+    ) -> Result<(Box<dyn Runner + Send + Sync>, Vec<String>)> {
+        let args = self.build(cfg, device, logger)?;
         let info = XCBuildSettings::new_sync(self.root(), &args)?;
         let runner: Box<dyn Runner + Send + Sync> = match device {
             Some(device) => Box::new(SimulatorRunner::new(device.clone(), &info)),
             None => Box::new(BinRunner::from_build_info(&info)),
         };
 
-        Ok((runner, build_stream, args))
+        Ok((runner, args))
     }
 }
 

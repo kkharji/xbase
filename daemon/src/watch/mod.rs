@@ -1,10 +1,9 @@
 mod event;
-mod serialize;
-
 pub use event::{Event, EventKind};
 
 use crate::compile::ensure_server_support;
-use crate::{constants::DAEMON_STATE, state::State, Result};
+use crate::logger::Logger;
+use crate::{constants::State, constants::DAEMON_STATE, Result};
 use async_trait::async_trait;
 use log::{error, info, trace};
 use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
@@ -50,10 +49,18 @@ impl WatchService {
     pub async fn new(client: Client, ignore_pattern: Vec<String>) -> Result<Self> {
         let listeners = Default::default();
 
+        let logger = Logger::new(
+            format!("Watch {}", client.root.display()),
+            format!("watch_{}.log", client.abbrev_root().replace("/", "_")),
+            &client.root,
+        )
+        .await?;
+
         async fn try_to_recompile<'a>(
             event: &Event,
             client: &Client,
             state: &mut MutexGuard<'a, State>,
+            logger: &Logger,
         ) -> Result<()> {
             let recompiled = event.is_create_event()
                 || event.is_remove_event()
@@ -61,17 +68,14 @@ impl WatchService {
                 || event.is_rename_event() && !event.is_seen();
 
             if recompiled {
-                let ensure = ensure_server_support(state, client, Some(event)).await;
+                let ensure = ensure_server_support(state, client, Some(event), logger).await;
                 match ensure {
                     Err(err) => {
                         log::error!("Ensure server support Errored!! {err:?} ");
                     }
                     Ok(true) => {
                         let ref name = client.abbrev_root();
-                        state
-                            .clients
-                            .echo_msg(&client.root, name, "new compilation database generated ✅")
-                            .await;
+                        logger.append("new compilation database generated ✅");
                         info!("[{name}] recompiled successfully");
                     }
                     _ => (),
@@ -120,7 +124,7 @@ impl WatchService {
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
 
-                try_to_recompile(event, &client, state).await?;
+                try_to_recompile(event, &client, state, &logger).await?;
 
                 let watcher = match state.watcher.get(root) {
                     Ok(w) => w,
@@ -208,5 +212,20 @@ impl InternalState {
     #[must_use]
     pub fn last_path(&self) -> Arc<Mutex<PathBuf>> {
         self.last_path.clone()
+    }
+}
+
+impl std::fmt::Debug for WatchService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let listners = self
+            .listeners
+            .iter()
+            .map(|(key, _)| key.to_string())
+            .collect::<Vec<String>>();
+
+        f.debug_struct("WatchService")
+            .field("listners", &listners)
+            .field("handler", &self.handler)
+            .finish()
     }
 }

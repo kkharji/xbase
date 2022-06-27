@@ -1,5 +1,5 @@
 use crate::device::Device;
-use crate::nvim::Logger;
+use crate::logger::Logger;
 use crate::run::Runner;
 use crate::util::{fmt, pid};
 use crate::{Error, Result};
@@ -17,7 +17,7 @@ pub struct SimulatorRunner {
 
 #[async_trait::async_trait]
 impl Runner for SimulatorRunner {
-    async fn run<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
+    async fn run<'a>(&self, logger: &Logger) -> Result<Process> {
         self.boot(logger).await?;
         self.install(logger).await?;
         self.launch(logger).await
@@ -33,44 +33,42 @@ impl SimulatorRunner {
         }
     }
 
-    pub async fn boot<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
+    pub async fn boot<'a>(&self, logger: &Logger) -> Result<()> {
         match pid::get_by_name("Simulator") {
             Err(Error::Lookup(_, _)) => {
                 let msg = format!("[Simulator] Launching");
                 log::info!("{msg}");
-                logger.append(msg).await?;
+                logger.append(msg);
                 tokio::process::Command::new("open")
                     .args(&["-a", "Simulator"])
                     .spawn()?
                     .wait()
                     .await?;
                 let msg = format!("[Simulator] Connected");
-                logger.append(msg).await?;
-                logger.append(fmt::separator()).await?;
+                logger.append(msg);
+                logger.append(fmt::separator());
             }
             Err(err) => {
                 let msg = err.to_string();
                 log::error!("{msg}");
-                logger.append(msg).await?;
+                logger.append(msg);
             }
             _ => {}
         }
 
-        logger.append(self.booting_msg()).await?;
+        logger.append(self.booting_msg());
         if let Err(e) = self.device.boot() {
             let err: Error = e.into();
             let err_msg = err.to_string();
             if !err_msg.contains("current state Booted") {
-                logger.append(err_msg).await?;
-                logger.set_status_end(false, true).await?;
-                return Err(err);
+                logger.error(err_msg);
             }
         }
         Ok(())
     }
 
-    pub async fn install<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
-        logger.append(self.installing_msg()).await?;
+    pub async fn install<'a>(&self, logger: &Logger) -> Result<()> {
+        logger.append(self.installing_msg());
         self.device
             .install(&self.output_dir)
             .pipe(|res| self.ok_or_abort(res, logger))
@@ -78,8 +76,8 @@ impl SimulatorRunner {
         Ok(())
     }
 
-    pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
-        logger.append(self.launching_msg()).await?;
+    pub async fn launch<'a>(&self, logger: &Logger) -> Result<Process> {
+        logger.append(self.launching_msg());
         let mut process = Process::new("xcrun");
         let args = &[
             "simctl",
@@ -92,21 +90,16 @@ impl SimulatorRunner {
 
         process.args(args);
 
-        logger.append(self.connected_msg()).await?;
-        logger.append(fmt::separator()).await?;
+        logger.append(self.connected_msg());
+        logger.append(fmt::separator());
 
         Ok(process)
     }
 
-    async fn ok_or_abort<'a, T>(
-        &self,
-        res: simctl::Result<T>,
-        logger: &mut Logger<'a>,
-    ) -> Result<()> {
+    async fn ok_or_abort<'a, T>(&self, res: simctl::Result<T>, logger: &Logger) -> Result<()> {
         if let Err(e) = res {
             let error: Error = e.into();
-            logger.append(error.to_string()).await?;
-            logger.set_status_end(false, true).await?;
+            logger.error(error.to_string());
             Err(error)
         } else {
             Ok(())

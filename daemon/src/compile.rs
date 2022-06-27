@@ -1,8 +1,8 @@
 //! Module for generating Compilation Database.
+use crate::logger::Logger;
 use crate::watch::Event;
-use crate::{state::State, Result};
+use crate::{constants::State, Result};
 use std::path::PathBuf;
-use tap::Pipe;
 use tokio::{io::AsyncWriteExt, sync::MutexGuard};
 use xbase_proto::Client;
 
@@ -42,6 +42,7 @@ pub async fn ensure_server_support<'a>(
     state: &'a mut MutexGuard<'_, State>,
     client: &Client,
     event: Option<&Event>,
+    logger: &Logger,
 ) -> Result<bool> {
     let Client { root, pid, .. } = client;
     let ref name = client.abbrev_root();
@@ -51,63 +52,34 @@ pub async fn ensure_server_support<'a>(
     let is_swift_project = root.join("Package.swift").exists();
 
     if !is_swift_project && ensure_server_config(root).await.is_err() {
-        "fail to ensure build server configuration!"
-            .pipe(|msg| state.clients.echo_err(root, name, msg))
-            .await;
-    }
+        logger.error("fail to ensure build server configuration!");
+    };
 
     if let Some(event) = event {
         let project = state.projects.get_mut(root)?;
         let name = project.name().to_string();
         if project.should_generate(event) {
             if let Err(e) = project.generate().await {
-                let mut lines = e
-                    .to_string()
-                    .split("\n")
-                    .map(ToString::to_string)
-                    .collect::<Vec<String>>();
-                if lines.len() == 1 {
-                    state.clients.get(&pid)?.echo_err(&lines[0]).await?;
-                } else {
-                    let first = lines.remove(0);
-                    state.clients.get(&pid)?.echo_err(&first).await?;
-                    let mut logger = state.clients.get(&pid)?.logger();
-                    logger.set_status_end(false, true).await?;
-                    logger.set_title(name);
-                    logger.append(first).await?;
-                    logger.append(lines.join("\n")).await?;
-                }
+                e.to_string().split("\n").for_each(|l| {
+                    logger.error(l);
+                });
                 return Ok(false);
             };
 
+            // TODO: pass logger
             project.update_compile_database().await?;
-            state
-                .clients
-                .get(&pid)?
-                .exec_lua("require'xbase.util'.reload_lsp_servers()", vec![])
-                .await?;
             return Ok(true);
         }
     }
 
     if !is_swift_project && !compile_exists {
-        "⚙ Generating compile database (may take few seconds) .."
-            .pipe(|msg| state.clients.echo_msg(root, name, msg))
-            .await;
+        logger.append("⚙ Generating compile database (may take few seconds) ..");
 
         if let Err(err) = state.projects.get(&root)?.update_compile_database().await {
-            "setup: fail to regenerate compilation database!"
-                .pipe(|msg| state.clients.echo_err(&root, &name, msg))
-                .await;
-
-            let mut logger = state.clients.get(&client.pid)?.logger();
-
-            logger.set_running(false).await.ok();
-
-            logger.open_win().await.ok();
-            logger.append(err.to_string()).await.ok();
-
-            logger.set_status_end(false, true).await.ok();
+            logger.error("setup: fail to regenerate compilation database!");
+            err.to_string().split("\n").for_each(|l| {
+                logger.append(l);
+            });
 
             return Ok(false);
         }
