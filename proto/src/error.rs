@@ -18,8 +18,8 @@ pub enum Error {
     Build(String),
     #[error("Failed to run target/scheme: {0}")]
     Run(String),
-    #[error("Failed to generate project definition: {0}")]
-    Generate(String),
+    #[error("Failed to generate project definition")]
+    Generate,
     #[error("Failed to parse project definition: {0}")]
     DefinitionParsing(String),
     #[error("No project definition found")]
@@ -33,6 +33,10 @@ pub enum Error {
     RPC(#[from] tarpc::client::RpcError),
     #[error("{0}")]
     JoinError(#[from] tokio::task::JoinError),
+    #[error("{0}")]
+    SendError(String),
+    #[error("Failed to parse broadcast message: {0}")]
+    MessageParse(String),
 }
 
 impl From<ErrorInner> for Error {
@@ -41,10 +45,12 @@ impl From<ErrorInner> for Error {
             "Setup" => Self::Setup(v.message),
             "Build" => Self::Build(v.message),
             "Run" => Self::Run(v.message),
-            "Generate" => Self::Generate(v.message),
+            "Generate" => Self::Generate,
             "DefinitionParsing" => Self::DefinitionParsing(v.message),
             "DefinitionLocating" => Self::DefinitionLocating,
             "DefinitionMutliFound" => Self::DefinitionMutliFound,
+            "SendError" => Self::SendError(v.message),
+            "MessageParse" => Self::MessageParse(v.message),
             _ => Self::Unexpected(v.message),
         }
     }
@@ -61,7 +67,7 @@ impl From<&Error> for ErrorInner {
             Error::Lookup(_, _) => res.kind = "Lookup".into(),
             Error::Build(_) => res.kind = "Build".into(),
             Error::Run(_) => res.kind = "Run".into(),
-            Error::Generate(_) => res.kind = "Generate".into(),
+            Error::Generate => res.kind = "Generate".into(),
             Error::DefinitionParsing(_) => res.kind = "DefinitionParsing".into(),
             Error::DefinitionLocating => res.kind = "DefinitionLocating".into(),
             Error::DefinitionMutliFound => res.kind = "DefinitionMutliFound".into(),
@@ -69,6 +75,8 @@ impl From<&Error> for ErrorInner {
             #[cfg(feature = "client")]
             Error::RPC(_) => res.kind = "RPC".into(),
             Error::JoinError(_) => res.kind = "JoinError".into(),
+            Error::SendError(_) => res.kind = "SendError".into(),
+            Error::MessageParse(_) => res.kind = "MessageParse".into(),
         };
         res
     }
@@ -171,6 +179,13 @@ impl From<simctl::Error> for Error {
             simctl::Error::Json(err) => err.to_string(),
             simctl::Error::Utf8(err) => err.to_string(),
         })
+    }
+}
+
+#[cfg(feature = "server")]
+impl<T: std::fmt::Debug> From<tokio::sync::mpsc::error::SendError<T>> for Error {
+    fn from(v: tokio::sync::mpsc::error::SendError<T>) -> Self {
+        Self::SendError(format!("Channel closed, unable to send `{:?}`", v))
     }
 }
 

@@ -1,4 +1,5 @@
 use log::Level;
+use std::path::PathBuf;
 use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::net::UnixListener;
@@ -11,25 +12,19 @@ struct Server;
 
 #[tarpc::server]
 impl xbase_proto::XBase for Server {
-    async fn register(self, _: Context, req: RegisterRequest) -> Result<Vec<LoggingTask>> {
-        xbase::register::handle(req).await
+    async fn register(self, _: Context, client: Client) -> Result<PathBuf> {
+        xbase::register::handle(client).await
     }
-
-    async fn build(self, _: Context, req: BuildRequest) -> Result<LoggingTask> {
-        // NOTE: Required because of nvim-rs
+    async fn build(self, _: Context, req: BuildRequest) -> Result<()> {
         tokio::spawn(async { xbase::build::handle(req).await });
-        Ok(LoggingTask::default())
+        Ok(())
     }
-
-    async fn run(self, _: Context, req: RunRequest) -> Result<LoggingTask> {
-        // NOTE: Required because of nvim-rs
+    async fn run(self, _: Context, req: RunRequest) -> Result<()> {
         tokio::spawn(async { xbase::run::handle(req).await });
-        Ok(Default::default())
+        Ok(())
     }
-
-    async fn drop(self, _: Context, req: DropRequest) -> Result<()> {
-        // NOTE: Required because of nvim-rs
-        tokio::spawn(async { xbase::drop::handle(req).await });
+    async fn drop(self, _: Context, client: Client) -> Result<()> {
+        tokio::spawn(async { xbase::drop::handle(client).await });
         Ok(())
     }
 }
@@ -52,10 +47,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
                 channel.execute(Server.serve()).await;
             });
-            // TODO: re implement state validatation
-            // let state = DAEMON_STATE.clone();
-            // let mut state = state.lock().await;
-            // state.validate().await;
+            // TODO: break loop if no more projects
         } else {
             log::error!("Fail to accept a connection")
         };
@@ -74,5 +66,5 @@ async fn ensure_single_instance() -> Result<()> {
         remove_file(DAEMON_PID_PATH).await.ok();
     }
     write(DAEMON_PID_PATH, std::process::id().to_string()).await?;
-    Ok(())
+    OK(())
 }

@@ -5,7 +5,6 @@ use crate::{Error, Result};
 use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use xbase_proto::Client;
 use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
 
 #[derive(Debug, Serialize, Default)]
@@ -13,7 +12,7 @@ use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
 pub struct TuistProject {
     root: PathBuf,
     targets: HashMap<String, PBXTargetPlatform>,
-    clients: Vec<i32>,
+    num_clients: i32,
     watchignore: Vec<String>,
     #[serde(skip)]
     xcodeproj: XCodeProject,
@@ -40,12 +39,12 @@ impl ProjectData for TuistProject {
         &self.targets
     }
 
-    fn clients(&self) -> &Vec<i32> {
-        &self.clients
+    fn clients(&self) -> &i32 {
+        &self.num_clients
     }
 
-    fn clients_mut(&mut self) -> &mut Vec<i32> {
-        &mut self.clients
+    fn clients_mut(&mut self) -> &mut i32 {
+        &mut self.num_clients
     }
 
     fn watchignore(&self) -> &Vec<String> {
@@ -61,7 +60,8 @@ impl ProjectRun for TuistProject {}
 
 #[async_trait::async_trait]
 impl ProjectCompile for TuistProject {
-    async fn update_compile_database(&self) -> Result<()> {
+    // TODO: Use logger
+    async fn update_compile_database(&self, logger: &Arc<Broadcast>) -> Result<()> {
         use xclog::XCCompileCommand as C;
 
         let name = self.name();
@@ -71,7 +71,7 @@ impl ProjectCompile for TuistProject {
         let mut compile_commands: Vec<C> = vec![];
 
         // Compile manifests
-        {
+        let (mut manifest_compile_success, manifest_compile_commands) = {
             let mut arguments = arguments.clone();
 
             arguments.extend_from_slice(&[
@@ -84,15 +84,14 @@ impl ProjectCompile for TuistProject {
 
             log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
 
-            let mut xclogger = XCLogger::new(&root, &arguments)?;
+            let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();
-            xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
-            let xccommands = xccommands.lock().await;
-            compile_commands.extend(xccommands.to_vec());
-        }
+            let recv = logger.consume(Box::new(xclogger))?;
+            (recv, xccommands)
+        };
 
         // Compile Project
-        {
+        let (mut project_compile_success, project_compile_commands) = {
             let mut arguments = arguments.clone();
 
             arguments.extend_from_slice(&[
@@ -105,12 +104,24 @@ impl ProjectCompile for TuistProject {
 
             log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
 
-            let mut xclogger = XCLogger::new(&root, &arguments)?;
+            let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();
-            xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
-            let xccommands = xccommands.lock().await;
-            compile_commands.extend(xccommands.to_vec());
+            let recv = logger.consume(Box::new(xclogger))?;
+            (recv, xccommands)
+        };
+
+        if !(project_compile_success.recv().await.unwrap_or_default()
+            && manifest_compile_success.recv().await.unwrap_or_default())
+        {
+            logger.error(format!(
+                "Fail to generated compile commands for {}",
+                self.name()
+            ))?;
+            return Err(Error::Build(self.name().into()));
         }
+
+        compile_commands.extend(manifest_compile_commands.lock().await.to_vec());
+        compile_commands.extend(project_compile_commands.lock().await.to_vec());
 
         log::debug!("[{}] compiled successfully", self.name());
         let json = serde_json::to_vec_pretty(&compile_commands)?;
@@ -135,7 +146,7 @@ impl ProjectGenerate for TuistProject {
     }
 
     /// Generate xcodeproj
-    async fn generate(&mut self) -> Result<()> {
+    async fn generate(&mut self, _logger: &Arc<Broadcast>) -> Result<()> {
         log::info!("generating ...");
 
         self.tuist(&["edit", "--permanent"]).await?;
@@ -190,9 +201,9 @@ impl TuistProject {
         process.args(args);
         process.current_dir(self.root());
 
-        let (success, logs) = consume_and_log(Box::pin(process.spawn_and_stream()?)).await;
+        let (success, _) = consume_and_log(Box::pin(process.spawn_and_stream()?)).await;
         if !success {
-            return Err(Error::Generate(logs.join("\n")));
+            return Err(Error::Generate);
         }
 
         Ok(())
@@ -201,9 +212,7 @@ impl TuistProject {
 
 #[async_trait::async_trait]
 impl Project for TuistProject {
-    async fn new(client: &Client) -> Result<Self> {
-        let Client { root, pid, .. } = client;
-
+    async fn new(root: &PathBuf, logger: &Arc<Broadcast>) -> Result<Self> {
         let mut watchignore = generate_watchignore(root).await;
 
         watchignore.extend([
@@ -215,7 +224,7 @@ impl Project for TuistProject {
         let mut project = Self {
             root: root.clone(),
             watchignore,
-            clients: vec![pid.clone()],
+            num_clients: 1,
             ..Self::default()
         };
 
@@ -236,7 +245,7 @@ impl Project for TuistProject {
             _ => {
                 log::info!("no xcodeproj found at {root:?}");
 
-                project.generate().await?;
+                project.generate(logger).await?;
 
                 project.targets = project.xcodeproj.targets_platform();
                 project.manifest_files = project.manifest.build_file_names();

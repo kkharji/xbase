@@ -3,7 +3,6 @@ use crate::watch::Event;
 use crate::{Error, Result};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use xbase_proto::Client;
 use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
 
 #[derive(Debug, Serialize, Default)]
@@ -11,7 +10,7 @@ use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
 pub struct BareboneProject {
     root: PathBuf,
     targets: HashMap<String, PBXTargetPlatform>,
-    clients: Vec<i32>,
+    num_clients: i32,
     watchignore: Vec<String>,
     #[serde(skip)]
     xcodeproj: XCodeProject,
@@ -30,12 +29,12 @@ impl ProjectData for BareboneProject {
         &self.targets
     }
 
-    fn clients(&self) -> &Vec<i32> {
-        &self.clients
+    fn clients(&self) -> &i32 {
+        &self.num_clients
     }
 
-    fn clients_mut(&mut self) -> &mut Vec<i32> {
-        &mut self.clients
+    fn clients_mut(&mut self) -> &mut i32 {
+        &mut self.num_clients
     }
 
     fn watchignore(&self) -> &Vec<String> {
@@ -51,9 +50,7 @@ impl ProjectRun for BareboneProject {}
 
 #[async_trait::async_trait]
 impl ProjectCompile for BareboneProject {
-    async fn update_compile_database(&self) -> Result<()> {
-        use xclog::XCCompilationDatabase as CC;
-
+    async fn update_compile_database(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let (name, root) = (self.name(), self.root());
         let cache_root = self.build_cache_root()?;
         let mut args = self.compile_arguments();
@@ -74,14 +71,19 @@ impl ProjectCompile for BareboneProject {
         }
 
         log::info!("xcodebuild {}", args.join(" "));
-        let mut xclogger = XCLogger::new(&root, &args)?;
-        let compile_commands = xclogger.compile_commands.clone();
-        xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
-        let compile_commands = compile_commands.lock().await;
-        let compile_commands = CC::new(compile_commands.to_vec());
+        let xclogger = XCLogger::new(&root, &args)?;
+        let xccommands = xclogger.compile_commands.clone();
+        let mut recv = broadcast.consume(Box::new(xclogger))?;
 
-        let json = serde_json::to_vec_pretty(&compile_commands)?;
+        if !recv.recv().await.unwrap_or_default() {
+            broadcast.error(format!(
+                "Fail to generated compile commands for {}",
+                self.name()
+            ))?;
+            return Err(Error::Build(self.name().into()));
+        }
 
+        let json = serde_json::to_vec_pretty(&xccommands.lock().await.to_vec())?;
         tokio::fs::write(root.join(".compile"), &json).await?;
 
         Ok(())
@@ -94,7 +96,7 @@ impl ProjectGenerate for BareboneProject {
         event.is_create_event() || event.is_remove_event() || event.is_rename_event()
     }
 
-    async fn generate(&mut self) -> Result<()> {
+    async fn generate(&mut self, _logger: &Arc<Broadcast>) -> Result<()> {
         log::error!("New File created or removed but generate barebone project is not supported");
 
         Ok(())
@@ -103,13 +105,11 @@ impl ProjectGenerate for BareboneProject {
 
 #[async_trait::async_trait]
 impl Project for BareboneProject {
-    async fn new(client: &Client) -> Result<Self> {
-        let Client { root, pid, .. } = client;
-
+    async fn new(root: &PathBuf, _logger: &Arc<Broadcast>) -> Result<Self> {
         let mut project = Self {
             root: root.clone(),
             watchignore: generate_watchignore(root).await,
-            clients: vec![pid.clone()],
+            num_clients: 1,
             ..Self::default()
         };
 

@@ -10,7 +10,6 @@ use mlua::prelude::*;
 pub struct Client {
     pub pid: i32,
     pub root: PathBuf,
-    pub address: String,
 }
 
 #[cfg(feature = "neovim")]
@@ -207,27 +206,20 @@ impl Operation {
 impl Client {
     #[cfg(feature = "neovim")]
     pub fn new(lua: &Lua, root: Option<String>) -> LuaResult<Self> {
-        use crate::util::address;
-        use crate::util::cwd;
-        Ok(Self {
-            pid: std::process::id() as i32,
-            address: address(lua)?,
-            root: if let Some(v) = root { v } else { cwd(lua)? }.into(),
-        })
-    }
-
-    pub fn abbrev_root(&self) -> String {
-        let abbr = || {
-            let path = &self.root;
-            Some(
-                path.strip_prefix(path.ancestors().nth(3)?)
-                    .ok()?
-                    .display()
-                    .to_string(),
-            )
+        let root = if let Some(v) = root {
+            v
+        } else {
+            lua.globals()
+                .get::<_, LuaTable>("vim")?
+                .get::<_, LuaTable>("loop")?
+                .get::<_, LuaFunction>("cwd")?
+                .call::<_, String>(())?
         };
 
-        abbr().unwrap_or_default()
+        Ok(Self {
+            pid: std::process::id() as i32,
+            root: root.into(),
+        })
     }
 }
 
@@ -239,55 +231,6 @@ impl BufferDirection {
             BufferDirection::Vertical => format!("vert sbuffer {bufnr}"),
             BufferDirection::Horizontal => format!("sbuffer {bufnr}"),
             BufferDirection::TabEdit => format!("tabe {bufnr}"),
-        }
-    }
-}
-
-/// Logging Task
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct LoggingTask {
-    source: PathBuf,
-    status: LoggingTaskStatus,
-    title: String,
-    description: Option<String>,
-}
-
-#[cfg(feature = "neovim")]
-impl LuaUserData for LoggingTask {}
-
-/// Logging Task Status
-///
-/// This is used to indicate the status of a logging task.
-#[derive(Clone, Debug, EnumString, EnumDisplay, Serialize, Deserialize)]
-pub enum LoggingTaskStatus {
-    /// A New Logging task that isn't yet processed
-    Created,
-    /// A Logging task that is wating for and cosuming loggs
-    Consuming,
-    /// Like [`LoggingTaskStatus::Cosuming`] but meant for a long running tasks.
-    Running,
-    /// A Logging task that ended with success stats code
-    Succeeded,
-    /// A Logging task that errored
-    Errored,
-}
-
-impl Default for LoggingTaskStatus {
-    fn default() -> Self {
-        Self::Created
-    }
-}
-
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for LoggingTaskStatus {
-    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
-        use std::str::FromStr;
-        if let LuaValue::String(ref value) = value {
-            Self::from_str(value.to_str()?).to_lua_err()
-        } else {
-            Err(LuaError::external(
-                "Expected a string value for BuildConfiguration",
-            ))
         }
     }
 }

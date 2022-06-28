@@ -5,7 +5,6 @@ use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
 use tokio::process::Command;
-use xbase_proto::Client;
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
 #[derive(Debug, Serialize, Default)]
@@ -14,7 +13,7 @@ pub struct SwiftProject {
     name: String,
     root: PathBuf,
     targets: HashMap<String, PBXTargetPlatform>,
-    clients: Vec<i32>,
+    num_clients: i32,
     watchignore: Vec<String>,
 }
 
@@ -31,12 +30,12 @@ impl ProjectData for SwiftProject {
         &self.targets
     }
 
-    fn clients(&self) -> &Vec<i32> {
-        &self.clients
+    fn clients(&self) -> &i32 {
+        &self.num_clients
     }
 
-    fn clients_mut(&mut self) -> &mut Vec<i32> {
-        &mut self.clients
+    fn clients_mut(&mut self) -> &mut i32 {
+        &mut self.num_clients
     }
 
     fn watchignore(&self) -> &Vec<String> {
@@ -50,15 +49,15 @@ impl ProjectBuild for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-        logger: &Arc<Logger>,
+        logger: &Arc<Broadcast>,
     ) -> Result<Vec<String>> {
-        logger.append(format!("Building {}", cfg.target));
+        logger.info(format!("Building {}", cfg.target))?;
         let args = vec!["build", "--target", &cfg.target];
         let mut process = Process::new("/usr/bin/swift");
 
         process.args(&args);
         process.current_dir(self.root());
-        logger.add_process(Box::new(process))?;
+        logger.consume(Box::new(process))?;
 
         Ok(vec![])
     }
@@ -70,7 +69,7 @@ impl ProjectRun for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-        logger: &Arc<Logger>,
+        logger: &Arc<Broadcast>,
     ) -> Result<(Box<dyn Runner + Send + Sync>, Vec<String>)> {
         let args = self.build(cfg, None, logger)?;
 
@@ -98,7 +97,7 @@ impl ProjectRun for SwiftProject {
 
 #[async_trait::async_trait]
 impl ProjectCompile for SwiftProject {
-    async fn update_compile_database(&self) -> Result<()> {
+    async fn update_compile_database(&self, _logger: &Arc<Broadcast>) -> Result<()> {
         // No Compile database needed for swif projects
         Ok(())
     }
@@ -117,17 +116,23 @@ impl ProjectGenerate for SwiftProject {
     }
 
     /// Generate xcodeproj
-    async fn generate(&mut self) -> Result<()> {
-        log::info!("Building and compiling swift project {}", self.name());
-
+    async fn generate(&mut self, logger: &Arc<Broadcast>) -> Result<()> {
         let mut process: Process = vec!["/usr/bin/swift", "build"].into();
-
         process.current_dir(self.root());
 
-        let (success, logs) = consume_and_log(process.spawn_and_stream()?.boxed()).await;
+        logger.info(format!(
+            "Building and compiling swift project {}",
+            self.name()
+        ))?;
+
+        let success = logger
+            .consume(Box::new(process))?
+            .recv()
+            .await
+            .unwrap_or_default();
 
         if !success {
-            return Err(Error::Generate(logs.join("\n")));
+            return Err(Error::Generate);
         }
 
         self.update_project_info().await?;
@@ -140,21 +145,19 @@ impl ProjectGenerate for SwiftProject {
 
 #[async_trait::async_trait]
 impl Project for SwiftProject {
-    async fn new(client: &Client) -> Result<Self> {
-        let Client { root, pid, .. } = client;
-
+    async fn new(root: &PathBuf, logger: &Arc<Broadcast>) -> Result<Self> {
         let watchignore = generate_watchignore(root).await;
 
         let mut project = Self {
             root: root.clone(),
             watchignore,
-            clients: vec![pid.clone()],
+            num_clients: 1,
             ..Self::default()
         };
 
         if !root.join(".build").exists() {
             log::info!("no .build directory found at {root:?}");
-            project.generate().await?;
+            project.generate(logger).await?;
             return Ok(project);
         } else {
             project.update_project_info().await?;

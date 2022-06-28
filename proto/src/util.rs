@@ -8,34 +8,3 @@ where
 {
     Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or_default())
 }
-
-#[cfg(feature = "neovim")]
-use mlua::prelude::*;
-
-#[cfg(feature = "neovim")]
-pub(crate) fn cwd(lua: &Lua) -> LuaResult<String> {
-    lua.globals()
-        .get::<_, LuaTable>("vim")?
-        .get::<_, LuaTable>("loop")?
-        .get::<_, LuaFunction>("cwd")?
-        .call::<_, String>(())
-}
-
-#[cfg(feature = "neovim")]
-pub(crate) fn address(lua: &Lua) -> LuaResult<String> {
-    let global = lua.globals();
-    let address = match global.get::<_, LuaString>("__SERVERNAME") {
-        Ok(v) => v,
-        Err(_) => {
-            let value = global
-                .get::<_, LuaTable>("vim")
-                .and_then(|v| v.get::<_, LuaTable>("v"))
-                .and_then(|v| v.get::<_, LuaString>("servername"))?;
-            global.set("__SERVERNAME", value.clone())?;
-            value
-        }
-    }
-    .to_string_lossy()
-    .to_string();
-    Ok(address)
-}

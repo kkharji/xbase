@@ -1,48 +1,86 @@
-use super::NvimLogBuffer;
-use mlua::prelude::*;
-use serde::{Deserialize, Serialize};
-use tokio::sync::OnceCell;
-use xbase_proto::Result;
+// use tokio::sync::{Mutex, MutexGuard};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NvimState {
-    buffer: NvimLogBuffer,
-}
+// use mlua::prelude::*;
+// use serde::{Deserialize, Serialize};
+// use tokio::sync::OnceCell;
+// use xbase_proto::{Error, Result};
 
-impl NvimState {
-    pub fn new(lua: &Lua) -> Result<Self> {
-        Ok(Self {
-            buffer: NvimLogBuffer::new(lua)?,
-        })
-    }
-}
+// #[derive(Clone, Debug, Serialize, Deserialize)]
+// pub struct NvimState {
+//     pub buffer: NvimLogBuffer,
+// }
 
-static STATE: OnceCell<NvimState> = OnceCell::const_new();
-
-pub async fn state(lua: &Lua) -> Result<&'static NvimState> {
-    STATE
-        .get_or_try_init(|| async { NvimState::new(lua) })
-        .await
-}
-
-// impl<'lua> FromLua<'lua> for NvimState {
-//     fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
-//         if let LuaValue::Table(table) = value {
-//             Ok(Self {
-//                 buffer: table.get("buffer")?,
-//             })
-//         } else {
-//             let state = Self::new(lua)?;
-//             lua.set_state(state.clone())?;
-//             Ok(state)
-//         }
+// impl NvimState {
+//     pub fn new(lua: &Lua) -> Result<Self> {
+//         Ok(Self {
+//             buffer: NvimLogBuffer::new(lua)?,
+//         })
 //     }
 // }
 
-// impl<'lua> ToLua<'lua> for NvimState {
-//     fn to_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-//         let table = lua.create_table()?;
-//         table.set("buffer", self.buffer)?;
-//         Ok(LuaValue::Table(table))
+// static STATE: OnceCell<Mutex<NvimState>> = OnceCell::const_new();
+
+// pub async fn state(lua: &Lua) -> Result<MutexGuard<'static, NvimState>> {
+//     let state = STATE
+//         .get_or_try_init(|| async { Ok::<_, Error>(Mutex::new(NvimState::new(lua)?)) })
+//         .await?;
+//     Ok(state.lock().await)
+// }
+
+// /// Buffer state
+// #[derive(Clone, Debug, Serialize, Deserialize)]
+// pub struct NvimLogBuffer {
+//     bufnr: usize,
+//     last_task_status: LoggingTaskStatus,
+//     connected_tasks: Vec<LoggingTask>,
+//     line_count: usize,
+// }
+
+// impl NvimLogBuffer {
+//     /// Setup Nvim Log buffer
+//     pub fn new(lua: &Lua) -> Result<Self> {
+//         let bufnr = 0;
+
+//         Ok(Self {
+//             bufnr,
+//             last_task_status: Default::default(),
+//             connected_tasks: Default::default(),
+//             line_count: 0,
+//         })
+//     }
+//     fn get_last_status(&self, lua: &Lua) -> Result<LoggingTaskStatus> {
+//         todo!()
+//     }
+
+//     fn set_last_status(&mut self, lua: &Lua, success: LoggingTaskStatus) -> Result<()> {
+//         todo!()
+//     }
+
+//     fn append<S: AsRef<str>>(&self, lua: &Lua, chunk: S) -> Result<()> {
+//         todo!()
+//     }
+
+//     fn push<S: AsRef<str>>(&self, lua: &Lua, line: S) -> Result<()> {
+//         todo!()
+//     }
+
+//     fn clear(&self, lua: &Lua) -> Result<()> {
+//         todo!()
+//     }
+
+//     fn open(&self, lua: &Lua, direction: BufferDirection) -> Result<()> {
+//         todo!()
+//     }
+
+//     fn close(&self, lua: &Lua) -> Result<()> {
+//         todo!()
+//     }
+
+//     fn insert_task(&mut self, lua: &Lua, task: LoggingTask) -> Result<()> {
+//         todo!()
+//     }
+
+//     fn tasks(&self) -> Vec<&LoggingTask> {
+//         todo!()
 //     }
 // }

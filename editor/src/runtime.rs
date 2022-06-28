@@ -6,8 +6,8 @@ use tokio::runtime::Runtime;
 use tokio::sync::OnceCell;
 use xbase_proto::*;
 
+static CLIENT: OnceCell<XBaseClient> = OnceCell::const_new();
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("Tokio runtime"));
-
 static DAEMON_SOCKET_ADDRESS: &str = "/tmp/xbase.socket";
 
 static DAEMON_BINARY_PATH: Lazy<PathBuf> = Lazy::new(|| {
@@ -23,9 +23,11 @@ static DAEMON_BINARY_PATH: Lazy<PathBuf> = Lazy::new(|| {
     root
 });
 
-static CLIENT: OnceCell<XBaseClient> = OnceCell::const_new();
+pub fn rt() -> &'static Runtime {
+    &*RUNTIME
+}
 
-pub async fn client() -> &'static XBaseClient {
+pub async fn rpc() -> &'static XBaseClient {
     CLIENT
         .get_or_init(|| async {
             let codec_builder = LengthDelimitedCodec::builder();
@@ -38,7 +40,7 @@ pub async fn client() -> &'static XBaseClient {
         .await
 }
 
-pub async fn block_on<F: Future>(future: F) -> F::Output {
+pub async fn _spawn<F: Future>(future: F) -> F::Output {
     tokio::task::LocalSet::new()
         .run_until(async move { RUNTIME.block_on(future) })
         .await
@@ -58,10 +60,10 @@ pub fn ensure_daemon() -> bool {
 
 macro_rules! spawn {
     ($body:block) => {
-        $crate::runtime::block_on(async { Ok::<_, Error>($body.await?) })
+        $crate::runtime::_spawn(async { Ok::<_, Error>($body.await?) })
     };
     ($body:ident) => {
-        $crate::runtime::block_on(async { Ok::<_, Error>($body.await?) })
+        $crate::runtime::_spawn(async { Ok::<_, Error>($body.await?) })
     };
 }
 pub(crate) use spawn;

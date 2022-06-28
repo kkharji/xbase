@@ -20,7 +20,7 @@ pub struct State {
     /// Available Devices
     pub devices: Devices,
     /// Loggers
-    pub loggers: LoggerStore,
+    pub broadcasters: BroadcastStore,
 }
 
 lazy_static::lazy_static! {
@@ -40,7 +40,7 @@ lazy_static::lazy_static! {
             projects: Default::default(),
             watcher: Default::default(),
             devices: Default::default(),
-            loggers: Default::default(),
+            broadcasters: Default::default(),
         }))
 
     };

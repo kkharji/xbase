@@ -1,51 +1,50 @@
 use crate::compile;
 use crate::constants::DAEMON_STATE;
-use crate::logger::Logger;
 use crate::util::log_request;
 use crate::Result;
-use xbase_proto::LoggingTask;
-use xbase_proto::RegisterRequest;
+use std::path::PathBuf;
+use xbase_proto::Client;
+use xbase_proto::OK;
 
 /// Handle RegisterRequest
-pub async fn handle(RegisterRequest { client }: RegisterRequest) -> Result<Vec<LoggingTask>> {
-    log_request!("Register", client);
-    let root = client.root.as_path();
-    let logger = Logger::new(
-        format!("Register {}", root.display()),
-        format!("register_{}.log", client.abbrev_root().replace("/", "_")),
-        root,
-    )
-    .await?;
+pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
+    log_request!("Register", root);
 
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;
+    let broadcast = state.broadcasters.get_or_init(&root).await?;
+    let broadcast = broadcast.upgrade().unwrap();
+    let logger_path = broadcast.address().clone();
 
-    let mut tasks = state
-        .loggers
-        .get_by_project_root(&client.root)
-        .iter()
-        .map(|l| l.to_logging_task())
-        .collect::<Vec<_>>();
+    drop(state);
 
-    tasks.push(logger.to_logging_task());
+    tokio::spawn(async move {
+        let state = DAEMON_STATE.clone();
+        let ref mut state = state.lock().await;
+        let name: String;
 
-    let weak_logger = state.loggers.push(logger);
-    let logger = weak_logger.upgrade().unwrap();
+        if let Ok(project) = state.projects.get_mut(&root) {
+            name = project.name().to_string();
+            broadcast.info(format!("[{}]: connected to an existing instance ✅", name))?;
+            project.inc_clients();
+        } else {
+            state.projects.register(&root, &broadcast).await?;
+            let project = state.projects.get(&root).unwrap();
+            let watchignore = project.watchignore().clone();
+            name = project.name().to_string();
 
-    if let Ok(project) = state.projects.get_mut(&client.root) {
-        project.add_client(client.pid);
-    } else {
-        state.projects.add(&client).await?;
-        let project = state.projects.get(&client.root).unwrap();
-        let watchignore = project.watchignore().clone();
-        let name = project.name().to_string();
+            state
+                .watcher
+                .add(&root, watchignore, &name, &broadcast)
+                .await?;
+            broadcast.info(format!("[{}]: connected ✅", name))?;
+        }
+        if compile::ensure_server_support(state, &root, None, &broadcast).await? {
+            broadcast.info(format!("[{}]: compiled ✅", name))?;
+        }
 
-        state.watcher.add(&client, watchignore, &name).await?;
-    }
+        OK(())
+    });
 
-    if compile::ensure_server_support(state, &client, None, &logger).await? {
-        logger.append("setup: ✅");
-    }
-
-    Ok(tasks)
+    Ok(logger_path)
 }

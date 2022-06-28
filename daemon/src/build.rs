@@ -1,24 +1,26 @@
+use crate::broadcast::Broadcast;
 use crate::constants::{State, DAEMON_STATE};
-use crate::logger::Logger;
 use crate::util::log_request;
 use crate::watch::{Event, Watchable};
 use crate::Result;
 use async_trait::async_trait;
-use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::MutexGuard;
-use xbase_proto::{BuildRequest, LoggingTask};
+use xbase_proto::BuildRequest;
 
 /// Handle build Request
-pub async fn handle(req: BuildRequest) -> Result<LoggingTask> {
+pub async fn handle(req: BuildRequest) -> Result<()> {
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;
     let client = &req.client;
+    let root = &req.client.root;
+    let broadcast = state.broadcasters.get(&client.root)?;
 
-    log_request!("Build", client, req);
+    log_request!("Build", root, req);
 
     if req.ops.is_once() {
-        req.trigger(state, &Event::default()).await?;
-        return Ok(LoggingTask::default());
+        req.trigger(state, &Event::default(), &broadcast).await?;
+        return Ok(());
     }
 
     if req.ops.is_watch() {
@@ -30,39 +32,23 @@ pub async fn handle(req: BuildRequest) -> Result<LoggingTask> {
             .remove(&req.to_string())?;
     }
 
-    Ok(LoggingTask::default())
+    Ok(())
 }
 
 #[async_trait]
 impl Watchable for BuildRequest {
-    async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
-        let is_once = self.ops.is_once();
+    async fn trigger(
+        &self,
+        state: &MutexGuard<State>,
+        _event: &Event,
+        broadcast: &Arc<Broadcast>,
+    ) -> Result<()> {
+        // let is_once = self.ops.is_once();
         let (root, config) = (&self.client.root, &self.settings);
 
-        let logger = state.loggers.get(PathBuf::from(Logger::ROOT).join(format!(
-            "auto_build_{}_{}.log",
-            self.settings.target,
-            self.client.abbrev_root().replace("/", "_")
-        )))?;
+        let project = state.projects.get(root)?;
 
-        // let weak_logger = Arc::downgrade(&logger);
-
-        let args = state.projects.get(root)?.build(&config, None, &logger)?;
-
-        log::info!("[target: {}] building .....", self.settings.target);
-
-        // TODO: Ensure that build process is indeed ran successfully
-        // let success = logger
-        //     .consume_build_logs(stream, false, !is_once, logger)
-        //     .await?;
-        // if !success {
-        //     let ref msg = format!("Failed: {} ", config.to_string());
-        //     logger.error(msg);
-        //     log::error!("[target: {}] failed to be built", self.settings.target);
-        //     log::error!("[ran: 'xcodebuild {}']", args.join(" "));
-        // } else {
-        //     log::info!("[target: {}] built successfully", self.settings.target);
-        // };
+        project.build(&config, None, broadcast)?;
 
         Ok(())
     }

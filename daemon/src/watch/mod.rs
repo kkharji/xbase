@@ -1,19 +1,20 @@
 mod event;
 pub use event::{Event, EventKind};
 
+use crate::broadcast::Broadcast;
 use crate::compile::ensure_server_support;
-use crate::logger::Logger;
+use crate::util::fs::PathExt;
 use crate::{constants::State, constants::DAEMON_STATE, Result};
 use async_trait::async_trait;
 use log::{error, info, trace};
 use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::SystemTime;
 use tokio::sync::mpsc::channel;
 use tokio::{sync::MutexGuard, task::JoinHandle};
-use xbase_proto::{Client, IntoResult};
+use xbase_proto::IntoResult;
 
 #[derive(derive_deref_rs::Deref)]
 pub struct WatchService {
@@ -33,7 +34,12 @@ pub struct InternalState {
 #[async_trait]
 pub trait Watchable: ToString + Send + Sync + 'static {
     /// Trigger Restart of Watchable.
-    async fn trigger(&self, state: &MutexGuard<State>, event: &Event) -> Result<()>;
+    async fn trigger(
+        &self,
+        state: &MutexGuard<State>,
+        event: &Event,
+        boradcast: &Arc<Broadcast>,
+    ) -> Result<()>;
 
     /// A function that controls whether a a Watchable should restart
     async fn should_trigger(&self, state: &MutexGuard<State>, event: &Event) -> bool;
@@ -46,21 +52,18 @@ pub trait Watchable: ToString + Send + Sync + 'static {
 }
 
 impl WatchService {
-    pub async fn new(client: Client, ignore_pattern: Vec<String>) -> Result<Self> {
+    pub async fn new(
+        root: PathBuf,
+        ignore_pattern: Vec<String>,
+        boradcast: Weak<Broadcast>,
+    ) -> Result<Self> {
         let listeners = Default::default();
-
-        let logger = Logger::new(
-            format!("Watch {}", client.root.display()),
-            format!("watch_{}.log", client.abbrev_root().replace("/", "_")),
-            &client.root,
-        )
-        .await?;
 
         async fn try_to_recompile<'a>(
             event: &Event,
-            client: &Client,
+            root: &PathBuf,
             state: &mut MutexGuard<'a, State>,
-            logger: &Logger,
+            boradcast: &Arc<Broadcast>,
         ) -> Result<()> {
             let recompiled = event.is_create_event()
                 || event.is_remove_event()
@@ -68,14 +71,14 @@ impl WatchService {
                 || event.is_rename_event() && !event.is_seen();
 
             if recompiled {
-                let ensure = ensure_server_support(state, client, Some(event), logger).await;
+                let ensure = ensure_server_support(state, root, Some(event), boradcast).await;
                 match ensure {
                     Err(err) => {
                         log::error!("Ensure server support Errored!! {err:?} ");
                     }
                     Ok(true) => {
-                        let ref name = client.abbrev_root();
-                        logger.append("new compilation database generated ✅");
+                        let ref name = root.as_path().abbrv()?.display();
+                        boradcast.info("new compilation database generated ✅")?;
                         info!("[{name}] recompiled successfully");
                     }
                     _ => (),
@@ -87,7 +90,6 @@ impl WatchService {
 
         let handler = tokio::spawn(async move {
             let mut discards = vec![];
-            let ref root = client.root;
             let internal_state = InternalState::default();
 
             let (tx, mut rx) = channel::<notify::Event>(1);
@@ -97,7 +99,7 @@ impl WatchService {
                 }
             })
             .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
-            w.watch(&client.root, Recursive)
+            w.watch(&root, Recursive)
                 .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
             w.configure(Config::NoticeEvents(true))
                 .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
@@ -123,10 +125,17 @@ impl WatchService {
 
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
+                let boradcast = match boradcast.upgrade() {
+                    Some(boradcast) => boradcast,
+                    None => {
+                        error!(r"No boradcast found for {root:?}, dropping watcher ..");
+                        return Ok(());
+                    }
+                };
 
-                try_to_recompile(event, &client, state, &logger).await?;
+                try_to_recompile(event, &root, state, &boradcast).await?;
 
-                let watcher = match state.watcher.get(root) {
+                let watcher = match state.watcher.get(&root) {
                     Ok(w) => w,
                     Err(err) => {
                         error!(r#"Unable to get watcher for {root:?}: {err}"#);
@@ -142,12 +151,12 @@ impl WatchService {
                         }
                         discards.push(key.to_string());
                     } else if listener.should_trigger(state, event).await {
-                        if let Err(err) = listener.trigger(state, event).await {
+                        if let Err(err) = listener.trigger(state, event, &boradcast).await {
                             error!("trigger errored for `{key}`!: {err}");
                         }
                     }
                 }
-                let watcher = state.watcher.get_mut(root).unwrap();
+                let watcher = state.watcher.get_mut(&root).unwrap();
 
                 for key in discards.iter() {
                     info!("[{key:?}] discarded");
@@ -160,7 +169,7 @@ impl WatchService {
                 info!("{event} consumed successfully");
             }
 
-            info!("Dropped {:?}!!", client.root);
+            info!("Dropped {:?}!!", root.as_path().abbrv()?.display());
 
             Ok(())
         });

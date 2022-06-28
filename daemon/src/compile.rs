@@ -1,10 +1,10 @@
 //! Module for generating Compilation Database.
-use crate::logger::Logger;
+use crate::broadcast::Broadcast;
 use crate::watch::Event;
 use crate::{constants::State, Result};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::{io::AsyncWriteExt, sync::MutexGuard};
-use xbase_proto::Client;
 
 /// Ensure that buildServer.json exists in root directory.
 pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
@@ -40,46 +40,47 @@ pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
 
 pub async fn ensure_server_support<'a>(
     state: &'a mut MutexGuard<'_, State>,
-    client: &Client,
+    root: &PathBuf,
     event: Option<&Event>,
-    logger: &Logger,
+    broadcast: &Arc<Broadcast>,
 ) -> Result<bool> {
-    let Client { root, pid, .. } = client;
-    let ref name = client.abbrev_root();
-
     let compile_path = root.join(".compile");
     let compile_exists = compile_path.exists();
     let is_swift_project = root.join("Package.swift").exists();
 
     if !is_swift_project && ensure_server_config(root).await.is_err() {
-        logger.error("fail to ensure build server configuration!");
+        broadcast.error("fail to ensure build server configuration!")?;
     };
 
     if let Some(event) = event {
         let project = state.projects.get_mut(root)?;
-        let name = project.name().to_string();
         if project.should_generate(event) {
-            if let Err(e) = project.generate().await {
-                e.to_string().split("\n").for_each(|l| {
-                    logger.error(l);
-                });
+            if let Err(e) = project.generate(broadcast).await {
+                for line in e.to_string().split("\n") {
+                    broadcast.error(line)?;
+                }
                 return Ok(false);
             };
 
-            // TODO: pass logger
-            project.update_compile_database().await?;
+            project.update_compile_database(broadcast).await?;
             return Ok(true);
         }
     }
 
     if !is_swift_project && !compile_exists {
-        logger.append("⚙ Generating compile database (may take few seconds) ..");
+        broadcast.info("⚙ Generating compile database (may take few seconds) ..")?;
 
-        if let Err(err) = state.projects.get(&root)?.update_compile_database().await {
-            logger.error("setup: fail to regenerate compilation database!");
-            err.to_string().split("\n").for_each(|l| {
-                logger.append(l);
-            });
+        if let Err(err) = state
+            .projects
+            .get(&root)?
+            .update_compile_database(broadcast)
+            .await
+        {
+            // TODO: open logger or notifiy to check logger
+            broadcast.error("Fail to regenerate compilation database!")?;
+            for line in err.to_string().split("\n") {
+                broadcast.log_error(line)?;
+            }
 
             return Ok(false);
         }

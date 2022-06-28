@@ -65,6 +65,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "async_once"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ce4f10ea3abcd6617873bae9f91d1c5332b4a778bd9ce34d0cd517474c1de82"
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1212,6 +1218,16 @@ dependencies = [
  "pin-project",
  "rand 0.8.5",
  "thiserror",
+]
+
+[[package]]
+name = "os_pipe"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c92f2b54f081d635c77e7120862d48db8e91f7f21cef23ab1b4fe9971c59f55"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -2427,6 +2443,7 @@ dependencies = [
  "linemux",
  "log 0.1.0",
  "notify 5.0.0-pre.15",
+ "os_pipe",
  "parity-tokio-ipc",
  "paste",
  "process-stream",
@@ -2453,9 +2470,13 @@ name = "xbase-editor-lib"
 version = "0.2.0"
 dependencies = [
  "async-trait",
+ "async_once",
+ "derive-deref-rs",
+ "lazy_static",
  "linemux",
  "mlua",
  "once_cell",
+ "os_pipe",
  "process-stream",
  "serde",
  "serde_json",

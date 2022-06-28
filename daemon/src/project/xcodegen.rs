@@ -5,7 +5,6 @@ use crate::{Error, Result};
 use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use xbase_proto::Client;
 use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
 
 #[derive(Debug, Serialize, Default)]
@@ -13,7 +12,7 @@ use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
 pub struct XCodeGenProject {
     root: PathBuf,
     targets: HashMap<String, PBXTargetPlatform>,
-    clients: Vec<i32>,
+    num_clients: i32,
     watchignore: Vec<String>,
     #[serde(skip)]
     xcodeproj: xcodeproj::XCodeProject,
@@ -32,12 +31,12 @@ impl ProjectData for XCodeGenProject {
         &self.targets
     }
 
-    fn clients(&self) -> &Vec<i32> {
-        &self.clients
+    fn clients(&self) -> &i32 {
+        &self.num_clients
     }
 
-    fn clients_mut(&mut self) -> &mut Vec<i32> {
-        &mut self.clients
+    fn clients_mut(&mut self) -> &mut i32 {
+        &mut self.num_clients
     }
 
     fn watchignore(&self) -> &Vec<String> {
@@ -53,9 +52,10 @@ impl ProjectRun for XCodeGenProject {}
 
 #[async_trait::async_trait]
 impl ProjectCompile for XCodeGenProject {
-    async fn update_compile_database(&self) -> Result<()> {
+    async fn update_compile_database(&self, logger: &Arc<Broadcast>) -> Result<()> {
         use xclog::XCCompilationDatabase as CC;
 
+        let name = self.name();
         let root = self.root();
         let cache_root = self.build_cache_root()?;
         let mut arguments = self.compile_arguments();
@@ -64,15 +64,30 @@ impl ProjectCompile for XCodeGenProject {
 
         log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
 
-        let mut xclogger = XCLogger::new(&root, &arguments)?;
+        let xclogger = XCLogger::new(&root, &arguments)?;
         let compile_commands = xclogger.compile_commands.clone();
-        xclogger.spawn_and_stream()?.collect::<Vec<_>>().await;
-        let compile_commands = compile_commands.lock().await;
 
-        let compile_db = CC::new(compile_commands.to_vec());
+        let success = logger
+            .consume(Box::new(xclogger))?
+            .recv()
+            .await
+            .unwrap_or_default();
+
+        if !success {
+            logger.error(format!(
+                "Fail to generated compile commands for {}",
+                self.name()
+            ))?;
+            return Err(Error::Build(self.name().into()));
+        }
+
+        let compile_db = CC::new(compile_commands.lock().await.to_vec());
         let json = serde_json::to_vec_pretty(&compile_db)?;
-        log::debug!("[{}] compiled successfully", self.name());
+
         tokio::fs::write(root.join(".compile"), &json).await?;
+
+        log::info!("[{name}] compiled successfully");
+        logger.error(format!("[{name}] compiled successfully"))?;
 
         Ok(())
     }
@@ -91,13 +106,16 @@ impl ProjectGenerate for XCodeGenProject {
     }
 
     /// Generate xcodeproj
-    async fn generate(&mut self) -> Result<()> {
-        log::info!("generating ...");
+    async fn generate(&mut self, logger: &Arc<Broadcast>) -> Result<()> {
+        logger.info(format!("generating {} ...", self.name()))?;
 
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
         process.current_dir(self.root());
-
-        let (success, logs) = consume_and_log(Box::pin(process.spawn_and_stream()?)).await;
+        let success = logger
+            .consume(Box::new(process))?
+            .recv()
+            .await
+            .unwrap_or_default();
 
         if success {
             let xcodeproj_paths = self.get_xcodeproj_paths()?;
@@ -111,7 +129,7 @@ impl ProjectGenerate for XCodeGenProject {
             self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
             self.targets = self.xcodeproj.targets_platform();
         } else {
-            return Err(Error::Generate(logs.join("\n")));
+            return Err(Error::Generate);
         }
 
         Ok(())
@@ -120,16 +138,14 @@ impl ProjectGenerate for XCodeGenProject {
 
 #[async_trait::async_trait]
 impl Project for XCodeGenProject {
-    async fn new(client: &Client) -> Result<Self> {
-        let Client { root, pid, .. } = client;
-
+    async fn new(root: &PathBuf, logger: &Arc<Broadcast>) -> Result<Self> {
         let mut watchignore = generate_watchignore(root).await;
         watchignore.extend(["**/*.xcodeproj/**".into(), "**/*.xcworkspace/**".into()]);
 
         let mut project = Self {
             root: root.clone(),
             watchignore,
-            clients: vec![pid.clone()],
+            num_clients: 1,
             ..Self::default()
         };
 
@@ -146,7 +162,7 @@ impl Project for XCodeGenProject {
             project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
             project.targets = project.xcodeproj.targets_platform();
         } else {
-            project.generate().await?;
+            project.generate(logger).await?;
         }
 
         log::info!("[{}] targets: {:?}", project.name(), project.targets());

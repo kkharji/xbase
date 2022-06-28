@@ -51,6 +51,7 @@ which = "4.2.5"
 erased-serde = "0.3.21"
 tarpc = { version = "0.29.0", features = ["serde-transport", "tokio1", "serde1"] }
 linemux = "0.2.3"
+os_pipe = "1.0.1"
 
 [dev-dependencies]
 tracing-test = "0.2.2"

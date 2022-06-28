@@ -3,17 +3,16 @@ mod swift;
 mod tuist;
 mod xcodegen;
 
-use crate::logger::Logger;
+use crate::broadcast::Broadcast;
 use crate::Result;
 use crate::{device::*, run::*, util::*, watch::*};
 use anyhow::Context;
 use barebone::BareboneProject;
-use futures::StreamExt;
 use process_stream::ProcessExt;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use xbase_proto::{BuildSettings, Client};
+use xbase_proto::BuildSettings;
 use xclog::{XCBuildSettings, XCLogger};
 use xcodeproj::pbxproj::PBXTargetPlatform;
 use {swift::*, tuist::*, xcodegen::*};
@@ -27,12 +26,18 @@ pub trait ProjectData: std::fmt::Debug {
     /// Project targets
     fn targets(&self) -> &HashMap<String, PBXTargetPlatform>;
     /// Project clients
-    fn clients(&self) -> &Vec<i32>;
+    fn clients(&self) -> &i32;
     /// Get mut clients
-    fn clients_mut(&mut self) -> &mut Vec<i32>;
-    /// Add client to project
-    fn add_client(&mut self, pid: i32) {
-        self.clients_mut().push(pid)
+    fn clients_mut(&mut self) -> &mut i32;
+    /// Increment the number of client connected to project
+    fn inc_clients(&mut self) {
+        let current = self.clients_mut();
+        *current += 1;
+    }
+    /// Decrement the number of client connected to project
+    fn dec_clients(&mut self) {
+        let current = self.clients_mut();
+        *current -= 1;
     }
     /// Get Ignore patterns
     fn watchignore(&self) -> &Vec<String>;
@@ -53,11 +58,16 @@ pub trait ProjectBuild: ProjectData {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-        logger: &Arc<Logger>,
+        broadcast: &Arc<Broadcast>,
     ) -> Result<Vec<String>> {
         let mut args = cfg.to_args();
+        let target = &cfg.target;
+        let name = self.name().to_owned();
+        let xcworkspace = format!("{}.xcworkspace", &name);
 
         args.insert(0, "build".to_string());
+
+        broadcast.info(format!("[target: {target}] building ..."))?;
 
         if let Some(device) = device {
             args.extend(device.special_build_args())
@@ -68,8 +78,6 @@ pub trait ProjectBuild: ProjectData {
         args.push(format!("SYMROOT={cache_build_root}",));
         args.push("-allowProvisioningUpdates".into());
 
-        let name = self.name().to_owned();
-        let xcworkspace = format!("{}.xcworkspace", &name);
         if self.root().join(&xcworkspace).exists() {
             args.iter_mut().for_each(|arg| {
                 if arg == "-target" {
@@ -81,9 +89,21 @@ pub trait ProjectBuild: ProjectData {
             args.extend_from_slice(&["-project".into(), format!("{}.xcodeproj", name)]);
         }
 
-        log::trace!("building with [{}]", args.join(" "));
+        broadcast.log_trace(format!("building with [{}]", args.join(" ")))?;
 
-        logger.add_process(Box::new(XCLogger::new(self.root(), &args)?));
+        let success = broadcast
+            .consume(Box::new(XCLogger::new(self.root(), &args)?))?
+            .blocking_recv()
+            .unwrap_or_default();
+
+        if !success {
+            broadcast.error(format!(
+                "[target: {target}] building Failed: `xcodebuild {}`",
+                args.join(" ")
+            ))?;
+        } else {
+            broadcast.error(format!("[target: {target}] built successfully"))?;
+        };
 
         Ok(args)
     }
@@ -102,9 +122,9 @@ pub trait ProjectRun: ProjectData + ProjectBuild {
         &self,
         cfg: &BuildSettings,
         device: Option<&Device>,
-        logger: &Arc<Logger>,
+        broadcast: &Arc<Broadcast>,
     ) -> Result<(Box<dyn Runner + Send + Sync>, Vec<String>)> {
-        let args = self.build(cfg, device, logger)?;
+        let args = self.build(cfg, device, broadcast)?;
         let info = XCBuildSettings::new_sync(self.root(), &args)?;
         let runner: Box<dyn Runner + Send + Sync> = match device {
             Some(device) => Box::new(SimulatorRunner::new(device.clone(), &info)),
@@ -118,7 +138,7 @@ pub trait ProjectRun: ProjectData + ProjectBuild {
 #[async_trait::async_trait]
 pub trait ProjectCompile: ProjectData {
     /// Generate compile database in project root
-    async fn update_compile_database(&self) -> Result<()>;
+    async fn update_compile_database(&self, broadcast: &Arc<Broadcast>) -> Result<()>;
 
     /// Get compile arguments
     fn compile_arguments(&self) -> Vec<String> {
@@ -145,7 +165,7 @@ pub trait ProjectGenerate: ProjectData {
         false
     }
     /// Generate xcodeproj
-    async fn generate(&mut self) -> Result<()>;
+    async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()>;
 }
 
 #[async_trait::async_trait]
@@ -161,7 +181,7 @@ pub trait Project:
     + erased_serde::Serialize
 {
     /// Create new project
-    async fn new(client: &Client) -> Result<Self>
+    async fn new(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<Self>
     where
         Self: Sized;
 }
@@ -169,16 +189,18 @@ pub trait Project:
 erased_serde::serialize_trait_object!(Project);
 
 /// Create a project from given client
-pub async fn project(client: &Client) -> Result<Box<dyn Project + Send + Sync>> {
-    let Client { root, .. } = client;
+pub async fn project(
+    root: &PathBuf,
+    broadcast: &Arc<Broadcast>,
+) -> Result<Box<dyn Project + Send + Sync>> {
     if root.join("project.yml").exists() {
-        Ok(Box::new(XCodeGenProject::new(client).await?))
+        Ok(Box::new(XCodeGenProject::new(root, broadcast).await?))
     } else if root.join("Project.swift").exists() {
-        Ok(Box::new(TuistProject::new(client).await?))
+        Ok(Box::new(TuistProject::new(root, broadcast).await?))
     } else if root.join("Package.swift").exists() {
-        Ok(Box::new(SwiftProject::new(client).await?))
+        Ok(Box::new(SwiftProject::new(root, broadcast).await?))
     } else {
-        Ok(Box::new(BareboneProject::new(client).await?))
+        Ok(Box::new(BareboneProject::new(root, broadcast).await?))
     }
 }
 

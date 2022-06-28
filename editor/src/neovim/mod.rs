@@ -1,64 +1,123 @@
-mod extensions;
-mod logger;
+mod global;
+mod listener;
 mod state;
 
-use crate::runtime::*;
+use std::path::PathBuf;
+
+use crate::{runtime::*, BrodcastMessage, XBase};
 use mlua::prelude::*;
 use xbase_proto::*;
 
-pub(self) use extensions::*;
-pub(self) use logger::*;
-pub(self) use state::*;
+pub use global::*;
+pub use listener::*;
+pub use state::*;
 
-pub struct NeovimDaemonClient;
+impl BrodcastMessage for Lua {
+    type Result = LuaResult<()>;
 
-impl NeovimDaemonClient {
-    /// Register current runtime as a daemon client
-    ///
-    /// If root is given then the registration will be for the root instead
-    pub async fn register(lua: &Lua, root: Option<String>) -> Result<()> {
-        let client = client().await;
+    fn handle(&self, msg: Message) -> Self::Result {
+        match msg {
+            Message::Notify { msg, level } => self.notify(msg, level),
+            Message::Log { msg, level } => self.log(msg, level),
+            Message::Execute(task) => match task {
+                Task::UpdateStatusline(state) => self.update_statusline(state),
+            },
+        }
+    }
+
+    fn update_statusline(&self, state: StatuslineState) -> Self::Result {
+        todo!()
+    }
+}
+
+impl XBase for Lua {
+    type Result = LuaResult<()>;
+
+    fn register(&self, root: Option<String>) -> Self::Result {
         if ensure_daemon() {
-            lua.info("new instance initialized, connecting ..")?;
+            self.info("new instance initialized, connecting ..")?;
         }
 
-        let req = RegisterRequest {
-            client: Client::new(lua, root)?,
+        let root = if let Some(root) = root {
+            root.into()
+        } else {
+            self.cwd()?
         };
 
-        let _log_path = client.register(context::current(), req).await??;
-
-        lua.info("Connected")?;
+        Listener::init_or_skip(self, root)?;
 
         Ok(())
     }
 
     /// Build project
-    pub async fn build(_lua: &Lua, req: BuildRequest) -> Result<()> {
-        let client = client().await;
-        let ctx = context::current();
-        let _path = client.build(ctx, req).await??;
+    fn build(&self, req: BuildRequest) -> Self::Result {
+        rt().block_on(async move {
+            let rpc = rpc().await;
+            let ctx = context::current();
+            let _path = rpc.build(ctx, req).await??;
+            OK(())
+        })
+        .to_lua_err()?;
         Ok(())
     }
 
     /// Run project
-    pub async fn run(_lua: &Lua, req: RunRequest) -> Result<()> {
-        let client = client().await;
-        let ctx = context::current();
-        let _path = client.run(ctx, req).await??;
+    fn run(&self, req: RunRequest) -> Self::Result {
+        rt().block_on(async move {
+            let rpc = rpc().await;
+            let ctx = context::current();
+            let _path = rpc.run(ctx, req).await??;
+            OK(())
+        })
+        .to_lua_err()?;
         Ok(())
     }
 
     /// Drop project at given root, otherwise drop client
-    pub async fn drop(lua: &Lua, root: Option<String>) -> Result<()> {
-        let client = client().await;
-        let ctx = context::current();
-        let req = DropRequest {
-            remove_client: root.is_none(),
-            client: Client::new(lua, root)?,
-        };
+    fn drop(&self, root: Option<String>) -> Self::Result {
+        let client = Client::new(self, root)?;
+        rt().block_on(async move {
+            let rpc = rpc().await;
+            let ctx = context::current();
 
-        client.drop(ctx, req).await??;
+            rpc.drop(ctx, client).await??;
+
+            OK(())
+        })?;
         Ok(())
+    }
+}
+
+pub struct XBaseUserData;
+
+impl LuaUserData for XBaseUserData {
+    fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(m: &mut M) {
+        m.add_function("register", XBase::register);
+        m.add_function("build", XBase::build);
+        m.add_function("run", XBase::run);
+        m.add_function("drop", XBase::drop);
+    }
+}
+
+impl NvimGlobal for Lua {
+    fn vim(&self) -> LuaResult<LuaTable> {
+        self.globals().get("vim")
+    }
+
+    fn cwd(&self) -> LuaResult<PathBuf> {
+        self.vim()?
+            .get::<_, LuaTable>("loop")?
+            .get::<_, LuaFunction>("cwd")?
+            .call::<_, String>(())
+            .map(PathBuf::from)
+    }
+
+    fn notify<S: AsRef<str>>(&self, msg: S, level: MessageLevel) -> LuaResult<()> {
+        let notify: LuaFunction = self.vim()?.get("notify")?;
+        notify.call((msg.as_ref(), level as u8))
+    }
+
+    fn log<S: AsRef<str>>(&self, _: S, _: MessageLevel) -> std::result::Result<(), mlua::Error> {
+        todo!()
     }
 }

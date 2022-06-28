@@ -1,10 +1,8 @@
-#![allow(dead_code)]
-use std::sync::Weak;
-
-use crate::logger::Logger;
+use crate::broadcast::Broadcast;
 use crate::{constants::DAEMON_STATE, Result};
 use process_stream::ProcessExt;
 use process_stream::{Process, StreamExt};
+use std::sync::Weak;
 use tokio::task::JoinHandle;
 use xbase_proto::Client;
 
@@ -21,7 +19,7 @@ impl RunServiceHandler {
         target: &String,
         client: &Client,
         mut process: Process,
-        logger: Weak<Logger>,
+        broadcast: Weak<Broadcast>,
     ) -> Result<Self> {
         let (key, target, client) = (key.clone(), target.clone(), client.clone());
         let mut stream = process.spawn_and_stream()?;
@@ -34,8 +32,8 @@ impl RunServiceHandler {
             while let Some(output) = stream.next().await {
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
-                let ref mut logger = match logger.upgrade() {
-                    Some(logger) => logger,
+                let ref mut broadcast = match broadcast.upgrade() {
+                    Some(broadcast) => broadcast,
                     None => {
                         log::warn!("No client instance listening, closing runner ..");
                         state.watcher.get_mut(&client.root)?.listeners.remove(&key);
@@ -48,19 +46,19 @@ impl RunServiceHandler {
                 match output {
                     Output(msg) => {
                         if !msg.contains("ignoring singular matrix") {
-                            logger.append(msg);
+                            broadcast.info(msg)?;
                         }
                     }
                     Error(msg) => {
-                        logger.error(msg);
+                        broadcast.error(msg)?;
                     }
                     // TODO: this should be skipped when user re-run the app
                     Exit(code) => {
                         let success = &code == "0";
                         if success {
-                            logger.append(format!("disconnected"));
+                            broadcast.info(format!("disconnected"))?;
                         } else {
-                            logger.append(format!("disconnected, exit: {code}"));
+                            broadcast.info(format!("disconnected, exit: {code}"))?;
                         }
 
                         log::info!("[target: {target}] runner closed");
