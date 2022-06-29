@@ -49,15 +49,15 @@ impl ProjectBuild for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-        logger: &Arc<Broadcast>,
+        broadcast: &Arc<Broadcast>,
     ) -> Result<Vec<String>> {
-        logger.info(format!("Building {}", cfg.target))?;
+        broadcast::notify_info!(broadcast, "Building {}", cfg.target)?;
         let args = vec!["build", "--target", &cfg.target];
         let mut process = Process::new("/usr/bin/swift");
 
         process.args(&args);
         process.current_dir(self.root());
-        logger.consume(Box::new(process))?;
+        broadcast.consume(Box::new(process))?;
 
         Ok(vec![])
     }
@@ -69,9 +69,9 @@ impl ProjectRun for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-        logger: &Arc<Broadcast>,
+        broadcast: &Arc<Broadcast>,
     ) -> Result<(Box<dyn Runner + Send + Sync>, Vec<String>)> {
-        let args = self.build(cfg, None, logger)?;
+        let args = self.build(cfg, None, broadcast)?;
 
         let output = std::process::Command::new("/usr/bin/swift")
             .args(["build", "--show-bin-path"])
@@ -116,16 +116,17 @@ impl ProjectGenerate for SwiftProject {
     }
 
     /// Generate xcodeproj
-    async fn generate(&mut self, logger: &Arc<Broadcast>) -> Result<()> {
+    async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let mut process: Process = vec!["/usr/bin/swift", "build"].into();
         process.current_dir(self.root());
 
-        logger.info(format!(
+        broadcast::notify_info!(
+            broadcast,
             "Building and compiling swift project {}",
             self.name()
-        ))?;
+        )?;
 
-        let success = logger
+        let success = broadcast
             .consume(Box::new(process))?
             .recv()
             .await
@@ -145,7 +146,7 @@ impl ProjectGenerate for SwiftProject {
 
 #[async_trait::async_trait]
 impl Project for SwiftProject {
-    async fn new(root: &PathBuf, logger: &Arc<Broadcast>) -> Result<Self> {
+    async fn new(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<Self> {
         let watchignore = generate_watchignore(root).await;
 
         let mut project = Self {
@@ -157,7 +158,7 @@ impl Project for SwiftProject {
 
         if !root.join(".build").exists() {
             log::info!("no .build directory found at {root:?}");
-            project.generate(logger).await?;
+            project.generate(broadcast).await?;
             return Ok(project);
         } else {
             project.update_project_info().await?;

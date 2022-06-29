@@ -2477,6 +2477,7 @@ dependencies = [
  "mlua",
  "once_cell",
  "os_pipe",
+ "paste",
  "process-stream",
  "serde",
  "serde_json",

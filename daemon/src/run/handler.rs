@@ -1,4 +1,4 @@
-use crate::broadcast::Broadcast;
+use crate::broadcast::{self, Broadcast};
 use crate::{constants::DAEMON_STATE, Result};
 use process_stream::ProcessExt;
 use process_stream::{Process, StreamExt};
@@ -46,19 +46,19 @@ impl RunServiceHandler {
                 match output {
                     Output(msg) => {
                         if !msg.contains("ignoring singular matrix") {
-                            broadcast.info(msg)?;
+                            broadcast::log_info!(broadcast, "{msg}")?;
                         }
                     }
                     Error(msg) => {
-                        broadcast.error(msg)?;
+                        broadcast::log_error!(broadcast, "{msg}")?;
                     }
                     // TODO: this should be skipped when user re-run the app
                     Exit(code) => {
                         let success = &code == "0";
                         if success {
-                            broadcast.info(format!("disconnected"))?;
+                            broadcast::log_info!(broadcast, "disconnected")?;
                         } else {
-                            broadcast.info(format!("disconnected, exit: {code}"))?;
+                            broadcast::log_error!(broadcast, "disconnected, exit: {code}")?;
                         }
 
                         log::info!("[target: {target}] runner closed");

@@ -1,5 +1,5 @@
 //! Module for generating Compilation Database.
-use crate::broadcast::Broadcast;
+use crate::broadcast::{self, Broadcast};
 use crate::watch::Event;
 use crate::{constants::State, Result};
 use std::path::PathBuf;
@@ -49,7 +49,7 @@ pub async fn ensure_server_support<'a>(
     let is_swift_project = root.join("Package.swift").exists();
 
     if !is_swift_project && ensure_server_config(root).await.is_err() {
-        broadcast.error("fail to ensure build server configuration!")?;
+        broadcast::notify_error!(broadcast, "fail to ensure build server configuration!")?;
     };
 
     if let Some(event) = event {
@@ -57,7 +57,7 @@ pub async fn ensure_server_support<'a>(
         if project.should_generate(event) {
             if let Err(e) = project.generate(broadcast).await {
                 for line in e.to_string().split("\n") {
-                    broadcast.error(line)?;
+                    broadcast::notify_error!(broadcast, "{line}")?;
                 }
                 return Ok(false);
             };
@@ -68,7 +68,10 @@ pub async fn ensure_server_support<'a>(
     }
 
     if !is_swift_project && !compile_exists {
-        broadcast.info("⚙ Generating compile database (may take few seconds) ..")?;
+        broadcast::notify_info!(
+            broadcast,
+            "⚙ Generating compile database (may take few seconds) .."
+        )?;
 
         if let Err(err) = state
             .projects
@@ -76,10 +79,12 @@ pub async fn ensure_server_support<'a>(
             .update_compile_database(broadcast)
             .await
         {
-            // TODO: open logger or notifiy to check logger
-            broadcast.error("Fail to regenerate compilation database!")?;
+            broadcast::notify_error!(
+                broadcast,
+                "Fail to regenerate compilation database!, checkout logs"
+            )?;
             for line in err.to_string().split("\n") {
-                broadcast.log_error(line)?;
+                broadcast::log_error!(broadcast, "{line}")?;
             }
 
             return Ok(false);

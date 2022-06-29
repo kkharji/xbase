@@ -3,7 +3,7 @@ mod handler;
 mod service;
 mod simulator;
 
-use crate::broadcast::Broadcast;
+use crate::broadcast::{self, Broadcast};
 use crate::constants::State;
 use crate::constants::DAEMON_STATE;
 use crate::device::Device;
@@ -20,7 +20,7 @@ pub use {bin::*, simulator::*};
 #[async_trait::async_trait]
 pub trait Runner {
     /// Run Project
-    async fn run<'a>(&self, logger: &Broadcast) -> Result<Process>;
+    async fn run<'a>(&self, broadcast: &Broadcast) -> Result<Process>;
 }
 
 /// Handle RunRequest
@@ -33,12 +33,12 @@ pub async fn handle(req: RunRequest) -> Result<()> {
     let ref key = req.to_string();
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;
-    let logger = state.broadcasters.get_or_init(root).await?;
-    let logger = logger.upgrade().unwrap();
+    let broadcast = state.broadcasters.get_or_init(root).await?;
+    let broadcast = broadcast.upgrade().unwrap();
 
     if req.ops.is_once() {
         // TODO(run): might want to keep track of ran services
-        RunService::new(state, req, &logger).await?;
+        RunService::new(state, req, &broadcast).await?;
         return Ok(Default::default());
     }
 
@@ -46,17 +46,17 @@ pub async fn handle(req: RunRequest) -> Result<()> {
     if req.ops.is_watch() {
         let watcher = state.watcher.get(&req.client.root)?;
         if watcher.contains_key(key) {
-            logger.info(format!("Already watching with {key}!!"))?;
+            broadcast::notify_warn!(broadcast, "Already watching with {key}!!")?;
         } else {
-            let run_service = RunService::new(state, req, &logger).await?;
+            let run_service = RunService::new(state, req, &broadcast).await?;
             let watcher = state.watcher.get_mut(&client.root)?;
             watcher.add(run_service)?;
         }
     } else {
-        log::info!("[target: {}] stopping .....", &req.settings.target);
         let watcher = state.watcher.get_mut(&req.client.root)?;
         let listener = watcher.remove(&req.to_string())?;
         listener.discard(state).await?;
+        broadcast::notify_info!(broadcast, "[target: {}] watch stop", &req.settings.target)?;
     }
 
     log::info!("{sep}",);
@@ -71,14 +71,14 @@ async fn get_runner<'a>(
     settings: &BuildSettings,
     device: Option<&Device>,
     _is_once: bool,
-    logger: &Arc<Broadcast>,
+    broadcast: &Arc<Broadcast>,
 ) -> Result<process_stream::Process> {
     let root = &client.root;
     let target = &settings.target;
     let project = state.projects.get(root)?;
-    let (runner, _) = project.get_runner(&settings, device, logger)?;
+    let (runner, _) = project.get_runner(&settings, device, broadcast)?;
 
     log::info!("[target: {target}] running .....");
 
-    Ok(runner.run(logger).await?)
+    Ok(runner.run(broadcast).await?)
 }

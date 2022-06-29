@@ -40,7 +40,8 @@ pub async fn rpc() -> &'static XBaseClient {
         .await
 }
 
-pub async fn _spawn<F: Future>(future: F) -> F::Output {
+#[allow(dead_code)]
+pub async fn spawn<F: Future>(future: F) -> F::Output {
     tokio::task::LocalSet::new()
         .run_until(async move { RUNTIME.block_on(future) })
         .await
@@ -57,13 +58,3 @@ pub fn ensure_daemon() -> bool {
         true
     }
 }
-
-macro_rules! spawn {
-    ($body:block) => {
-        $crate::runtime::_spawn(async { Ok::<_, Error>($body.await?) })
-    };
-    ($body:ident) => {
-        $crate::runtime::_spawn(async { Ok::<_, Error>($body.await?) })
-    };
-}
-pub(crate) use spawn;

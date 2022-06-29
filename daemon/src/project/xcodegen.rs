@@ -52,7 +52,7 @@ impl ProjectRun for XCodeGenProject {}
 
 #[async_trait::async_trait]
 impl ProjectCompile for XCodeGenProject {
-    async fn update_compile_database(&self, logger: &Arc<Broadcast>) -> Result<()> {
+    async fn update_compile_database(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         use xclog::XCCompilationDatabase as CC;
 
         let name = self.name();
@@ -67,17 +67,18 @@ impl ProjectCompile for XCodeGenProject {
         let xclogger = XCLogger::new(&root, &arguments)?;
         let compile_commands = xclogger.compile_commands.clone();
 
-        let success = logger
+        let success = broadcast
             .consume(Box::new(xclogger))?
             .recv()
             .await
             .unwrap_or_default();
 
         if !success {
-            logger.error(format!(
+            broadcast::notify_error!(
+                broadcast,
                 "Fail to generated compile commands for {}",
                 self.name()
-            ))?;
+            )?;
             return Err(Error::Build(self.name().into()));
         }
 
@@ -87,7 +88,6 @@ impl ProjectCompile for XCodeGenProject {
         tokio::fs::write(root.join(".compile"), &json).await?;
 
         log::info!("[{name}] compiled successfully");
-        logger.error(format!("[{name}] compiled successfully"))?;
 
         Ok(())
     }
@@ -106,12 +106,12 @@ impl ProjectGenerate for XCodeGenProject {
     }
 
     /// Generate xcodeproj
-    async fn generate(&mut self, logger: &Arc<Broadcast>) -> Result<()> {
-        logger.info(format!("generating {} ...", self.name()))?;
+    async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
+        broadcast::notify_info!(broadcast, "generating {} ...", self.name())?;
 
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
         process.current_dir(self.root());
-        let success = logger
+        let success = broadcast
             .consume(Box::new(process))?
             .recv()
             .await
@@ -138,7 +138,7 @@ impl ProjectGenerate for XCodeGenProject {
 
 #[async_trait::async_trait]
 impl Project for XCodeGenProject {
-    async fn new(root: &PathBuf, logger: &Arc<Broadcast>) -> Result<Self> {
+    async fn new(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<Self> {
         let mut watchignore = generate_watchignore(root).await;
         watchignore.extend(["**/*.xcodeproj/**".into(), "**/*.xcworkspace/**".into()]);
 
@@ -162,7 +162,7 @@ impl Project for XCodeGenProject {
             project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
             project.targets = project.xcodeproj.targets_platform();
         } else {
-            project.generate(logger).await?;
+            project.generate(broadcast).await?;
         }
 
         log::info!("[{}] targets: {:?}", project.name(), project.targets());

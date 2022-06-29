@@ -60,8 +60,7 @@ impl ProjectRun for TuistProject {}
 
 #[async_trait::async_trait]
 impl ProjectCompile for TuistProject {
-    // TODO: Use logger
-    async fn update_compile_database(&self, logger: &Arc<Broadcast>) -> Result<()> {
+    async fn update_compile_database(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         use xclog::XCCompileCommand as C;
 
         let name = self.name();
@@ -86,7 +85,7 @@ impl ProjectCompile for TuistProject {
 
             let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();
-            let recv = logger.consume(Box::new(xclogger))?;
+            let recv = broadcast.consume(Box::new(xclogger))?;
             (recv, xccommands)
         };
 
@@ -106,17 +105,18 @@ impl ProjectCompile for TuistProject {
 
             let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();
-            let recv = logger.consume(Box::new(xclogger))?;
+            let recv = broadcast.consume(Box::new(xclogger))?;
             (recv, xccommands)
         };
 
         if !(project_compile_success.recv().await.unwrap_or_default()
             && manifest_compile_success.recv().await.unwrap_or_default())
         {
-            logger.error(format!(
+            broadcast::notify_error!(
+                broadcast,
                 "Fail to generated compile commands for {}",
                 self.name()
-            ))?;
+            )?;
             return Err(Error::Build(self.name().into()));
         }
 
@@ -212,7 +212,7 @@ impl TuistProject {
 
 #[async_trait::async_trait]
 impl Project for TuistProject {
-    async fn new(root: &PathBuf, logger: &Arc<Broadcast>) -> Result<Self> {
+    async fn new(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<Self> {
         let mut watchignore = generate_watchignore(root).await;
 
         watchignore.extend([
@@ -245,7 +245,7 @@ impl Project for TuistProject {
             _ => {
                 log::info!("no xcodeproj found at {root:?}");
 
-                project.generate(logger).await?;
+                project.generate(broadcast).await?;
 
                 project.targets = project.xcodeproj.targets_platform();
                 project.manifest_files = project.manifest.build_file_names();

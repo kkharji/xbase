@@ -3,7 +3,7 @@ mod swift;
 mod tuist;
 mod xcodegen;
 
-use crate::broadcast::Broadcast;
+use crate::broadcast::{self, Broadcast};
 use crate::Result;
 use crate::{device::*, run::*, util::*, watch::*};
 use anyhow::Context;
@@ -67,7 +67,7 @@ pub trait ProjectBuild: ProjectData {
 
         args.insert(0, "build".to_string());
 
-        broadcast.info(format!("[target: {target}] building ..."))?;
+        broadcast::notify_info!(broadcast, "[target: {target}] building ...")?;
 
         if let Some(device) = device {
             args.extend(device.special_build_args())
@@ -89,7 +89,7 @@ pub trait ProjectBuild: ProjectData {
             args.extend_from_slice(&["-project".into(), format!("{}.xcodeproj", name)]);
         }
 
-        broadcast.log_trace(format!("building with [{}]", args.join(" ")))?;
+        broadcast::log_trace!(broadcast, "building with [{}]", args.join(" "))?;
 
         let success = broadcast
             .consume(Box::new(XCLogger::new(self.root(), &args)?))?
@@ -97,12 +97,13 @@ pub trait ProjectBuild: ProjectData {
             .unwrap_or_default();
 
         if !success {
-            broadcast.error(format!(
+            broadcast::notify_error!(
+                broadcast,
                 "[target: {target}] building Failed: `xcodebuild {}`",
                 args.join(" ")
-            ))?;
+            )?
         } else {
-            broadcast.error(format!("[target: {target}] built successfully"))?;
+            broadcast::notify_error!(broadcast, "[target: {target}] build failed")?;
         };
 
         Ok(args)

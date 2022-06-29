@@ -1,7 +1,7 @@
 mod event;
 pub use event::{Event, EventKind};
 
-use crate::broadcast::Broadcast;
+use crate::broadcast::{self, Broadcast};
 use crate::compile::ensure_server_support;
 use crate::util::fs::PathExt;
 use crate::{constants::State, constants::DAEMON_STATE, Result};
@@ -63,7 +63,7 @@ impl WatchService {
             event: &Event,
             root: &PathBuf,
             state: &mut MutexGuard<'a, State>,
-            boradcast: &Arc<Broadcast>,
+            broadcast: &Arc<Broadcast>,
         ) -> Result<()> {
             let recompiled = event.is_create_event()
                 || event.is_remove_event()
@@ -71,14 +71,17 @@ impl WatchService {
                 || event.is_rename_event() && !event.is_seen();
 
             if recompiled {
-                let ensure = ensure_server_support(state, root, Some(event), boradcast).await;
+                let ensure = ensure_server_support(state, root, Some(event), broadcast).await;
                 match ensure {
                     Err(err) => {
                         log::error!("Ensure server support Errored!! {err:?} ");
                     }
                     Ok(true) => {
                         let ref name = root.as_path().abbrv()?.display();
-                        boradcast.info("new compilation database generated ✅")?;
+                        broadcast::notify_info!(
+                            broadcast,
+                            "new compilation database generated ✅"
+                        )?;
                         info!("[{name}] recompiled successfully");
                     }
                     _ => (),

@@ -1,14 +1,13 @@
 local M = {}
-M.lib = require "xbase_editor_lib"
 
-vim.g.xbase = {
-  ---@type Project[]
-  projects = vim.empty_dict(),
-  ---@type table<string, boolean>
-  watch = vim.empty_dict(),
-  ---@type Device[]
-  devices = vim.empty_dict(),
-}
+vim.g.xbase = {}
+--   bufnr = nil,
+--   watchers = vim.empty_dict(),
+--   devices = vim.empty_dict(),
+--   config = vim.empty_dict(),
+-- }
+
+M.lib = require "xbase_editor_lib"
 
 ---Check whether the vim instance should be registered to xbase server.
 ---@param root string: current working directory
@@ -65,7 +64,7 @@ local function try_map(key, fun)
 end
 
 M.toggle_log_buffer = function(vsplit)
-  local bufnr = vim.g.xbase_log_bufnr
+  local bufnr = M.lib.log_bufnr()
   local win = vim.fn.win_findbuf(bufnr)[1]
 
   if win then

@@ -1,4 +1,4 @@
-use crate::broadcast::Broadcast;
+use crate::broadcast::{self, Broadcast};
 use crate::device::Device;
 use crate::run::Runner;
 use crate::util::{fmt, pid};
@@ -38,37 +38,36 @@ impl SimulatorRunner {
             Err(Error::Lookup(_, _)) => {
                 let msg = format!("[Simulator] Launching");
                 log::info!("{msg}");
-                broadcast.info(msg)?;
+                broadcast::log_info!(broadcast, "{msg}")?;
                 tokio::process::Command::new("open")
                     .args(&["-a", "Simulator"])
                     .spawn()?
                     .wait()
                     .await?;
-                let msg = format!("[Simulator] Connected");
-                broadcast.log_info(msg)?;
-                broadcast.log_info(fmt::separator())?;
+                broadcast::log_info!(broadcast, "[Simulator] Connected")?;
+                broadcast::log_info!(broadcast, "{}", fmt::separator())?;
             }
             Err(err) => {
                 let msg = err.to_string();
                 log::error!("{msg}");
-                broadcast.error(msg)?;
+                broadcast::log_error!(broadcast, "{}", msg)?;
             }
             _ => {}
         }
 
-        broadcast.info(self.booting_msg())?;
+        broadcast::log_info!(broadcast, "{}", self.booting_msg())?;
         if let Err(e) = self.device.boot() {
             let err: Error = e.into();
             let err_msg = err.to_string();
             if !err_msg.contains("current state Booted") {
-                broadcast.error(err_msg)?;
+                broadcast::log_error!(broadcast, "err_msg")?;
             }
         }
         Ok(())
     }
 
     pub async fn install<'a>(&self, broadcast: &Broadcast) -> Result<()> {
-        broadcast.info(self.installing_msg())?;
+        broadcast::log_info!(broadcast, "{}", self.installing_msg())?;
         self.device
             .install(&self.output_dir)
             .pipe(|res| self.ok_or_abort(res, broadcast))
@@ -77,7 +76,7 @@ impl SimulatorRunner {
     }
 
     pub async fn launch<'a>(&self, broadcast: &Broadcast) -> Result<Process> {
-        broadcast.log_info(self.launching_msg())?;
+        broadcast::log_info!(broadcast, "{}", self.launching_msg())?;
         let mut process = Process::new("xcrun");
         let args = &[
             "simctl",
@@ -90,8 +89,8 @@ impl SimulatorRunner {
 
         process.args(args);
 
-        broadcast.log_info(self.connected_msg())?;
-        broadcast.log_info(fmt::separator())?;
+        broadcast::log_info!(broadcast, "{}", self.connected_msg())?;
+        broadcast::log_info!(broadcast, "{}", fmt::separator())?;
 
         Ok(process)
     }
@@ -103,7 +102,7 @@ impl SimulatorRunner {
     ) -> Result<()> {
         if let Err(e) = res {
             let error: Error = e.into();
-            broadcast.error(error.to_string())?;
+            broadcast::log_error!(broadcast, "{}", error.to_string())?;
             Err(error)
         } else {
             Ok(())

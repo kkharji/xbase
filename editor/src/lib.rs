@@ -51,6 +51,6 @@ pub trait XBase {
 }
 
 #[mlua::lua_module]
-fn xbase_editor_lib(lua: &mlua::Lua) -> mlua::Result<neovim::XBaseUserData> {
+fn xbase_editor_lib(_lua: &mlua::Lua) -> mlua::Result<neovim::XBaseUserData> {
     Ok(neovim::XBaseUserData)
 }

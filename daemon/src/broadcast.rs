@@ -1,3 +1,4 @@
+#![allow(unused_imports, unused_macros)]
 use crate::util::fs::PathExt;
 use crate::Result;
 use process_stream::*;
@@ -8,7 +9,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{mpsc::*, Mutex, Notify};
 use tokio::task::JoinHandle;
-use xbase_proto::{Message, StatuslineState, Task};
+use xbase_proto::{Client, Message, StatuslineState, Task};
 
 /// Boradcast server to send task to clients
 #[derive(Debug)]
@@ -122,8 +123,10 @@ impl Broadcast {
                         break
                     },
                     Ok((stream, _)) = listener.accept() => {
+
                         let mut listeners = listeners.lock().await;
                         listeners.push(stream);
+                        log::info!("Connected");
                     }
                 }
             }
@@ -145,8 +148,10 @@ impl Broadcast {
                     result = rx.recv() => match result {
                         None => break,
                         Some(output) => {
+                            let mut listeners =  listeners.lock().await;
                             if let Ok(value) = serde_json::to_string(&output) {
-                                for listener in listeners.clone().lock().await.iter_mut() {
+                                log::info!("{}", listeners.len());
+                                for listener in listeners.iter_mut() {
                                     listener.write_all(format!("{value}\n").as_bytes()).await.ok();
                                     listener.flush().await.ok();
                                 };
@@ -176,52 +181,75 @@ impl Broadcast {
     pub fn address(&self) -> &PathBuf {
         &self.address
     }
+
+    /// Get a reference to the broadcast's tx.
+    #[must_use]
+    pub fn tx(&self) -> &UnboundedSender<Message> {
+        &self.tx
+    }
 }
 
+#[macro_export]
+macro_rules! __broadcast {
+    ($b:ident, $type:ident, $level:ident, $pid:tt, $f:literal, $($arg:tt)*) => { {
+        use xbase_proto::*;
+        $b.tx().send(Message::$type {
+            msg: std::fmt::format(format_args!($f, $($arg)*)),
+            level: MessageLevel::$level,
+            pid: $pid.into(),
+        }).map_err(Error::from)
+    }};
+}
+
+macro_rules! generate {
+    ($($level:ident)*) => {
+        paste::paste! {
+            $(macro_rules! [<log _ $level:lower>] {
+                ($b:ident, $pid:tt, $f:literal, $args:expr) => {
+                    crate::broadcast::__broadcast!($b, Log, $level, $pid, $f, $args)
+                };
+                ($b:ident, $f:literal, $args:expr) => {
+                    crate::broadcast::__broadcast!($b, Log, $level, None, $f, $args)
+                };
+                ($b:ident, $pid:tt, $f:literal) => {
+                    crate::broadcast::__broadcast!($b, Log, $level, $pid, $f,)
+                };
+                ($b:ident, $f:literal) => {
+                    crate::broadcast::__broadcast!($b, Log, $level, None, $f,)
+                };
+            }
+
+            macro_rules! [<notify _ $level:lower>] {
+                ($b:ident, $pid:tt, $f:literal, $args:expr) => {
+                    crate::broadcast::__broadcast!($b, Notify, $level, $pid, $f, $args)
+                };
+                ($b:ident, $f:literal, $args:expr) => {
+                    crate::broadcast::__broadcast!($b, Notify, $level, None, $f, $args)
+                };
+                ($b:ident, $pid:tt, $f:literal) => {
+                    crate::broadcast::__broadcast!($b, Notify, $level, $pid, $f,)
+                };
+                ($b:ident, $f:literal) => {
+                    crate::broadcast::__broadcast!($b, Notify, $level, None, $f,)
+                };
+            })*
+        }
+    };
+}
+
+generate! { Trace Debug Info Warn Error }
+pub(crate) use {
+    __broadcast, log_debug, log_error, log_info, log_trace, log_warn, notify_debug, notify_error,
+    notify_info, notify_trace, notify_warn,
+};
+
 impl Broadcast {
-    pub fn info<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(msg.as_ref().into())?.pipe(Ok)
-    }
-
-    pub fn error<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::notify_error(msg))?.pipe(Ok)
-    }
-
-    pub fn warn<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::notify_warn(msg))?.pipe(Ok)
-    }
-
-    pub fn trace<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::notify_trace(msg))?.pipe(Ok)
-    }
-
-    pub fn debug<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::notify_debug(msg))?.pipe(Ok)
-    }
-
-    pub fn log_info<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::log_info(msg))?.pipe(Ok)
-    }
-
-    pub fn log_error<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::log_error(msg))?.pipe(Ok)
-    }
-
-    pub fn log_warn<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::log_error(msg))?.pipe(Ok)
-    }
-
-    pub fn log_trace<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::log_trace(msg))?.pipe(Ok)
-    }
-
-    pub fn log_debug<S: AsRef<str>>(&self, msg: S) -> Result<()> {
-        self.tx.send(Message::log_debug(msg))?.pipe(Ok)
-    }
-
     pub fn update_statusline(&self, state: StatuslineState) -> Result<()> {
         self.tx
-            .send(Message::Execute(Task::UpdateStatusline(state)))?
+            .send(Message::Execute {
+                task: Task::UpdateStatusline(state),
+                pid: None,
+            })?
             .pipe(Ok)
     }
 }

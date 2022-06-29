@@ -1,3 +1,4 @@
+use crate::broadcast;
 use crate::compile;
 use crate::constants::DAEMON_STATE;
 use crate::util::log_request;
@@ -25,7 +26,12 @@ pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
 
         if let Ok(project) = state.projects.get_mut(&root) {
             name = project.name().to_string();
-            broadcast.info(format!("[{}]: connected to an existing instance ✅", name))?;
+
+            broadcast::notify_info!(
+                broadcast,
+                pid,
+                "[{name}]: connected to an existing instance ✅"
+            )?;
             project.inc_clients();
         } else {
             state.projects.register(&root, &broadcast).await?;
@@ -37,10 +43,10 @@ pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
                 .watcher
                 .add(&root, watchignore, &name, &broadcast)
                 .await?;
-            broadcast.info(format!("[{}]: connected ✅", name))?;
+            broadcast::notify_info!(broadcast, pid, "[{name}]: connected ✅")?;
         }
         if compile::ensure_server_support(state, &root, None, &broadcast).await? {
-            broadcast.info(format!("[{}]: compiled ✅", name))?;
+            broadcast::notify_info!(broadcast, pid, "[{name}]: compiled ✅")?;
         }
 
         OK(())

@@ -76,10 +76,11 @@ impl ProjectCompile for BareboneProject {
         let mut recv = broadcast.consume(Box::new(xclogger))?;
 
         if !recv.recv().await.unwrap_or_default() {
-            broadcast.error(format!(
+            broadcast::notify_error!(
+                broadcast,
                 "Fail to generated compile commands for {}",
                 self.name()
-            ))?;
+            )?;
             return Err(Error::Build(self.name().into()));
         }
 

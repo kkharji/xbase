@@ -1,86 +1,68 @@
-// use tokio::sync::{Mutex, MutexGuard};
+use mlua::{chunk, prelude::*};
+use serde::{Deserialize, Serialize};
+use std::cell::{Ref, RefMut};
 
-// use mlua::prelude::*;
-// use serde::{Deserialize, Serialize};
-// use tokio::sync::OnceCell;
-// use xbase_proto::{Error, Result};
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct XBaseState {
+    pub bufnr: usize,
+}
 
-// #[derive(Clone, Debug, Serialize, Deserialize)]
-// pub struct NvimState {
-//     pub buffer: NvimLogBuffer,
-// }
+pub trait XBaseStateExt {
+    fn setup_state(&self) -> LuaResult<()>;
+    fn state(&self) -> LuaResult<Ref<XBaseState>>;
+    fn state_mut(&self) -> LuaResult<RefMut<XBaseState>>;
+}
 
-// impl NvimState {
-//     pub fn new(lua: &Lua) -> Result<Self> {
-//         Ok(Self {
-//             buffer: NvimLogBuffer::new(lua)?,
-//         })
-//     }
-// }
+impl XBaseStateExt for Lua {
+    fn setup_state(&self) -> LuaResult<()> {
+        // NOTE: Is it better to have a log buffer to every project root?
+        if self.state().is_err() {
+            let bufnr = self
+                .load(chunk! {
+                    local bufnr = vim.api.nvim_create_buf(false, true)
+                        vim.api.nvim_buf_set_name(bufnr, "[XBase Logs]")
+                        vim.api.nvim_buf_set_option(bufnr, "filetype", "xcodebuildlog");
+                    vim.api.nvim_create_autocmd({"BufEnter"}, {
+                        buffer = bufnr,
+                        command = "setlocal nonumber norelativenumber scrolloff=3"
+                    });
+                    vim.g.xbase.bufnr = bufnr
+                        return bufnr
+                })
+                .eval::<usize>()?;
 
-// static STATE: OnceCell<Mutex<NvimState>> = OnceCell::const_new();
+            self.set_app_data(XBaseState { bufnr });
+        }
+        Ok(())
+    }
 
-// pub async fn state(lua: &Lua) -> Result<MutexGuard<'static, NvimState>> {
-//     let state = STATE
-//         .get_or_try_init(|| async { Ok::<_, Error>(Mutex::new(NvimState::new(lua)?)) })
-//         .await?;
-//     Ok(state.lock().await)
-// }
+    fn state(&self) -> LuaResult<std::cell::Ref<XBaseState>> {
+        self.app_data_ref::<XBaseState>()
+            .ok_or_else(|| LuaError::external("XBaseState is not set!"))
+    }
 
-// /// Buffer state
-// #[derive(Clone, Debug, Serialize, Deserialize)]
-// pub struct NvimLogBuffer {
-//     bufnr: usize,
-//     last_task_status: LoggingTaskStatus,
-//     connected_tasks: Vec<LoggingTask>,
-//     line_count: usize,
-// }
+    fn state_mut(&self) -> LuaResult<std::cell::RefMut<XBaseState>> {
+        self.app_data_mut::<XBaseState>()
+            .ok_or_else(|| LuaError::external("XBaseState is not set!"))
+    }
+}
 
-// impl NvimLogBuffer {
-//     /// Setup Nvim Log buffer
-//     pub fn new(lua: &Lua) -> Result<Self> {
-//         let bufnr = 0;
+impl<'lua> FromLua<'lua> for XBaseState {
+    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
+        if let LuaValue::Table(table) = value {
+            Ok(Self {
+                bufnr: table.get("bufnr")?,
+            })
+        } else {
+            Err(LuaError::external("Expected table, got something else"))
+        }
+    }
+}
 
-//         Ok(Self {
-//             bufnr,
-//             last_task_status: Default::default(),
-//             connected_tasks: Default::default(),
-//             line_count: 0,
-//         })
-//     }
-//     fn get_last_status(&self, lua: &Lua) -> Result<LoggingTaskStatus> {
-//         todo!()
-//     }
-
-//     fn set_last_status(&mut self, lua: &Lua, success: LoggingTaskStatus) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn append<S: AsRef<str>>(&self, lua: &Lua, chunk: S) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn push<S: AsRef<str>>(&self, lua: &Lua, line: S) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn clear(&self, lua: &Lua) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn open(&self, lua: &Lua, direction: BufferDirection) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn close(&self, lua: &Lua) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn insert_task(&mut self, lua: &Lua, task: LoggingTask) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn tasks(&self) -> Vec<&LoggingTask> {
-//         todo!()
-//     }
-// }
+impl<'lua> ToLua<'lua> for XBaseState {
+    fn to_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
+        let table = lua.create_table()?;
+        table.set("bufnr", self.bufnr)?;
+        Ok(LuaValue::Table(table))
+    }
+}
