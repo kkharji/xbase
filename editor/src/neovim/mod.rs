@@ -4,7 +4,7 @@ mod state;
 
 use std::path::PathBuf;
 
-use crate::{runtime::*, BrodcastMessage, XBase};
+use crate::{runtime::*, Broadcast, XBase};
 use mlua::prelude::*;
 use xbase_proto::*;
 
@@ -12,7 +12,7 @@ pub use global::*;
 pub use listener::*;
 pub use state::*;
 
-impl BrodcastMessage for Lua {
+impl Broadcast for Lua {
     type Result = LuaResult<()>;
 
     fn handle(&self, msg: Message) -> Self::Result {

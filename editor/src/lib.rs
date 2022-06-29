@@ -3,7 +3,7 @@ use xbase_proto::*;
 mod neovim;
 mod runtime;
 
-pub trait BrodcastMessage {
+pub trait Broadcast {
     type Result;
     fn parse(&self, content: String) -> Result<Vec<Message>> {
         fn parse_single(line: &str) -> Result<Message> {

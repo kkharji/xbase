@@ -1,6 +1,6 @@
 use super::global::NvimNotify;
 use crate::runtime::{rpc, rt};
-use crate::BrodcastMessage;
+use crate::Broadcast;
 use mlua::{chunk, prelude::*};
 use once_cell::sync::Lazy;
 use os_pipe::{PipeReader, PipeWriter};
