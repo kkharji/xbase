@@ -5,11 +5,24 @@ mod runtime;
 
 pub trait BrodcastMessage {
     type Result;
-    fn parse(&self, slice: &[u8]) -> Result<Message> {
-        serde_json::from_slice(slice).map_err(|e| {
-            let line = String::from_utf8(slice.to_vec()).unwrap_or_default();
-            Error::MessageParse(format!("\n\n\nERROR parsing `{line}`: {e}\n\n\n"))
-        })
+    fn parse(&self, content: String) -> Result<Vec<Message>> {
+        fn parse_single(line: &str) -> Result<Message> {
+            serde_json::from_str(&line)
+                .map_err(|e| Error::MessageParse(format!("\n{line}\n Error: {e}")))
+        }
+        let mut vec = vec![];
+        if content.contains("\n") {
+            for message in content
+                .split("\n")
+                .filter(|s| !s.trim().is_empty())
+                .map(parse_single)
+            {
+                vec.push(message?);
+            }
+        } else {
+            vec.push(parse_single(&content)?);
+        }
+        Ok(vec)
     }
     fn handle(&self, msg: Message) -> Self::Result;
     fn update_statusline(&self, state: StatuslineState) -> Self::Result;

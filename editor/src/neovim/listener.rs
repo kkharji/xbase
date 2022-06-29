@@ -35,8 +35,13 @@ impl Listener {
 
     /// Main handler of daemon messages
     fn handle(lua: &Lua, line: LuaString) -> LuaResult<()> {
-        match lua.parse(line.as_bytes()) {
-            Ok(msg) => lua.handle(msg),
+        match lua.parse(line.to_string_lossy().into()) {
+            Ok(msgs) => {
+                for msg in msgs {
+                    lua.handle(msg)?;
+                }
+                Ok(())
+            }
             Err(err) => {
                 lua.error(err.to_string()).ok();
                 Ok(())

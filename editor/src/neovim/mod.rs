@@ -18,7 +18,7 @@ impl BrodcastMessage for Lua {
     fn handle(&self, msg: Message) -> Self::Result {
         match msg {
             Message::Notify { msg, level } => self.notify(msg, level),
-            Message::Log { msg, level } => self.log(msg, level),
+            Message::Log { msg, level } => self.notify(msg, level),
             Message::Execute(task) => match task {
                 Task::UpdateStatusline(state) => self.update_statusline(state),
             },
