@@ -6,7 +6,7 @@ let s:cpo_save = &cpo
 set cpo&vim
 
 
-syn match   XbaseOperations   "\(Executing\|Compiling\|Generating\|Processing\|Emitting\|Copying\|Validating\|Signing\|Linking\|RegisterLaunchServices\|\Installing\|Booting\|Launching\|Writing\|Touching\)"
+syn match   XbaseOperations   "\(Executing\|Compiling\|Generating\|Processing\|Emitting\|Copying\|Validating\|Signing\|Linking\|RegisterLaunchServices\|\Installing\|Booting\|Launching\|Writing\|Touching\|Building\|Connecting\)"
 syn match   XbaseSuccess      "\(Executed\|Compiled\|Generated\|Processed\|Emitted\|Copied\|Validated\|Signed\|Linked\|Installed\|Booted\|Launched\)"
 syn match   XbaseEntitlement  "Entitlement"
 syn region  XbaseScope        display oneline start='^\[' end='\]'
@@ -21,7 +21,7 @@ syn match   XbaseLogOutput    "\(\[Exit\]\)"
 syn match   XbaseRunning      "\(\[Running\]\)"
 syn match   XbaseTarget       "`\(\w.*\)`"
 syn match   XbaseFilePath     "`\(\/.*\)`"
-syn region  XbaseSep          display oneline start='-' end='-$'
+syn region  XbaseSep          display oneline start='\.' end='\.$'
 
 hi def link XbaseScope         Label
 hi def link XbaseLogSuccess    healthSuccess

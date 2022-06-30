@@ -86,10 +86,8 @@ pub trait ProjectBuild: ProjectData {
             args.extend_from_slice(&["-project".into(), format!("{}.xcodeproj", name)]);
         }
 
-        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
-        broadcast.log_info(format!("[{target}] Building"));
+        broadcast.log_step(format!("[{target}] Building"));
         broadcast.log_debug(format!("[{target}] {}", args.join(" ")));
-        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
 
         let recv = broadcast.consume(Box::new(XCLogger::new(self.root(), &args)?))?;
 
@@ -155,9 +153,7 @@ pub trait ProjectCompile: ProjectData {
     fn on_compile_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.name();
         broadcast.info(format!("[{name}] Compiling ⚙"));
-        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
-        broadcast.log_info(format!("[{name}] Compiling ⚙"));
-        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
+        broadcast.log_step(format!("[{name}] Compiling ⚙"));
         Ok(())
     }
 
@@ -166,9 +162,7 @@ pub trait ProjectCompile: ProjectData {
         let name = self.name();
         if success {
             broadcast.info(format!("[{name}] Compiled "));
-            broadcast.log_info(format!("{}", crate::util::fmt::separator()));
             broadcast.log_info(format!("[{name}] Compiled "));
-            broadcast.log_info(format!("{}", crate::util::fmt::separator()));
             Ok(())
         } else {
             broadcast.error(format!(
@@ -193,9 +187,7 @@ pub trait ProjectGenerate: ProjectData {
     fn on_generate_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.root().name().unwrap();
         broadcast.info(format!("[{name}] Generating ⚙"));
-        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
-        broadcast.log_info(format!("[{name}] Generating ⚙"));
-        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
+        broadcast.log_step(format!("[{name}] Generating ⚙"));
         Ok(())
     }
 

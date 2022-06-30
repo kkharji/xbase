@@ -19,6 +19,7 @@ pub struct SimulatorRunner {
 #[async_trait::async_trait]
 impl Runner for SimulatorRunner {
     async fn run<'a>(&self, broadcast: &Broadcast) -> Result<Process> {
+        broadcast.log_step(format!("[{}] Connecting", self.device.name));
         self.boot(broadcast).await?;
         self.install(broadcast).await?;
         self.launch(broadcast).await
@@ -109,18 +110,18 @@ impl SimulatorRunner {
     }
 
     fn booting_msg(&self) -> String {
-        format!("Booting {}", self.device.name)
+        format!("[{}] Booting", self.device.name)
     }
 
     fn installing_msg(&self) -> String {
-        format!("Installing {}", self.app_id)
+        format!("[{}] Installing {}", self.device.name, self.app_id)
     }
 
     fn launching_msg(&self) -> String {
-        format!("Launching {}", self.app_id)
+        format!("[{}] Launching {}", self.device.name, self.app_id)
     }
 
     fn connected_msg(&self) -> String {
-        format!("Connected")
+        format!("[{}] Connected", self.device.name)
     }
 }

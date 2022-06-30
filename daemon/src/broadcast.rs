@@ -180,7 +180,14 @@ impl Broadcast {
 }
 
 impl Broadcast {
-    /// Notify with msg
+    pub fn log_step<S: AsRef<str>>(&self, msg: S) {
+        log::info!("{}", msg.as_ref());
+        let sep = ".".repeat(73);
+        self.tx.send(Message::log_info(&sep)).ok();
+        self.tx.send(Message::log_info(msg)).ok();
+        self.tx.send(Message::log_info(&sep)).ok();
+    }
+
     pub fn info<S: AsRef<str>>(&self, msg: S) {
         log::info!("{}", msg.as_ref());
         self.tx.send(msg.as_ref().into()).ok();
@@ -217,7 +224,7 @@ impl Broadcast {
 
     pub fn log_warn<S: AsRef<str>>(&self, msg: S) {
         log::warn!("{}", msg.as_ref());
-        self.tx.send(Message::log_error(msg)).ok();
+        self.tx.send(Message::log_warn(msg)).ok();
     }
 
     pub fn log_trace<S: AsRef<str>>(&self, msg: S) {
