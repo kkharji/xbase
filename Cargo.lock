@@ -2484,6 +2484,7 @@ dependencies = [
  "tap",
  "tarpc",
  "tokio",
+ "wax",
  "xbase-proto",
  "xcodeproj",
 ]

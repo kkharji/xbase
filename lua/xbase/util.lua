@@ -1,52 +1,6 @@
 local config = require("xbase.config").values
+
 local M = {}
----@param platform Platform
-local get_devices = function(platform)
-  local devices = {}
-
-  if platform then
-    for _, device in pairs(vim.g.xbase.devices) do
-      if platform == device.platform then
-        table.insert(devices, {
-          name = device.info.name,
-          udid = device.info.udid,
-          is_on = device.info.state ~= "Shutdown",
-        })
-      end
-    end
-  end
-
-  return devices
-end
-
----Get Targets from project
----To Support Multi Platform targets
----@param project Project
-M.get_targets_runners = function(project)
-  local targets = {}
-
-  for name, platform in pairs(project.targets) do
-    table.insert(targets, {
-      name = name,
-      runners = get_devices(platform),
-    })
-  end
-
-  return targets
-end
-
-M.reload_lsp_servers = function()
-  -- local clients = require("lspconfig.util").get_managed_clients()
-  -- local ids = ""
-  -- for _, client in ipairs(clients) do
-  --   if client.name == "sourcekit" then
-  --     ids = ids .. client.id
-  --   end
-  -- end
-
-  print "Restarting Servers"
-  vim.cmd "LspRestart"
-end
 
 function M.is_watching(config, command, device, watchlist)
   local root = vim.loop.cwd()
@@ -83,7 +37,27 @@ function M.is_watching(config, command, device, watchlist)
   return false
 end
 
-M.feline_provider = function()
+function M.try_map(key, fun)
+  if type(key) == "string" then
+    vim.keymap.set("n", key, fun, { buffer = true })
+  end
+end
+
+function M.bind(config)
+  local pickers = require "xbase.pickers"
+  M.try_map(config.mappings.build_picker, pickers.build)
+  M.try_map(config.mappings.run_picker, pickers.run)
+  M.try_map(config.mappings.watch_picker, pickers.watch)
+  M.try_map(config.mappings.all_picker, pickers.actions)
+  M.try_map(config.mappings.toggle_split_log_buffer, function()
+    require("xbase").toggle_log_buffer(false)
+  end)
+  M.try_map(config.mappings.toggle_vsplit_log_buffer, function()
+    require("xbase").toggle_log_buffer(true)
+  end)
+end
+
+function M.feline_provider()
   return {
     provider = function(_)
       icon = {}

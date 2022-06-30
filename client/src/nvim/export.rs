@@ -9,11 +9,17 @@ impl XBase for Lua {
     type Error = LuaError;
 
     fn register(&self, root: Option<String>) -> LuaResult<()> {
+        let root = self.root(root)?;
+        if !(root.join("project.yml").exists()
+            || root.join("Project.swift").exists()
+            || root.join("Package.swift").exists()
+            || wax::walk("*.xcodeproj", &root).to_lua_err()?.count() != 0)
+        {
+            return Ok(());
+        }
         if ensure_daemon() {
             self.info("new instance initialized")?;
         }
-
-        let root = self.root(root)?;
 
         Broadcast::init_or_skip(self, &root)?;
 
