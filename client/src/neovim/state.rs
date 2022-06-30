@@ -1,10 +1,12 @@
 use mlua::{chunk, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::cell::{Ref, RefMut};
+use xbase_proto::MessageLevel;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct XBaseState {
     pub bufnr: usize,
+    pub log_level: MessageLevel,
 }
 
 pub trait XBaseStateExt {
@@ -31,7 +33,22 @@ impl XBaseStateExt for Lua {
                 })
                 .eval::<usize>()?;
 
-            self.set_app_data(XBaseState { bufnr });
+            let log_level: String = self
+                .globals()
+                .get::<_, LuaTable>("_XBASECONFIG")?
+                .get("log_level")?;
+
+            self.set_app_data(XBaseState {
+                bufnr,
+                log_level: match log_level.as_str() {
+                    "info" => MessageLevel::Info,
+                    "error" => MessageLevel::Error,
+                    "warn" => MessageLevel::Warn,
+                    "trace" => MessageLevel::Trace,
+                    "debug" => MessageLevel::Debug,
+                    _ => MessageLevel::Info,
+                },
+            });
         }
         Ok(())
     }
@@ -41,31 +58,11 @@ impl XBaseStateExt for Lua {
             .ok_or_else(|| LuaError::external("XBaseState is not set!"))
     }
 
-    fn state_mut(&self) -> LuaResult<std::cell::RefMut<XBaseState>> {
-        self.app_data_mut::<XBaseState>()
-            .ok_or_else(|| LuaError::external("XBaseState is not set!"))
-    }
     fn log_bufnr(&self) -> LuaResult<usize> {
         Ok(self.state()?.bufnr)
     }
-}
-
-impl<'lua> FromLua<'lua> for XBaseState {
-    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
-        if let LuaValue::Table(table) = value {
-            Ok(Self {
-                bufnr: table.get("bufnr")?,
-            })
-        } else {
-            Err(LuaError::external("Expected table, got something else"))
-        }
-    }
-}
-
-impl<'lua> ToLua<'lua> for XBaseState {
-    fn to_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
-        table.set("bufnr", self.bufnr)?;
-        Ok(LuaValue::Table(table))
+    fn state_mut(&self) -> LuaResult<std::cell::RefMut<XBaseState>> {
+        self.app_data_mut::<XBaseState>()
+            .ok_or_else(|| LuaError::external("XBaseState is not set!"))
     }
 }

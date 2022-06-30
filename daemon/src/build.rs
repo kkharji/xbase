@@ -65,6 +65,7 @@ impl Watchable for BuildRequest {
             broadcast.update_statusline(StatuslineState::Failure);
         } else {
             broadcast.info(format!("[{target}] Built "));
+            broadcast.log_info(format!("[{target}] Built Successfully "));
             if is_once {
                 broadcast.update_statusline(StatuslineState::Success);
             } else {

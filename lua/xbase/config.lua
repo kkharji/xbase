@@ -8,7 +8,7 @@ config.values = _XBASECONFIG
 local defaults = {
   --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
   --- TODO(nvim): Use log_level to set tracing log level
-  log_level = "debug",
+  log_level = "info",
   --- Default log buffer direction: { "horizontal", "vertical", "float" }
   default_log_buffer_direction = "horizontal",
   --- Statusline provider configurations

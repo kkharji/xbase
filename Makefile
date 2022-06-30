@@ -15,7 +15,7 @@ watch:
 
 clean:
 	rm -rf bin;
-	rm -rf lua/xbase_editor_lib.so
+	rm -rf lua/xbase_client.so
 
 install: clean
 	killall xbase xbase-sourcekit-helper || true
@@ -23,7 +23,7 @@ install: clean
 	cargo build --release
 	mv target/release/xbase                        ./bin/xbase
 	mv target/release/xbase-sourcekit-helper       ./bin/xbase-sourcekit-helper
-	mv target/release/libxbase_client.dylib   ./lua/xbase_client.so
+	mv target/release/libxbase_client.dylib        ./lua/xbase_client.so
 	echo "DONE"
 
 install_debug: clean
