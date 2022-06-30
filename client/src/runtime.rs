@@ -1,15 +1,12 @@
 use once_cell::sync::Lazy;
-use std::future::Future;
 use std::path::PathBuf;
 use std::{net::Shutdown, os::unix::net::UnixStream, process::Command};
-use tokio::runtime::Runtime;
-use tokio::sync::OnceCell;
+use tokio::{runtime::Runtime, sync::OnceCell};
 use xbase_proto::*;
 
 static CLIENT: OnceCell<XBaseClient> = OnceCell::const_new();
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("Tokio runtime"));
 static DAEMON_SOCKET_ADDRESS: &str = "/tmp/xbase.socket";
-
 static DAEMON_BINARY_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -37,13 +34,6 @@ pub async fn rpc() -> &'static XBaseClient {
             let transport = transport::new(codec_builder.new_framed(conn), Json::default());
             XBaseClient::new(Default::default(), transport).spawn()
         })
-        .await
-}
-
-#[allow(dead_code)]
-pub async fn spawn<F: Future>(future: F) -> F::Output {
-    tokio::task::LocalSet::new()
-        .run_until(async move { RUNTIME.block_on(future) })
         .await
 }
 

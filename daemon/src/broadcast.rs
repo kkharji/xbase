@@ -181,10 +181,8 @@ impl Broadcast {
 
 impl Broadcast {
     pub fn log_step<S: AsRef<str>>(&self, msg: S) {
-        log::info!("{}", msg.as_ref());
         let sep = ".".repeat(73);
         self.tx.send(Message::log_info(msg)).ok();
-        log::info!("{sep}");
         self.tx.send(Message::log_info(&sep)).ok();
     }
 

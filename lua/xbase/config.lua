@@ -62,7 +62,7 @@ end
 ---@param key string
 ---@return boolean: true if it should be if key skipped
 local should_skip_type_checking = function(key)
-  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates" } do
+  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates", "log_level" } do
     for _, k in ipairs(vim.split(key, "%.")) do
       if k:find(v) then
         return true

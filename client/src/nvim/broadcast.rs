@@ -4,18 +4,18 @@ use crate::BroadcastHandler;
 use mlua::{chunk, prelude::*};
 use once_cell::sync::Lazy;
 use os_pipe::{PipeReader, PipeWriter};
+use std::collections::HashSet;
 use std::os::unix::io::IntoRawFd;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
-use std::{collections::HashMap, io::Write, path::PathBuf};
+use std::{io::Write, path::PathBuf};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     net::UnixStream,
 };
 use xbase_proto::*;
 
-static BROADCASTERS: Lazy<Mutex<HashMap<PathBuf, JoinHandle<Result<()>>>>> =
-    Lazy::new(Default::default);
+static BROADCASTERS: Lazy<Mutex<HashSet<PathBuf>>> = Lazy::new(Default::default);
 
 pub struct Broadcast;
 
@@ -23,12 +23,13 @@ impl Broadcast {
     /// Register a project and initialize command listener if the project isn't already initialized
     pub fn init_or_skip(lua: &Lua, root: &PathBuf) -> LuaResult<()> {
         let mut broadcast = BROADCASTERS.lock().unwrap();
-        if !broadcast.contains_key(root) {
+        if !broadcast.contains(root) {
             let (reader, writer) = os_pipe::pipe()?;
 
             Broadcast::start_reader(lua, reader)?;
-            let writer = Broadcast::start_writer(writer, root.clone());
-            broadcast.insert(root.clone(), writer);
+            Broadcast::start_writer(writer, root.clone());
+
+            broadcast.insert(root.clone());
         }
         Ok(())
     }

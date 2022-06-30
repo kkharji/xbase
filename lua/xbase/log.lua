@@ -61,7 +61,7 @@ function M.update_cursor_position(line_count)
 
   if not is_focused then
     vim.api.nvim_win_set_cursor(winid, { line_count + 1, 0 })
-    -- vim.fn.win_execute(winid, "call feedkeys('zt')", false)
+    vim.fn.win_execute(winid, "call feedkeys('zt')", false)
     return
   end
 
@@ -70,7 +70,7 @@ function M.update_cursor_position(line_count)
   if diff <= 2 then
     vim.api.nvim_win_set_cursor(winid, { line_count + 1, 0 })
     -- TODO: make this behavior configurable
-    -- vim.fn.win_execute(winid, "call feedkeys('zt')", false)
+    vim.fn.win_execute(winid, "call feedkeys('zt')", false)
   end
 end
 
@@ -94,8 +94,8 @@ function M.setup()
 
   vim.api.nvim_buf_set_name(bufnr, "[XBase Logs]")
   vim.api.nvim_buf_set_option(bufnr, "filetype", "xclog")
-  vim.api.nvim_create_autocmd({ "BufEnter" }, {
-    buffer = bufnr,
+  vim.api.nvim_create_autocmd({ "Filetype" }, {
+    pattern = "xclog",
     -- TODO: make scrolloff configurable
     command = "setlocal nonumber norelativenumber scrolloff=4",
   })
