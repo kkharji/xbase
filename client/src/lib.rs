@@ -8,7 +8,7 @@ mod runtime;
 pub trait XBase {
     type Error;
     /// Register project at given root or cwd.
-    fn register(&self, root: Option<String>) -> Result<(), Self::Error>;
+    fn register(&self, root: Option<String>) -> Result<bool, Self::Error>;
     /// Send build request to client
     fn build(&self, req: BuildRequest) -> Result<(), Self::Error>;
     /// Send run request to client

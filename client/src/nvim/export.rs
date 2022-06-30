@@ -8,14 +8,14 @@ use xcodeproj::pbxproj::PBXTargetPlatform;
 impl XBase for Lua {
     type Error = LuaError;
 
-    fn register(&self, root: Option<String>) -> LuaResult<()> {
+    fn register(&self, root: Option<String>) -> LuaResult<bool> {
         let root = self.root(root)?;
         if !(root.join("project.yml").exists()
             || root.join("Project.swift").exists()
             || root.join("Package.swift").exists()
             || wax::walk("*.xcodeproj", &root).to_lua_err()?.count() != 0)
         {
-            return Ok(());
+            return Ok(false);
         }
         if ensure_daemon() {
             self.info("new instance initialized")?;
@@ -28,7 +28,7 @@ impl XBase for Lua {
 
         self.info(format!("[{}] Connected ", root.as_path().name().unwrap()))?;
 
-        Ok(())
+        Ok(true)
     }
 
     /// Build project
