@@ -136,8 +136,8 @@ impl ProjectGenerate for TuistProject {
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
         self.on_generate_start(broadcast)?;
 
-        self.tuist(&["edit", "--permanent"]).await?;
-        self.tuist(&["generate", "--no-open"]).await?;
+        self.tuist(broadcast, &["edit", "--permanent"]).await?;
+        self.tuist(broadcast, &["generate", "--no-open"]).await?;
 
         let (xcodeproj_path, manifest_path) = self.xcodeproj_paths()?;
         let (xcodeproj_path, manifest_path) = (xcodeproj_path.unwrap(), manifest_path.unwrap());
@@ -198,13 +198,14 @@ impl TuistProject {
     }
 
     /// Run tuist command with given args
-    async fn tuist(&mut self, args: &[&str]) -> Result<()> {
+    async fn tuist(&mut self, broadcast: &Broadcast, args: &[&str]) -> Result<()> {
         let mut process = Process::new(which("tuist")?);
 
         process.args(args);
         process.current_dir(self.root());
+        let process = Box::new(process);
 
-        let (success, _) = consume_and_log(Box::pin(process.spawn_and_stream()?)).await;
+        let success = broadcast.consume(process)?.recv().await.unwrap_or_default();
         if !success {
             return Err(Error::Generate);
         }
@@ -234,13 +235,13 @@ impl Project for TuistProject {
         let (xcodeproj_path, manifest_path) = match project.xcodeproj_paths()? {
             (Some(xcodeproj_path), Some(manifest_path)) => (xcodeproj_path, manifest_path),
             (Some(_), None) => {
-                project.tuist(&["edit", "--permanent"]).await?;
+                project.tuist(broadcast, &["edit", "--permanent"]).await?;
 
                 let (a, b) = project.xcodeproj_paths()?;
                 (a.unwrap(), b.unwrap())
             }
             (None, Some(_)) => {
-                project.tuist(&["generate", "--no-open"]).await?;
+                project.tuist(broadcast, &["generate", "--no-open"]).await?;
 
                 let (a, b) = project.xcodeproj_paths()?;
                 (a.unwrap(), b.unwrap())

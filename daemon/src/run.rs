@@ -7,7 +7,6 @@ use crate::broadcast::Broadcast;
 use crate::constants::State;
 use crate::constants::DAEMON_STATE;
 use crate::device::Device;
-use crate::util::log_request;
 use crate::Result;
 use process_stream::Process;
 use std::sync::Arc;
@@ -28,7 +27,8 @@ pub trait Runner {
 pub async fn handle(req: RunRequest) -> Result<()> {
     let client = &req.client;
     let root = &client.root;
-    let sep = log_request!("Run", root, req);
+
+    log::trace!("{:#?}", req);
 
     let ref key = req.to_string();
     let state = DAEMON_STATE.clone();
@@ -58,9 +58,6 @@ pub async fn handle(req: RunRequest) -> Result<()> {
         listener.discard(state).await?;
         broadcast.info(format!("[{}] Wathcer Stopped", &req.settings.target));
     }
-
-    log::info!("{sep}",);
-    log::info!("{sep}",);
 
     Ok(())
 }

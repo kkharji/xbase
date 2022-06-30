@@ -1,14 +1,14 @@
 use crate::compile;
 use crate::constants::DAEMON_STATE;
-use crate::util::log_request;
 use crate::Result;
 use std::path::PathBuf;
 use xbase_proto::Client;
+use xbase_proto::PathExt;
 use xbase_proto::OK;
 
 /// Handle RegisterRequest
 pub async fn handle(Client { root, .. }: Client) -> Result<PathBuf> {
-    log_request!("Register", root);
+    log::info!("Register {}", root.as_path().name().unwrap());
 
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;

@@ -1,6 +1,5 @@
 use crate::broadcast::Broadcast;
 use crate::constants::{State, DAEMON_STATE};
-use crate::util::log_request;
 use crate::watch::{Event, Watchable};
 use crate::Result;
 use async_trait::async_trait;
@@ -13,12 +12,11 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;
     let client = &req.client;
-    let root = &req.client.root;
     let broadcast = state.broadcasters.get(&client.root)?;
     let target = &req.settings.target;
     let args = &req.settings.to_string();
 
-    log_request!("Build", root, req);
+    log::trace!("{:#?}", req);
 
     if req.ops.is_once() {
         req.trigger(state, &Event::default(), &broadcast).await?;

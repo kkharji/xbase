@@ -8,7 +8,6 @@ use crate::Result;
 use crate::{device::*, run::*, util::*, watch::*};
 use anyhow::Context;
 use barebone::BareboneProject;
-use process_stream::ProcessExt;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

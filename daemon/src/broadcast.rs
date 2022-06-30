@@ -182,22 +182,27 @@ impl Broadcast {
 impl Broadcast {
     /// Notify with msg
     pub fn info<S: AsRef<str>>(&self, msg: S) {
+        log::info!("{}", msg.as_ref());
         self.tx.send(msg.as_ref().into()).ok();
     }
 
     pub fn error<S: AsRef<str>>(&self, msg: S) {
+        log::error!("{}", msg.as_ref());
         self.tx.send(Message::notify_error(msg)).ok();
     }
 
     pub fn warn<S: AsRef<str>>(&self, msg: S) {
+        log::warn!("{}", msg.as_ref());
         self.tx.send(Message::notify_warn(msg)).ok();
     }
 
     pub fn trace<S: AsRef<str>>(&self, msg: S) {
+        log::trace!("{}", msg.as_ref());
         self.tx.send(Message::notify_trace(msg)).ok();
     }
 
     pub fn debug<S: AsRef<str>>(&self, msg: S) {
+        log::debug!("{}", msg.as_ref());
         self.tx.send(Message::notify_debug(msg)).ok();
     }
 
@@ -206,18 +211,22 @@ impl Broadcast {
     }
 
     pub fn log_error<S: AsRef<str>>(&self, msg: S) {
+        log::error!("{}", msg.as_ref());
         self.tx.send(Message::log_error(msg)).ok();
     }
 
     pub fn log_warn<S: AsRef<str>>(&self, msg: S) {
+        log::warn!("{}", msg.as_ref());
         self.tx.send(Message::log_error(msg)).ok();
     }
 
     pub fn log_trace<S: AsRef<str>>(&self, msg: S) {
+        log::trace!("{}", msg.as_ref());
         self.tx.send(Message::log_trace(msg)).ok();
     }
 
     pub fn log_debug<S: AsRef<str>>(&self, msg: S) {
+        log::debug!("{}", msg.as_ref());
         self.tx.send(Message::log_debug(msg)).ok();
     }
 
