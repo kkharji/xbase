@@ -8,7 +8,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{mpsc::*, Mutex, Notify};
 use tokio::task::JoinHandle;
-use xbase_proto::{Message, PathExt, StatuslineState, Task};
+use xbase_proto::{Message, MessageLevel, PathExt, StatuslineState, Task};
 
 /// Broadcast server to send task to clients
 #[derive(Debug)]
@@ -190,6 +190,16 @@ impl Broadcast {
         let sep = ".".repeat(73);
         log::info!("{sep}");
         self.tx.send(Message::log_info(&sep)).ok();
+    }
+
+    pub fn success<S: AsRef<str>>(&self, msg: S) {
+        log::info!("{}", msg.as_ref());
+        self.tx
+            .send(Message::Notify {
+                msg: msg.as_ref().into(),
+                level: MessageLevel::Success,
+            })
+            .ok();
     }
 
     pub fn info<S: AsRef<str>>(&self, msg: S) {

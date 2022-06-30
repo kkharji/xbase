@@ -74,7 +74,7 @@ async fn get_runner<'a>(
     let target = &settings.target;
     let project = state.projects.get(root)?;
     let device_name = device.map(|d| d.to_string()).unwrap_or("macOs".into());
-    broadcast.info(format!("[{target}] Running on {device_name} ⚙"));
+    broadcast.info(format!("[{target}({device_name})] Running ⚙"));
     let (runner, args, mut recv) = project.get_runner(&settings, device, broadcast)?;
 
     broadcast.update_statusline(StatuslineState::Processing);

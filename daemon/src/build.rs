@@ -13,7 +13,7 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     let ref mut state = state.lock().await;
     let broadcast = state.broadcasters.get(&req.root)?;
     let target = &req.settings.target;
-    let args = &req.settings.to_string();
+    // let args = &req.settings.to_string();
 
     log::trace!("{:#?}", req);
 
@@ -23,7 +23,7 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     }
 
     if req.ops.is_watch() {
-        broadcast.info(format!("[{target}] Watching  with '{args}'"));
+        broadcast.success(format!("[{target}] Watching "));
         broadcast.update_statusline(StatuslineState::Watching);
         state.watcher.get_mut(&req.root)?.add(req)?;
     } else {
@@ -65,7 +65,7 @@ impl Watchable for BuildRequest {
             broadcast.update_statusline(StatuslineState::Failure);
             broadcast.open_logger();
         } else {
-            broadcast.info(format!("[{target}] Built "));
+            broadcast.success(format!("[{target}] Built "));
             broadcast.log_info(format!("[{target}] Built Successfully "));
             if is_once {
                 broadcast.update_statusline(StatuslineState::Success);

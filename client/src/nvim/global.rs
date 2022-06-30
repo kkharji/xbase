@@ -42,11 +42,17 @@ impl NvimGlobal for Lua {
         log.call::<_, ()>((msg.as_ref(), level as u8))
     }
     fn notify<S: AsRef<str>>(&self, msg: S, level: MessageLevel) -> LuaResult<()> {
-        if msg.as_ref().trim().is_empty() {
+        let msg = msg.as_ref();
+        if msg.trim().is_empty() {
             return Ok(());
         }
 
-        let msg = msg.as_ref();
+        if matches!(level, MessageLevel::Success) {
+            return self
+                .api("nvim_echo")?
+                .call(([[msg, "healthSuccess"]], true, Vec::<u8>::new()));
+        }
+
         let vim = self.vim()?;
         let level = level as u8;
         let opts = self.create_table_from([("title", "XBase")])?;

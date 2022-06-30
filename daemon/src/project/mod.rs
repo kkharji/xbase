@@ -161,7 +161,7 @@ pub trait ProjectCompile: ProjectData {
     fn on_compile_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.name();
         if success {
-            broadcast.info(format!("[{name}] Compiled "));
+            broadcast.success(format!("[{name}] Compiled "));
             broadcast.log_step(format!("[{name}] Compiled "));
             Ok(())
         } else {
@@ -194,7 +194,7 @@ pub trait ProjectGenerate: ProjectData {
     fn on_generate_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.root().name().unwrap();
         if success {
-            broadcast.info(format!("[{name}] Generated "));
+            broadcast.success(format!("[{name}] Generated "));
             broadcast.log_step(format!("[{name}] Generated "));
             Ok(())
         } else {

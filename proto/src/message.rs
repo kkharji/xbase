@@ -129,6 +129,8 @@ pub enum MessageLevel {
     Warn = 3,
     /// Error Message
     Error = 4,
+    /// Success Message
+    Success = 5,
 }
 
 impl MessageLevel {

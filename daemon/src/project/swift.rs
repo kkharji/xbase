@@ -139,7 +139,7 @@ impl ProjectGenerate for SwiftProject {
             broadcast.open_logger();
             return Err(Error::Generate);
         } else {
-            broadcast.info(format!("[{name}] Compiled "));
+            broadcast.success(format!("[{name}] Compiled "));
             broadcast.log_step(format!("[{name}] Compiled "));
         }
 
