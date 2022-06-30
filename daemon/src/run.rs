@@ -83,6 +83,7 @@ async fn get_runner<'a>(
         let msg = format!("[{target}] Failed to build for running .. checkout logs");
         broadcast.error(&msg);
         broadcast.log_error(format!("xcodebuild {}", args.join(" ")));
+        broadcast.open_logger();
         return Err(crate::Error::Run(msg));
     }
 

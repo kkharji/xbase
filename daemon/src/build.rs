@@ -63,6 +63,7 @@ impl Watchable for BuildRequest {
                 args.join(" ")
             ));
             broadcast.update_statusline(StatuslineState::Failure);
+            broadcast.open_logger();
         } else {
             broadcast.info(format!("[{target}] Built "));
             broadcast.log_info(format!("[{target}] Built Successfully "));

@@ -112,6 +112,7 @@ impl std::fmt::Display for StatuslineState {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Task {
     UpdateStatusline(StatuslineState),
+    OpenLogger,
 }
 
 /// Message Kind

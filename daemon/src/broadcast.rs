@@ -246,4 +246,8 @@ impl Broadcast {
             .send(Message::Execute(Task::UpdateStatusline(state)))
             .ok();
     }
+
+    pub fn open_logger(&self) {
+        self.tx.send(Message::Execute(Task::OpenLogger)).ok();
+    }
 }

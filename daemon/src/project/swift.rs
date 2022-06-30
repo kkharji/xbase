@@ -83,6 +83,7 @@ impl ProjectRun for SwiftProject {
 
         if !output.status.success() {
             let stderr = String::from_utf8(output.stderr).unwrap();
+            broadcast.open_logger();
             return Err(Error::Run(format!(
                 "Getting target bin path failed {stderr}"
             )));
@@ -133,6 +134,7 @@ impl ProjectGenerate for SwiftProject {
             .unwrap_or_default();
 
         if !success {
+            broadcast.open_logger();
             return Err(Error::Generate);
         }
 

@@ -1,7 +1,33 @@
 local util = require "xbase.util"
 local M = { bufnr = nil }
 
+function M.setup()
+  local bufnr = vim.api.nvim_create_buf(false, true)
+
+  vim.api.nvim_buf_set_name(bufnr, "[XBase Logs]")
+  vim.api.nvim_buf_set_option(bufnr, "filetype", "xclog")
+  vim.api.nvim_create_autocmd({ "Filetype" }, {
+    pattern = "xclog",
+    -- TODO: make scrolloff configurable
+    command = "setlocal nonumber norelativenumber scrolloff=4",
+  })
+  M.bufnr = bufnr
+  return bufnr
+end
+
 function M.toggle(vsplit)
+  local cfg = require("xbase.config").values
+
+  if vsplit == nil then
+    local default = cfg.default_log_buffer_direction
+    if default == "horizontal" then
+      vsplit = false
+    else
+      vsplit = true
+    end
+  end
+  local mappings = cfg.mappings
+
   local bufnr = M.bufnr
   local win = vim.fn.win_findbuf(bufnr)[1]
   local cmd = vsplit and "vert sbuffer" or "sbuffer"
@@ -14,12 +40,10 @@ function M.toggle(vsplit)
   vim.cmd(open)
 
   -- TODO: make height and width configurable
-  if not vsplit then
+  if vsplit == false then
     vim.api.nvim_win_set_height(0, 20)
   else
   end
-
-  local mappings = require("xbase.config").values.mappings
 
   util.try_map(mappings.toggle_vsplit_log_buffer, function()
     vim.cmd "close"
@@ -87,20 +111,6 @@ function M.window()
     end
   end
   return nil, nil
-end
-
-function M.setup()
-  local bufnr = vim.api.nvim_create_buf(false, true)
-
-  vim.api.nvim_buf_set_name(bufnr, "[XBase Logs]")
-  vim.api.nvim_buf_set_option(bufnr, "filetype", "xclog")
-  vim.api.nvim_create_autocmd({ "Filetype" }, {
-    pattern = "xclog",
-    -- TODO: make scrolloff configurable
-    command = "setlocal nonumber norelativenumber scrolloff=4",
-  })
-  M.bufnr = bufnr
-  return bufnr
 end
 
 return M

@@ -26,6 +26,11 @@ impl BroadcastHandler for Lua {
                     self.load(chunk!(vim.g.xbase_watch_build_status = $s))
                         .exec()
                 }),
+                Task::OpenLogger => {
+                    // TODO: Make auto open logger on error configurable
+                    self.info("opening logger")?;
+                    self.load(chunk!(require("xbase.log").toggle())).exec()
+                }
             },
         }
     }
