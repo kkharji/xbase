@@ -11,8 +11,7 @@ use xbase_proto::BuildRequest;
 pub async fn handle(req: BuildRequest) -> Result<()> {
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;
-    let client = &req.client;
-    let broadcast = state.broadcasters.get(&client.root)?;
+    let broadcast = state.broadcasters.get(&req.root)?;
     let target = &req.settings.target;
     let args = &req.settings.to_string();
 
@@ -26,12 +25,9 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     if req.ops.is_watch() {
         broadcast.info(format!("[{target}] Watching  with '{args}'"));
 
-        state.watcher.get_mut(&req.client.root)?.add(req)?;
+        state.watcher.get_mut(&req.root)?.add(req)?;
     } else {
-        state
-            .watcher
-            .get_mut(&req.client.root)?
-            .remove(&req.to_string())?;
+        state.watcher.get_mut(&req.root)?.remove(&req.to_string())?;
     }
 
     Ok(())
@@ -47,7 +43,7 @@ impl Watchable for BuildRequest {
     ) -> Result<()> {
         let is_once = self.ops.is_once();
         let config = &self.settings;
-        let root = &self.client.root;
+        let root = &self.root;
         let target = &self.settings.target;
         let project = state.projects.get(root)?;
 

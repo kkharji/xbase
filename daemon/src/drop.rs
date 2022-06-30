@@ -1,9 +1,10 @@
 use crate::constants::DAEMON_STATE;
 use crate::Result;
-use xbase_proto::{Client, PathExt};
+use std::path::PathBuf;
+use xbase_proto::PathExt;
 
 /// handle drop request
-pub async fn handle(Client { root, .. }: Client) -> Result<()> {
+pub async fn handle(root: PathBuf) -> Result<()> {
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;
 

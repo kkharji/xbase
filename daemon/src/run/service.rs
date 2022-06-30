@@ -7,16 +7,17 @@ use crate::{
     watch::{Event, Watchable},
     Result,
 };
+use std::path::PathBuf;
 use std::sync::Arc;
 use tap::Pipe;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
-use xbase_proto::{BuildSettings, Client, RunRequest};
+use xbase_proto::{BuildSettings, RunRequest};
 
 /// Run Service
 pub struct RunService {
     pub key: String,
-    pub client: Client,
+    pub root: PathBuf,
     pub handler: Arc<Mutex<RunServiceHandler>>,
     pub settings: BuildSettings,
     pub device: Option<Device>,
@@ -37,7 +38,7 @@ impl RunService {
         let weak_logger = Arc::downgrade(&logger);
         let key = req.to_string();
         let RunRequest {
-            client,
+            root,
             settings,
             device,
             ..
@@ -47,16 +48,16 @@ impl RunService {
         let is_once = req.ops.is_once();
 
         let process =
-            get_runner(state, &client, &settings, device.as_ref(), is_once, &logger).await?;
+            get_runner(state, &root, &settings, device.as_ref(), is_once, &logger).await?;
 
-        let handler = RunServiceHandler::new(&key, target, &client, process, weak_logger)?
+        let handler = RunServiceHandler::new(&key, target, &root, process, weak_logger)?
             .pipe(Mutex::new)
             .pipe(Arc::new);
 
         Ok(Self {
             device,
             handler,
-            client,
+            root,
             settings,
             key,
         })
@@ -73,7 +74,7 @@ impl Watchable for RunService {
     ) -> Result<()> {
         let Self {
             key,
-            client,
+            root,
             settings,
             ..
         } = self;
@@ -89,8 +90,8 @@ impl Watchable for RunService {
         *handler = RunServiceHandler::new(
             key,
             target,
-            client,
-            get_runner(state, client, settings, device, false, &logger).await?,
+            root,
+            get_runner(state, root, settings, device, false, &logger).await?,
             Arc::downgrade(logger),
         )?;
 

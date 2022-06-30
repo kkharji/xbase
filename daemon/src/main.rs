@@ -14,8 +14,8 @@ struct Server;
 
 #[tarpc::server]
 impl xbase_proto::XBase for Server {
-    async fn register(self, _: Context, client: Client) -> Result<PathBuf> {
-        xbase::register::handle(client).await
+    async fn register(self, _: Context, root: PathBuf) -> Result<PathBuf> {
+        xbase::register::handle(root).await
     }
     async fn build(self, _: Context, req: BuildRequest) -> Result<()> {
         tokio::spawn(async { xbase::build::handle(req).await });
@@ -37,13 +37,13 @@ impl xbase_proto::XBase for Server {
             .collect())
     }
 
-    async fn drop(self, _: Context, client: Client) -> Result<()> {
-        tokio::spawn(async { xbase::drop::handle(client).await });
+    async fn drop(self, _: Context, root: PathBuf) -> Result<()> {
+        tokio::spawn(async { xbase::drop::handle(root).await });
         Ok(())
     }
-    async fn targets(self, _: Context, client: Client) -> Result<HashMap<String, TargetInfo>> {
+    async fn targets(self, _: Context, root: PathBuf) -> Result<HashMap<String, TargetInfo>> {
         let state = DAEMON_STATE.lock().await;
-        let project = state.projects.get(&client.root)?;
+        let project = state.projects.get(&root)?;
         Ok(project.targets().clone())
     }
     async fn runners(

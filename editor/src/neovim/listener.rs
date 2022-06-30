@@ -74,12 +74,7 @@ impl Listener {
         std::thread::spawn(move || {
             rt().block_on(async move {
                 let rpc = rpc().await;
-                let client = Client {
-                    pid: std::process::id() as i32,
-                    root,
-                };
-
-                let address = rpc.register(context::current(), client).await??;
+                let address = rpc.register(context::current(), root).await??;
                 let mut stream = UnixStream::connect(address).await?;
                 drop(rpc);
 

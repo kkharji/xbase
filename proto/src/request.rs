@@ -1,7 +1,7 @@
 use crate::types::*;
 use crate::util::value_or_default;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 
 #[cfg(feature = "neovim")]
 use mlua::prelude::*;
@@ -9,7 +9,7 @@ use mlua::prelude::*;
 /// Request to build a particular project
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BuildRequest {
-    pub client: Client,
+    pub root: PathBuf,
     pub settings: BuildSettings,
     #[serde(deserialize_with = "value_or_default")]
     pub direction: BufferDirection,
@@ -19,7 +19,7 @@ pub struct BuildRequest {
 /// Request to Run a particular project.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RunRequest {
-    pub client: Client,
+    pub root: PathBuf,
     pub settings: BuildSettings,
     #[serde(deserialize_with = "value_or_default")]
     pub device: DeviceLookup,
@@ -34,7 +34,7 @@ impl<'a> FromLua<'a> for BuildRequest {
     fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
         if let LuaValue::Table(table) = value {
             Ok(Self {
-                client: table.get("client")?,
+                root: table.get::<_, String>("root")?.into(),
                 settings: table.get("settings")?,
                 direction: table.get("direction")?,
                 ops: table.get("ops")?,
@@ -47,7 +47,7 @@ impl<'a> FromLua<'a> for BuildRequest {
 
 impl Display for BuildRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:Build:{}", self.client.root.display(), self.settings)
+        write!(f, "{}:Build:{}", self.root.display(), self.settings)
     }
 }
 
@@ -56,7 +56,7 @@ impl<'a> FromLua<'a> for RunRequest {
     fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
         if let LuaValue::Table(table) = value {
             Ok(Self {
-                client: table.get("client")?,
+                root: table.get::<_, String>("root")?.into(),
                 settings: table.get("settings")?,
                 direction: table.get("direction")?,
                 device: table.get("device")?,
@@ -73,7 +73,7 @@ impl Display for RunRequest {
         write!(
             f,
             "{}:Run:{}:{}",
-            self.client.root.display(),
+            self.root.display(),
             self.device.name.as_ref().unwrap_or(&"Bin".to_string()),
             self.settings
         )

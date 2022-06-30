@@ -41,14 +41,10 @@ impl Broadcast for Lua {
     type Result = LuaResult<()>;
 
     fn handle(&self, msg: Message) -> Self::Result {
-        if msg.should_skip(std::process::id()) {
-            return Ok(());
-        };
-
         match msg {
             Message::Notify { msg, level, .. } => self.notify(msg, level),
             Message::Log { msg, level, .. } => self.log(msg, level),
-            Message::Execute { task, .. } => match task {
+            Message::Execute(task) => match task {
                 Task::UpdateStatusline(value) => self.update_statusline(value),
             },
         }
@@ -67,11 +63,7 @@ impl XBase for Lua {
             self.info("new instance initialized")?;
         }
 
-        let root = if let Some(root) = root {
-            root.into()
-        } else {
-            self.cwd()?
-        };
+        let root = self.root(root)?;
 
         Listener::init_or_skip(self, &root)?;
 
@@ -109,12 +101,12 @@ impl XBase for Lua {
 
     /// Drop project at given root, otherwise drop client
     fn drop(&self, root: Option<String>) -> LuaResult<()> {
-        let client = Client::new(self, root)?;
+        let root = self.root(root)?;
         rt().block_on(async move {
             let rpc = rpc().await;
             let ctx = context::current();
 
-            rpc.drop(ctx, client).await??;
+            rpc.drop(ctx, root).await??;
 
             OK(())
         })?;
@@ -123,11 +115,11 @@ impl XBase for Lua {
 
     /// Get targets for given root
     fn targets(&self, root: Option<String>) -> LuaResult<HashMap<String, TargetInfo>> {
-        let client = Client::new(self, root)?;
+        let root = self.root(root)?;
         rt().block_on(async move {
             let rpc = rpc().await;
             let ctx = context::current();
-            rpc.targets(ctx, client).await?
+            rpc.targets(ctx, root).await?
         })
         .to_lua_err()
     }
@@ -144,7 +136,7 @@ impl XBase for Lua {
 
     /// Get a vector of keys being watched
     fn watching(&self, root: Option<String>) -> LuaResult<Vec<String>> {
-        let root = Client::new(self, root)?.root;
+        let root = self.root(root)?;
         rt().block_on(async move {
             let rpc = rpc().await;
             let ctx = context::current();
@@ -163,12 +155,16 @@ impl NvimGlobal for Lua {
         self.vim()?.get("api")
     }
 
-    fn cwd(&self) -> LuaResult<PathBuf> {
-        self.vim()?
-            .get::<_, LuaTable>("loop")?
-            .get::<_, LuaFunction>("cwd")?
-            .call::<_, String>(())
-            .map(PathBuf::from)
+    fn root(&self, root: Option<String>) -> LuaResult<PathBuf> {
+        let root = match root {
+            Some(root) => root,
+            None => self
+                .vim()?
+                .get::<_, LuaTable>("loop")?
+                .get::<_, LuaFunction>("cwd")?
+                .call::<_, String>(())?,
+        };
+        Ok(PathBuf::from(root))
     }
 
     fn notify<S: AsRef<str>>(&self, msg: S, level: MessageLevel) -> LuaResult<()> {

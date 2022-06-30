@@ -35,7 +35,7 @@ pub trait XBase {
     /// If the project is already registered then it will not be re-registered and instead
     /// broadcast address socket will be returned.
     ///
-    async fn register(client: Client) -> Result<PathBuf>;
+    async fn register(root: PathBuf) -> Result<PathBuf>;
     ///
     /// Build Project and get path to where to build log will be located
     ///
@@ -47,11 +47,11 @@ pub trait XBase {
     ///
     /// Drop project at a given root
     ///
-    async fn drop(client: Client) -> Result<()>;
+    async fn drop(root: PathBuf) -> Result<()>;
     ///
     /// Return targets for client projects
     ///
-    async fn targets(client: Client) -> Result<HashMap<String, TargetInfo>>;
+    async fn targets(root: PathBuf) -> Result<HashMap<String, TargetInfo>>;
     ///
     /// Return device names and id for given target
     ///

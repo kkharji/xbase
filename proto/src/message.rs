@@ -5,36 +5,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Message {
     /// Notify use with a message
-    Notify {
-        msg: String,
-        level: MessageLevel,
-        pid: Option<i32>,
-    },
+    Notify { msg: String, level: MessageLevel },
     /// Log a message
-    Log {
-        msg: String,
-        level: MessageLevel,
-        pid: Option<i32>,
-    },
+    Log { msg: String, level: MessageLevel },
     /// Execute an task
-    Execute { task: Task, pid: Option<i32> },
-}
-
-impl Message {
-    /// Whether the message should be skipped based on client pid.
-    ///
-    /// If pid is none then it always return false,
-    /// if some and pid == other, then it will returns false,
-    /// when the message pid != other then returns true
-    pub fn should_skip(&self, other: u32) -> bool {
-        match self {
-            Message::Notify { pid, .. } => pid,
-            Message::Log { pid, .. } => pid,
-            Message::Execute { pid, .. } => pid,
-        }
-        .map(|pid| pid != other as i32)
-        .unwrap_or_default()
-    }
+    Execute(Task),
 }
 
 impl Message {
@@ -42,7 +17,6 @@ impl Message {
         Self::Notify {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Error,
-            pid: None,
         }
     }
 
@@ -50,7 +24,6 @@ impl Message {
         Self::Notify {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Warn,
-            pid: None,
         }
     }
 
@@ -58,7 +31,6 @@ impl Message {
         Self::Notify {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Trace,
-            pid: None,
         }
     }
 
@@ -66,7 +38,6 @@ impl Message {
         Self::Notify {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Debug,
-            pid: None,
         }
     }
 
@@ -74,7 +45,6 @@ impl Message {
         Self::Log {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Error,
-            pid: None,
         }
     }
 
@@ -82,7 +52,6 @@ impl Message {
         Self::Log {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Error,
-            pid: None,
         }
     }
 
@@ -90,7 +59,6 @@ impl Message {
         Self::Log {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Warn,
-            pid: None,
         }
     }
 
@@ -98,7 +66,6 @@ impl Message {
         Self::Log {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Trace,
-            pid: None,
         }
     }
 
@@ -106,7 +73,6 @@ impl Message {
         Self::Log {
             msg: value.as_ref().to_string(),
             level: MessageLevel::Debug,
-            pid: None,
         }
     }
 }
@@ -199,13 +165,11 @@ impl From<ProcessItem> for Message {
                     Self::Log {
                         msg: value,
                         level: MessageLevel::Error,
-                        pid: None,
                     }
                 } else if value.to_lowercase().contains("warn") {
                     Self::Log {
                         msg: value,
                         level: MessageLevel::Warn,
-                        pid: None,
                     }
                 } else {
                     Self::Log {
@@ -215,27 +179,23 @@ impl From<ProcessItem> for Message {
                             value
                         },
                         level: MessageLevel::Info,
-                        pid: None,
                     }
                 }
             }
             ProcessItem::Error(value) => Self::Log {
                 msg: value,
                 level: MessageLevel::Error,
-                pid: None,
             },
             ProcessItem::Exit(code) => {
                 if is_success.unwrap() {
                     Self::Log {
                         msg: Default::default(),
                         level: MessageLevel::Info,
-                        pid: None,
                     }
                 } else {
                     Self::Log {
                         msg: format!("Failed with {code} code"),
                         level: MessageLevel::Error,
-                        pid: None,
                     }
                 }
             }
@@ -248,7 +208,6 @@ impl From<String> for Message {
         Self::Notify {
             msg: value,
             level: MessageLevel::Info,
-            pid: None,
         }
     }
 }
@@ -258,7 +217,6 @@ impl From<&str> for Message {
         Self::Notify {
             msg: value.to_string(),
             level: MessageLevel::Info,
-            pid: None,
         }
     }
 }

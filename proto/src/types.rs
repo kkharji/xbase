@@ -1,30 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, path::PathBuf};
+use std::fmt::Display;
 use strum::{Display as EnumDisplay, EnumString};
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
 #[cfg(feature = "neovim")]
 use mlua::prelude::*;
-
-/// Client data
-#[derive(Clone, Default, Debug, Deserialize, Serialize)]
-pub struct Client {
-    pub pid: i32,
-    pub root: PathBuf,
-}
-
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for Client {
-    fn from_lua(value: LuaValue<'a>, lua: &'a Lua) -> LuaResult<Self> {
-        Self::new(lua, {
-            if let LuaValue::String(ref root) = value {
-                Some(root.to_string_lossy().to_string())
-            } else {
-                None
-            }
-        })
-    }
-}
 
 /// Build Configuration to run
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
@@ -218,26 +198,6 @@ impl Operation {
     #[must_use]
     pub fn is_once(&self) -> bool {
         matches!(self, Self::Once)
-    }
-}
-
-impl Client {
-    #[cfg(feature = "neovim")]
-    pub fn new(lua: &Lua, root: Option<String>) -> LuaResult<Self> {
-        let root = if let Some(v) = root {
-            v
-        } else {
-            lua.globals()
-                .get::<_, LuaTable>("vim")?
-                .get::<_, LuaTable>("loop")?
-                .get::<_, LuaFunction>("cwd")?
-                .call::<_, String>(())?
-        };
-
-        Ok(Self {
-            pid: std::process::id() as i32,
-            root: root.into(),
-        })
     }
 }
 

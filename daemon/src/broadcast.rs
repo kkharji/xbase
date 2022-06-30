@@ -8,7 +8,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{mpsc::*, Mutex, Notify};
 use tokio::task::JoinHandle;
-use xbase_proto::{Client, Message, PathExt, StatuslineState, Task};
+use xbase_proto::{Message, PathExt, StatuslineState, Task};
 
 /// Boradcast server to send task to clients
 #[derive(Debug)]
@@ -232,10 +232,7 @@ impl Broadcast {
 
     pub fn update_statusline(&self, state: StatuslineState) {
         self.tx
-            .send(Message::Execute {
-                task: Task::UpdateStatusline(state),
-                pid: None,
-            })
+            .send(Message::Execute(Task::UpdateStatusline(state)))
             .ok();
     }
 }

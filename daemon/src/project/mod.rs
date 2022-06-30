@@ -155,6 +155,7 @@ pub trait ProjectCompile: ProjectData {
     fn on_compile_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.name();
         broadcast.info(format!("[{name}] Compiling ⚙"));
+        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
         broadcast.log_info(format!("[{name}] Compiling ⚙"));
         broadcast.log_info(format!("{}", crate::util::fmt::separator()));
         Ok(())

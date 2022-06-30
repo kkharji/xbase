@@ -5,7 +5,7 @@ use xbase_proto::MessageLevel;
 pub trait NvimGlobal {
     fn vim(&self) -> LuaResult<LuaTable>;
     fn api(&self) -> LuaResult<LuaTable>;
-    fn cwd(&self) -> LuaResult<PathBuf>;
+    fn root(&self, root: Option<String>) -> LuaResult<PathBuf>;
     fn notify<S: AsRef<str>>(&self, msg: S, level: MessageLevel) -> LuaResult<()>;
     fn log<S: AsRef<str>>(&self, msg: S, level: MessageLevel) -> LuaResult<()>;
 }

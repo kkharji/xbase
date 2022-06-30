@@ -2,12 +2,11 @@ use crate::compile;
 use crate::constants::DAEMON_STATE;
 use crate::Result;
 use std::path::PathBuf;
-use xbase_proto::Client;
 use xbase_proto::PathExt;
 use xbase_proto::OK;
 
 /// Handle RegisterRequest
-pub async fn handle(Client { root, .. }: Client) -> Result<PathBuf> {
+pub async fn handle(root: PathBuf) -> Result<PathBuf> {
     log::info!("Register {}", root.as_path().name().unwrap());
 
     let state = DAEMON_STATE.clone();

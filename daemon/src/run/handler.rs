@@ -2,9 +2,9 @@ use crate::broadcast::Broadcast;
 use crate::{constants::DAEMON_STATE, Result};
 use process_stream::ProcessExt;
 use process_stream::{Process, StreamExt};
+use std::path::PathBuf;
 use std::sync::Weak;
 use tokio::task::JoinHandle;
-use xbase_proto::Client;
 
 /// Run Service Task Handler
 pub struct RunServiceHandler {
@@ -17,11 +17,11 @@ impl RunServiceHandler {
     pub fn new(
         key: &String,
         target: &String,
-        client: &Client,
+        root: &PathBuf,
         mut process: Process,
         broadcast: Weak<Broadcast>,
     ) -> Result<Self> {
-        let (key, target, client) = (key.clone(), target.clone(), client.clone());
+        let (key, target, root) = (key.clone(), target.clone(), root.clone());
         let mut stream = process.spawn_and_stream()?;
         let abort = process.aborter().unwrap();
 
@@ -37,7 +37,7 @@ impl RunServiceHandler {
                     Some(broadcast) => broadcast,
                     None => {
                         log::warn!("No client instance listening, closing runner ..");
-                        state.watcher.get_mut(&client.root)?.listeners.remove(&key);
+                        state.watcher.get_mut(&root)?.listeners.remove(&key);
                         abort.notify_waiters();
                         break;
                     }
