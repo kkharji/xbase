@@ -2,17 +2,42 @@ local util = require "xbase.util"
 local M = { bufnr = nil }
 
 function M.setup()
-  local bufnr = vim.api.nvim_create_buf(false, true)
+  M.bufnr = vim.api.nvim_create_buf(false, true)
+  local mappings = require("xbase.config").values.mappings
 
-  vim.api.nvim_buf_set_name(bufnr, "[XBase Logs]")
-  vim.api.nvim_buf_set_option(bufnr, "filetype", "xclog")
+  vim.api.nvim_buf_set_name(M.bufnr, "[XBase Logs]")
+  vim.api.nvim_buf_set_option(M.bufnr, "filetype", "xclog")
   vim.api.nvim_create_autocmd({ "Filetype" }, {
     pattern = "xclog",
-    -- TODO: make scrolloff configurable
-    command = "setlocal nonumber norelativenumber scrolloff=4",
+    callback = function()
+      -- TODO: make scrolloff configurable
+      vim.cmd "setlocal nonumber norelativenumber scrolloff=4"
+      vim.cmd "call feedkeys('G')"
+    end,
   })
-  M.bufnr = bufnr
-  return bufnr
+  vim.api.nvim_create_autocmd({ "BufEnter" }, {
+    buffer = M.bufnr,
+    callback = function()
+      -- TODO: make scrolloff configurable
+      vim.cmd "setlocal nonumber norelativenumber scrolloff=4"
+
+      vim.cmd "call feedkeys('G')"
+    end,
+  })
+
+  util.try_map(mappings.toggle_vsplit_log_buffer, function()
+    -- vim.cmd "close"
+    M.toggle(true)
+  end, M.bufnr)
+
+  util.try_map(mappings.toggle_split_log_buffer, function()
+    -- vim.cmd "close"
+    M.toggle(false)
+  end, M.bufnr)
+
+  vim.keymap.set("n", "q", "close", { buffer = M.bufnr })
+
+  return M.bufnr
 end
 
 function M.toggle(vsplit)
@@ -26,7 +51,6 @@ function M.toggle(vsplit)
       vsplit = true
     end
   end
-  local mappings = cfg.mappings
 
   local bufnr = M.bufnr
   local win = vim.fn.win_findbuf(bufnr)[1]
@@ -44,20 +68,6 @@ function M.toggle(vsplit)
     vim.api.nvim_win_set_height(0, 20)
   else
   end
-
-  util.try_map(mappings.toggle_vsplit_log_buffer, function()
-    vim.cmd "close"
-    M.toggle(true)
-  end)
-
-  util.try_map(mappings.toggle_split_log_buffer, function()
-    vim.cmd "close"
-    M.toggle(false)
-  end)
-
-  vim.keymap.set("n", "q", "close", { buffer = true })
-
-  vim.cmd "call feedkeys('G')"
 end
 
 function M.log(msg, level)

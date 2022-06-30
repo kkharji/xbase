@@ -13,8 +13,6 @@ pub async fn handle(root: PathBuf) -> Result<()> {
         return Ok(());
     }
 
-    log::info!("Trying to drop {}", root.as_path().name().unwrap());
-
     // NOTE: Should only be Some if no more client depend on it
     if let Some(_) = state.projects.remove(&root).await? {
         state.watcher.remove(&root)?;

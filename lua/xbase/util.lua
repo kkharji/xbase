@@ -28,7 +28,6 @@ function M.is_watching(config, command, device, watchlist)
   key = key .. " -target " .. config.target
 
   for _, watching_key in pairs(watchlist) do
-    I(key, watching_key)
     if key == watching_key then
       return true
     end
@@ -37,9 +36,9 @@ function M.is_watching(config, command, device, watchlist)
   return false
 end
 
-function M.try_map(key, fun)
+function M.try_map(key, fun, bufnr)
   if type(key) == "string" then
-    vim.keymap.set("n", key, fun, { buffer = true })
+    vim.keymap.set("n", key, fun, { buffer = bufnr and bufnr or true })
   end
 end
 
