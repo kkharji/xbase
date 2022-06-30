@@ -54,6 +54,7 @@ impl ProjectCompile for BareboneProject {
         let (name, root) = (self.name(), self.root());
         let cache_root = self.build_cache_root()?;
         let mut args = self.compile_arguments();
+        self.on_compile_start(broadcast)?;
 
         args.push(format!("SYMROOT={cache_root}"));
 
@@ -75,13 +76,7 @@ impl ProjectCompile for BareboneProject {
         let xccommands = xclogger.compile_commands.clone();
         let mut recv = broadcast.consume(Box::new(xclogger))?;
 
-        if !recv.recv().await.unwrap_or_default() {
-            broadcast.error(format!(
-                "Fail to generated compile commands for {}",
-                self.name()
-            ));
-            return Err(Error::Build(self.name().into()));
-        }
+        self.on_compile_finish(recv.recv().await.unwrap_or_default(), broadcast)?;
 
         let json = serde_json::to_vec_pretty(&xccommands.lock().await.to_vec())?;
         tokio::fs::write(root.join(".compile"), &json).await?;

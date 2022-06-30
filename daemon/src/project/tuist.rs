@@ -208,7 +208,7 @@ impl TuistProject {
         let success = logs.pop().unwrap().is_success().unwrap_or_default();
 
         if !success {
-            broadcast.error("Tuist Project Generation failed, checkout logs ..");
+            broadcast.error("Tuist Project Generation failed ");
             let logs = logs.into_iter().map(|p| p.to_string()).collect::<Vec<_>>();
 
             for log in logs {

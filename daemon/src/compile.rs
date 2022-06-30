@@ -48,7 +48,7 @@ pub async fn ensure_server_support<'a>(
     let is_swift_project = root.join("Package.swift").exists();
 
     if !is_swift_project && ensure_server_config(root).await.is_err() {
-        broadcast.error("fail to ensure build server configuration!");
+        broadcast.error("fail to ensure build server configuration ");
     };
 
     if let Some(event) = event {

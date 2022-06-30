@@ -122,10 +122,11 @@ impl ProjectGenerate for SwiftProject {
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let mut process: Process = vec!["/usr/bin/swift", "build"].into();
-        let name = self.name();
+        let name = self.root().name().unwrap();
         process.current_dir(self.root());
 
-        broadcast.info(format!("[{name}] Building and compiling swift project"));
+        broadcast.info(format!("[{name}] Compiling"));
+        broadcast.log_step(format!("[{name}] Compiling"));
 
         let success = broadcast
             .consume(Box::new(process))?
@@ -134,8 +135,12 @@ impl ProjectGenerate for SwiftProject {
             .unwrap_or_default();
 
         if !success {
+            broadcast.error(format!("[{name}] Failed to compiled "));
             broadcast.open_logger();
             return Err(Error::Generate);
+        } else {
+            broadcast.info(format!("[{name}] Compiled "));
+            broadcast.log_step(format!("[{name}] Compiled "));
         }
 
         self.update_project_info().await?;

@@ -57,7 +57,7 @@ impl Watchable for BuildRequest {
 
         if !recv.recv().await.unwrap_or_default() {
             let verb = if is_once { "building" } else { "Rebuilding" };
-            broadcast.error(format!("[{target}] {verb} Failed, checkout logs"));
+            broadcast.error(format!("[{target}] {verb} Failed "));
             broadcast.log_error(format!(
                 "[{target}] build args `xcodebuild {}`",
                 args.join(" ")

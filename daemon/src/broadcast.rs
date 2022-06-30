@@ -10,7 +10,7 @@ use tokio::sync::{mpsc::*, Mutex, Notify};
 use tokio::task::JoinHandle;
 use xbase_proto::{Message, PathExt, StatuslineState, Task};
 
-/// Boradcast server to send task to clients
+/// Broadcast server to send task to clients
 #[derive(Debug)]
 pub struct Broadcast {
     /// Project root for which the logger is created for.
@@ -104,7 +104,7 @@ impl Broadcast {
         Ok(recv_status)
     }
 
-    /// Start Boradcast server and start accepting clients
+    /// Start Broadcast server and start accepting clients
     fn start_server(
         address: &PathBuf,
         abort: Arc<Notify>,

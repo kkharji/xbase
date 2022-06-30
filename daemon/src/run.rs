@@ -80,7 +80,7 @@ async fn get_runner<'a>(
     broadcast.update_statusline(StatuslineState::Processing);
 
     if !recv.recv().await.unwrap_or_default() {
-        let msg = format!("[{target}] Failed to build for running .. checkout logs");
+        let msg = format!("[{target}] Failed to build for running ");
         broadcast.error(&msg);
         broadcast.log_error(format!("xcodebuild {}", args.join(" ")));
         broadcast.open_logger();

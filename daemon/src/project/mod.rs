@@ -165,9 +165,7 @@ pub trait ProjectCompile: ProjectData {
             broadcast.log_step(format!("[{name}] Compiled "));
             Ok(())
         } else {
-            broadcast.error(format!(
-                "[{name}] Failed to generate compile commands (see logs)"
-            ));
+            broadcast.error(format!("[{name}] Failed to generate compile commands "));
             broadcast.update_statusline(StatuslineState::Failure);
             broadcast.open_logger();
             Err(crate::Error::Compile)
@@ -200,7 +198,7 @@ pub trait ProjectGenerate: ProjectData {
             broadcast.log_step(format!("[{name}] Generated "));
             Ok(())
         } else {
-            broadcast.error(format!("[{name}] Failed to generated project (see logs)"));
+            broadcast.error(format!("[{name}] Failed to generate project "));
             broadcast.update_statusline(StatuslineState::Failure);
             broadcast.open_logger();
 
