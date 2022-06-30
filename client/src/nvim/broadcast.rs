@@ -1,6 +1,6 @@
 use super::global::NvimNotify;
 use crate::runtime::{rpc, rt};
-use crate::Broadcast;
+use crate::BroadcastHandler;
 use mlua::{chunk, prelude::*};
 use once_cell::sync::Lazy;
 use os_pipe::{PipeReader, PipeWriter};
@@ -14,21 +14,21 @@ use tokio::{
 };
 use xbase_proto::*;
 
-static LISTENERS: Lazy<Mutex<HashMap<PathBuf, JoinHandle<Result<()>>>>> =
+static BROADCASTERS: Lazy<Mutex<HashMap<PathBuf, JoinHandle<Result<()>>>>> =
     Lazy::new(Default::default);
 
-pub struct Listener;
+pub struct Broadcast;
 
-impl Listener {
+impl Broadcast {
     /// Register a project and initialize command listener if the project isn't already initialized
     pub fn init_or_skip(lua: &Lua, root: &PathBuf) -> LuaResult<()> {
-        let mut listeners = LISTENERS.lock().unwrap();
-        if !listeners.contains_key(root) {
+        let mut broadcast = BROADCASTERS.lock().unwrap();
+        if !broadcast.contains_key(root) {
             let (reader, writer) = os_pipe::pipe()?;
 
-            Listener::start_reader(lua, reader)?;
-            let writer = Listener::start_writer(writer, root.clone());
-            listeners.insert(root.clone(), writer);
+            Broadcast::start_reader(lua, reader)?;
+            let writer = Broadcast::start_writer(writer, root.clone());
+            broadcast.insert(root.clone(), writer);
         }
         Ok(())
     }

@@ -2,21 +2,11 @@ use std::collections::HashMap;
 use xbase_proto::*;
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
-mod neovim;
+mod nvim;
 mod runtime;
 pub trait XBase {
     type Error;
-
-    /// Register project on the client.
-    ///
-    /// This function start a listener for daemon commands to either log messages or excitation
-    /// actions for every new project root. If root already registered, then
-    ///
-    /// Note [`Listener::init_or_skip`] will skip creating a listener when root is already
-    /// registered.
-    ///
-    /// See [`Listener::start_reader`] to understand how the client handle messages.
-    ///
+    /// Register project at given root or cwd.
     fn register(&self, root: Option<String>) -> Result<(), Self::Error>;
     /// Send build request to client
     fn build(&self, req: BuildRequest) -> Result<(), Self::Error>;
@@ -35,7 +25,7 @@ pub trait XBase {
     fn watching(&self, root: Option<String>) -> Result<Vec<String>, Self::Error>;
 }
 
-pub trait Broadcast {
+pub trait BroadcastHandler {
     type Result;
     fn parse(&self, content: String) -> Result<Vec<Message>> {
         fn parse_single(line: &str) -> Result<Message> {
@@ -61,6 +51,38 @@ pub trait Broadcast {
 }
 
 #[mlua::lua_module]
-fn xbase_client(_lua: &mlua::Lua) -> mlua::Result<neovim::XBaseUserData> {
-    Ok(neovim::XBaseUserData)
+fn xbase_client(_lua: &mlua::Lua) -> mlua::Result<impl mlua::UserData> {
+    pub struct XBaseUserData;
+
+    impl mlua::UserData for XBaseUserData {
+        fn add_methods<'lua, M>(m: &mut M)
+        where
+            M: mlua::UserDataMethods<'lua, Self>,
+        {
+            m.add_function("register", XBase::register);
+            m.add_function("build", XBase::build);
+            m.add_function("run", XBase::run);
+            m.add_function("drop", XBase::drop);
+            m.add_function("targets", |lua, root: Option<String>| {
+                lua.create_table_from(lua.targets(root)?)
+            });
+            m.add_function("runners", |lua, platform: String| {
+                let runners = lua.runners(mlua::ExternalResult::to_lua_err(
+                    <PBXTargetPlatform as std::str::FromStr>::from_str(&platform),
+                )?)?;
+                let table = lua.create_table()?;
+                for (i, runner) in runners.into_iter().enumerate() {
+                    table.set(i, lua.create_table_from(runner)?)?;
+                }
+                Ok(table)
+            });
+            m.add_function("log_bufnr", |lua, _: ()| {
+                nvim::XBaseStateExt::log_bufnr(lua)
+            });
+            m.add_function("watching", |lua, root: Option<String>| {
+                lua.create_table_from(lua.watching(root)?.into_iter().enumerate())
+            });
+        }
+    }
+    Ok(XBaseUserData)
 }

@@ -166,7 +166,7 @@ pub trait ProjectCompile: ProjectData {
             Ok(())
         } else {
             broadcast.error(format!(
-                "[{name}] Failed to generated compile commands (see logs)"
+                "[{name}] Failed to generate compile commands (see logs)"
             ));
             broadcast.update_statusline(StatuslineState::Failure);
             Err(crate::Error::Compile)
