@@ -173,8 +173,18 @@ impl NvimGlobal for Lua {
         if msg.as_ref().trim().is_empty() {
             return Ok(());
         }
-        let notify: LuaFunction = self.vim()?.get("notify")?;
-        notify.call((msg.as_ref(), level as u8))
+
+        let msg = msg.as_ref();
+        let vim = self.vim()?;
+        let level = level as u8;
+        let opts = self.create_table_from([("title", "XBase")])?;
+        let args = (msg, level, opts);
+
+        // NOTE: Plugins like nvim-notify sets notify to metatable
+        match vim.get::<_, LuaFunction>("notify") {
+            Ok(f) => f.call(args),
+            Err(_) => vim.get::<_, LuaTable>("notify")?.call(args),
+        }
     }
 
     // TODO: Respect user configuration, Only log the level the user set.

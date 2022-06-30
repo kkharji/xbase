@@ -25,7 +25,6 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     if req.ops.is_watch() {
         broadcast.info(format!("[{target}] Watching  with '{args}'"));
         broadcast.update_statusline(StatuslineState::Watching);
-
         state.watcher.get_mut(&req.root)?.add(req)?;
     } else {
         broadcast.info(format!("[{}] Wathcer Stopped", &req.settings.target));
