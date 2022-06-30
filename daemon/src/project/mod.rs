@@ -12,9 +12,8 @@ use process_stream::ProcessExt;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use xbase_proto::BuildSettings;
+use xbase_proto::{BuildSettings, TargetInfo};
 use xclog::{XCBuildSettings, XCLogger};
-use xcodeproj::pbxproj::PBXTargetPlatform;
 use {swift::*, tuist::*, xcodegen::*};
 
 /// Project Data
@@ -24,7 +23,7 @@ pub trait ProjectData: std::fmt::Debug {
     /// Project name
     fn name(&self) -> &str;
     /// Project targets
-    fn targets(&self) -> &HashMap<String, PBXTargetPlatform>;
+    fn targets(&self) -> &HashMap<String, TargetInfo>;
     /// Project clients
     fn clients(&self) -> &i32;
     /// Get mut clients
@@ -59,15 +58,13 @@ pub trait ProjectBuild: ProjectData {
         cfg: &BuildSettings,
         device: Option<&Device>,
         broadcast: &Arc<Broadcast>,
-    ) -> Result<Vec<String>> {
+    ) -> Result<(Vec<String>, tokio::sync::mpsc::Receiver<bool>)> {
         let mut args = cfg.to_args();
         let target = &cfg.target;
         let name = self.name().to_owned();
         let xcworkspace = format!("{}.xcworkspace", &name);
 
         args.insert(0, "build".to_string());
-
-        broadcast::notify_info!(broadcast, "[target: {target}] building ...")?;
 
         if let Some(device) = device {
             args.extend(device.special_build_args())
@@ -89,24 +86,14 @@ pub trait ProjectBuild: ProjectData {
             args.extend_from_slice(&["-project".into(), format!("{}.xcodeproj", name)]);
         }
 
-        broadcast::log_trace!(broadcast, "building with [{}]", args.join(" "))?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast::log_info!(broadcast, "[{target}] Building")?;
+        broadcast::log_debug!(broadcast, "[{target}] {}", args.join(" "))?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
 
-        let success = broadcast
-            .consume(Box::new(XCLogger::new(self.root(), &args)?))?
-            .blocking_recv()
-            .unwrap_or_default();
+        let recv = broadcast.consume(Box::new(XCLogger::new(self.root(), &args)?))?;
 
-        if !success {
-            broadcast::notify_error!(
-                broadcast,
-                "[target: {target}] building Failed: `xcodebuild {}`",
-                args.join(" ")
-            )?
-        } else {
-            broadcast::notify_error!(broadcast, "[target: {target}] build failed")?;
-        };
-
-        Ok(args)
+        Ok((args, recv))
     }
 
     /// Get build cache root
@@ -124,15 +111,21 @@ pub trait ProjectRun: ProjectData + ProjectBuild {
         cfg: &BuildSettings,
         device: Option<&Device>,
         broadcast: &Arc<Broadcast>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, Vec<String>)> {
-        let args = self.build(cfg, device, broadcast)?;
+    ) -> Result<(
+        Box<dyn Runner + Send + Sync>,
+        Vec<String>,
+        tokio::sync::mpsc::Receiver<bool>,
+    )> {
+        let (args, recv) = self.build(cfg, device, broadcast)?;
+
         let info = XCBuildSettings::new_sync(self.root(), &args)?;
+
         let runner: Box<dyn Runner + Send + Sync> = match device {
             Some(device) => Box::new(SimulatorRunner::new(device.clone(), &info)),
             None => Box::new(BinRunner::from_build_info(&info)),
         };
 
-        Ok((runner, args))
+        Ok((runner, args, recv))
     }
 }
 

@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use xbase_proto::*;
+use xcodeproj::pbxproj::PBXTargetPlatform;
 
 mod neovim;
 mod runtime;
@@ -29,7 +31,7 @@ pub trait Broadcast {
 }
 
 pub trait XBase {
-    type Result;
+    type Error;
 
     /// Register project on the client.
     ///
@@ -41,13 +43,22 @@ pub trait XBase {
     ///
     /// See [`Listener::start_reader`] to understand how the client handle messages.
     ///
-    fn register(&self, root: Option<String>) -> Self::Result;
+    fn register(&self, root: Option<String>) -> Result<(), Self::Error>;
     /// Send build request to client
-    fn build(&self, req: BuildRequest) -> Self::Result;
+    fn build(&self, req: BuildRequest) -> Result<(), Self::Error>;
     /// Send run request to client
-    fn run(&self, req: RunRequest) -> Self::Result;
+    fn run(&self, req: RunRequest) -> Result<(), Self::Error>;
     /// Send drop request to client
-    fn drop(&self, root: Option<String>) -> Self::Result;
+    fn drop(&self, root: Option<String>) -> Result<(), Self::Error>;
+    /// Send targets for given root
+    fn targets(&self, root: Option<String>) -> Result<HashMap<String, TargetInfo>, Self::Error>;
+    /// Send targets for given root
+    fn runners(
+        &self,
+        platform: PBXTargetPlatform,
+    ) -> Result<Vec<HashMap<String, String>>, Self::Error>;
+    /// Get currently watched tagets and configuration
+    fn watching(&self, root: Option<String>) -> Result<Vec<String>, Self::Error>;
 }
 
 #[mlua::lua_module]

@@ -78,10 +78,7 @@ impl WatchService {
                     }
                     Ok(true) => {
                         let ref name = root.as_path().abbrv()?.display();
-                        broadcast::notify_info!(
-                            broadcast,
-                            "new compilation database generated ✅"
-                        )?;
+                        broadcast::notify_info!(broadcast, "new compilation database generated ")?;
                         info!("[{name}] recompiled successfully");
                     }
                     _ => (),

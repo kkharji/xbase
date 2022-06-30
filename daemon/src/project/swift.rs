@@ -12,7 +12,7 @@ use xcodeproj::pbxproj::PBXTargetPlatform;
 pub struct SwiftProject {
     name: String,
     root: PathBuf,
-    targets: HashMap<String, PBXTargetPlatform>,
+    targets: HashMap<String, TargetInfo>,
     num_clients: i32,
     watchignore: Vec<String>,
 }
@@ -26,7 +26,7 @@ impl ProjectData for SwiftProject {
         &self.name
     }
 
-    fn targets(&self) -> &HashMap<String, PBXTargetPlatform> {
+    fn targets(&self) -> &HashMap<String, TargetInfo> {
         &self.targets
     }
 
@@ -50,16 +50,15 @@ impl ProjectBuild for SwiftProject {
         cfg: &BuildSettings,
         _device: Option<&Device>,
         broadcast: &Arc<Broadcast>,
-    ) -> Result<Vec<String>> {
-        broadcast::notify_info!(broadcast, "Building {}", cfg.target)?;
+    ) -> Result<(Vec<String>, tokio::sync::mpsc::Receiver<bool>)> {
         let args = vec!["build", "--target", &cfg.target];
         let mut process = Process::new("/usr/bin/swift");
 
         process.args(&args);
         process.current_dir(self.root());
-        broadcast.consume(Box::new(process))?;
+        let recv = broadcast.consume(Box::new(process))?;
 
-        Ok(vec![])
+        Ok((vec![], recv))
     }
 }
 
@@ -70,8 +69,12 @@ impl ProjectRun for SwiftProject {
         cfg: &BuildSettings,
         _device: Option<&Device>,
         broadcast: &Arc<Broadcast>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, Vec<String>)> {
-        let args = self.build(cfg, None, broadcast)?;
+    ) -> Result<(
+        Box<dyn Runner + Send + Sync>,
+        Vec<String>,
+        tokio::sync::mpsc::Receiver<bool>,
+    )> {
+        let (args, recv) = self.build(cfg, None, broadcast)?;
 
         let output = std::process::Command::new("/usr/bin/swift")
             .args(["build", "--show-bin-path"])
@@ -91,7 +94,7 @@ impl ProjectRun for SwiftProject {
 
         log::info!("Running {:?} via {bin_path:?}", self.name());
 
-        Ok((Box::new(BinRunner::from_path(&bin_path)), args))
+        Ok((Box::new(BinRunner::from_path(&bin_path)), args, recv))
     }
 }
 
@@ -222,7 +225,13 @@ impl SwiftProject {
                     .map(|s| s == "test")
                     .unwrap_or_default()
                 {
-                    Some((name, PBXTargetPlatform::MacOS))
+                    Some((
+                        name,
+                        TargetInfo {
+                            platform: PBXTargetPlatform::MacOS,
+                            watching: false,
+                        },
+                    ))
                 } else {
                     None
                 }

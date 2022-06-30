@@ -3,13 +3,13 @@ use crate::watch::Event;
 use crate::{Error, Result};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
+use xcodeproj::XCodeProject;
 
 #[derive(Debug, Serialize, Default)]
 #[serde(default)]
 pub struct BareboneProject {
     root: PathBuf,
-    targets: HashMap<String, PBXTargetPlatform>,
+    targets: HashMap<String, TargetInfo>,
     num_clients: i32,
     watchignore: Vec<String>,
     #[serde(skip)]
@@ -25,7 +25,7 @@ impl ProjectData for BareboneProject {
         &self.xcodeproj.name()
     }
 
-    fn targets(&self) -> &HashMap<String, PBXTargetPlatform> {
+    fn targets(&self) -> &HashMap<String, TargetInfo> {
         &self.targets
     }
 
@@ -93,8 +93,8 @@ impl ProjectCompile for BareboneProject {
 
 #[async_trait::async_trait]
 impl ProjectGenerate for BareboneProject {
-    fn should_generate(&self, event: &Event) -> bool {
-        event.is_create_event() || event.is_remove_event() || event.is_rename_event()
+    fn should_generate(&self, _event: &Event) -> bool {
+        false
     }
 
     async fn generate(&mut self, _logger: &Arc<Broadcast>) -> Result<()> {
@@ -127,7 +127,20 @@ impl Project for BareboneProject {
         };
 
         project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
-        project.targets = project.xcodeproj.targets_platform();
+        project.targets = project
+            .xcodeproj
+            .targets_platform()
+            .into_iter()
+            .map(|(k, platform)| {
+                (
+                    k,
+                    TargetInfo {
+                        platform,
+                        watching: false,
+                    },
+                )
+            })
+            .collect();
 
         log::info!("targets: {:?}", project.targets());
         Ok(project)

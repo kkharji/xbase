@@ -48,10 +48,8 @@ M.reload_lsp_servers = function()
   vim.cmd "LspRestart"
 end
 
-M.is_watching = function(config, command, device)
+M.is_watching = function(config, command, device, watchlist)
   local root = vim.loop.cwd()
-  local watching = vim.g.xbase.watcher[root]
-
   local base_key = string.format("-configuration %s", config.configuration)
   local key
 
@@ -75,7 +73,13 @@ M.is_watching = function(config, command, device)
 
   key = key .. " -target " .. config.target
 
-  return watching[key] ~= nil
+  for _, watching_key in ipairs(watchlist) do
+    if key == watching_key then
+      return true
+    end
+  end
+
+  return false
 end
 
 M.feline_provider = function()

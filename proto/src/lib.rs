@@ -4,6 +4,7 @@ mod request;
 mod types;
 mod util;
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub use error::*;
@@ -15,6 +16,7 @@ pub use tarpc::server::{BaseChannel, Channel};
 pub use tokio_serde::formats::Json;
 pub use tokio_util::codec::length_delimited::LengthDelimitedCodec;
 pub use types::*;
+use xcodeproj::pbxproj::PBXTargetPlatform;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Short hand to get Result with given Error
@@ -45,4 +47,16 @@ pub trait XBase {
     /// Drop project at a given root
     ///
     async fn drop(client: Client) -> Result<()>;
+    ///
+    /// Return targets for client projects
+    ///
+    async fn targets(client: Client) -> Result<HashMap<String, TargetInfo>>;
+    ///
+    /// Return device names and id for given target
+    ///
+    async fn runners(platform: PBXTargetPlatform) -> Result<Vec<HashMap<String, String>>>;
+    ///
+    /// Return all watched keys
+    ///
+    async fn watching(root: PathBuf) -> Result<Vec<String>>;
 }

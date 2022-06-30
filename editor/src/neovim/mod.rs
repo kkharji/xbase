@@ -1,12 +1,11 @@
 mod global;
 mod listener;
 mod state;
-
-use std::path::PathBuf;
-
 use crate::{runtime::*, Broadcast, XBase};
 use mlua::{chunk, prelude::*};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use xbase_proto::*;
+use xcodeproj::pbxproj::PBXTargetPlatform;
 
 pub use global::*;
 pub use listener::*;
@@ -20,7 +19,21 @@ impl LuaUserData for XBaseUserData {
         m.add_function("build", XBase::build);
         m.add_function("run", XBase::run);
         m.add_function("drop", XBase::drop);
-        m.add_function("log_bufnr", |lua, _: ()| Ok(lua.state()?.bufnr));
+        m.add_function("targets", |lua, root: Option<String>| {
+            lua.create_table_from(lua.targets(root)?)
+        });
+        m.add_function("runners", |lua, platform: String| {
+            let runners = lua.runners(PBXTargetPlatform::from_str(&platform).to_lua_err()?)?;
+            let table = lua.create_table()?;
+            for (i, runner) in runners.into_iter().enumerate() {
+                table.set(i, lua.create_table_from(runner)?)?;
+            }
+            Ok(table)
+        });
+        m.add_function("log_bufnr", |lua, _: ()| lua.log_bufnr());
+        m.add_function("watching", |lua, root: Option<String>| {
+            lua.create_table_from(lua.watching(root)?.into_iter().enumerate())
+        });
     }
 }
 
@@ -47,9 +60,9 @@ impl Broadcast for Lua {
 }
 
 impl XBase for Lua {
-    type Result = LuaResult<()>;
+    type Error = LuaError;
 
-    fn register(&self, root: Option<String>) -> Self::Result {
+    fn register(&self, root: Option<String>) -> LuaResult<()> {
         if ensure_daemon() {
             self.info("new instance initialized, connecting ..")?;
         }
@@ -69,7 +82,7 @@ impl XBase for Lua {
     }
 
     /// Build project
-    fn build(&self, req: BuildRequest) -> Self::Result {
+    fn build(&self, req: BuildRequest) -> LuaResult<()> {
         rt().block_on(async move {
             let rpc = rpc().await;
             let ctx = context::current();
@@ -81,7 +94,7 @@ impl XBase for Lua {
     }
 
     /// Run project
-    fn run(&self, req: RunRequest) -> Self::Result {
+    fn run(&self, req: RunRequest) -> LuaResult<()> {
         rt().block_on(async move {
             let rpc = rpc().await;
             let ctx = context::current();
@@ -93,7 +106,7 @@ impl XBase for Lua {
     }
 
     /// Drop project at given root, otherwise drop client
-    fn drop(&self, root: Option<String>) -> Self::Result {
+    fn drop(&self, root: Option<String>) -> LuaResult<()> {
         let client = Client::new(self, root)?;
         rt().block_on(async move {
             let rpc = rpc().await;
@@ -104,6 +117,38 @@ impl XBase for Lua {
             OK(())
         })?;
         Ok(())
+    }
+
+    /// Get targets for given root
+    fn targets(&self, root: Option<String>) -> LuaResult<HashMap<String, TargetInfo>> {
+        let client = Client::new(self, root)?;
+        rt().block_on(async move {
+            let rpc = rpc().await;
+            let ctx = context::current();
+            rpc.targets(ctx, client).await?
+        })
+        .to_lua_err()
+    }
+
+    /// Get targets for given root
+    fn runners(&self, platform: PBXTargetPlatform) -> LuaResult<Vec<HashMap<String, String>>> {
+        rt().block_on(async move {
+            let rpc = rpc().await;
+            let ctx = context::current();
+            rpc.runners(ctx, platform).await?
+        })
+        .to_lua_err()
+    }
+
+    /// Get a vector of keys being watched
+    fn watching(&self, root: Option<String>) -> LuaResult<Vec<String>> {
+        let root = Client::new(self, root)?.root;
+        rt().block_on(async move {
+            let rpc = rpc().await;
+            let ctx = context::current();
+            rpc.watching(ctx, root).await?
+        })
+        .to_lua_err()
     }
 }
 
@@ -125,15 +170,23 @@ impl NvimGlobal for Lua {
     }
 
     fn notify<S: AsRef<str>>(&self, msg: S, level: MessageLevel) -> LuaResult<()> {
+        if msg.as_ref().trim().is_empty() {
+            return Ok(());
+        }
         let notify: LuaFunction = self.vim()?.get("notify")?;
-        notify.call((msg.as_ref(), level as u8))
+        let msg = format!("xbase: {}", msg.as_ref());
+        notify.call((msg, level as u8))
     }
 
     // TODO: Respect user configuration, Only log the level the user set.
     // TODO: Change line color based on level
     // TODO: Fix first line is empty
     fn log<S: AsRef<str>>(&self, msg: S, _level: MessageLevel) -> LuaResult<()> {
-        let msg = msg.as_ref().to_string();
+        let msg = msg.as_ref().trim();
+
+        if msg.is_empty() {
+            return Ok(());
+        }
         let bufnr = self.state()?.bufnr;
         let api = self.api()?;
 

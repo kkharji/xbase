@@ -91,9 +91,7 @@ impl Broadcast {
                         None => break,
                         Some(output) => {
                             if let Some(succ) = output.is_success() {
-                                if let Err(e) = send_status.send(succ).await {
-                                    log::error!("Fail to send process status {e}");
-                                }
+                                send_status.send(succ).await.ok();
                             }
                             if let Err(e) = tx.send(output.into()) {
                                 log::error!("Fail to send to channel {e}");
@@ -150,7 +148,6 @@ impl Broadcast {
                         Some(output) => {
                             let mut listeners =  listeners.lock().await;
                             if let Ok(value) = serde_json::to_string(&output) {
-                                log::info!("{}", listeners.len());
                                 for listener in listeners.iter_mut() {
                                     listener.write_all(format!("{value}\n").as_bytes()).await.ok();
                                     listener.flush().await.ok();
@@ -191,7 +188,7 @@ impl Broadcast {
 
 #[macro_export]
 macro_rules! __broadcast {
-    ($b:ident, $type:ident, $level:ident, $pid:tt, $f:literal, $($arg:tt)*) => { {
+    ($b:ident, $type:ident, $level:ident, $pid:tt, $f:literal, $($arg:tt),*) => { {
         use xbase_proto::*;
         $b.tx().send(Message::$type {
             msg: std::fmt::format(format_args!($f, $($arg)*)),

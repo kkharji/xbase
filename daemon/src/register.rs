@@ -30,7 +30,7 @@ pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
             broadcast::notify_info!(
                 broadcast,
                 pid,
-                "[{name}]: connected to an existing instance ✅"
+                "[{name}] connected to an existing instance "
             )?;
             project.inc_clients();
         } else {
@@ -43,10 +43,10 @@ pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
                 .watcher
                 .add(&root, watchignore, &name, &broadcast)
                 .await?;
-            broadcast::notify_info!(broadcast, pid, "[{name}]: connected ✅")?;
+            broadcast::notify_info!(broadcast, pid, "[{name}] Connected ")?;
         }
         if compile::ensure_server_support(state, &root, None, &broadcast).await? {
-            broadcast::notify_info!(broadcast, pid, "[{name}]: compiled ✅")?;
+            broadcast::notify_info!(broadcast, pid, "[{name}] Compiled ")?;
         }
 
         OK(())

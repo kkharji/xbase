@@ -56,7 +56,7 @@ pub async fn handle(req: RunRequest) -> Result<()> {
         let watcher = state.watcher.get_mut(&req.client.root)?;
         let listener = watcher.remove(&req.to_string())?;
         listener.discard(state).await?;
-        broadcast::notify_info!(broadcast, "[target: {}] watch stop", &req.settings.target)?;
+        broadcast::notify_info!(broadcast, "[{}] Wathcer Stopped", &req.settings.target)?;
     }
 
     log::info!("{sep}",);
@@ -76,9 +76,22 @@ async fn get_runner<'a>(
     let root = &client.root;
     let target = &settings.target;
     let project = state.projects.get(root)?;
-    let (runner, _) = project.get_runner(&settings, device, broadcast)?;
+    let (runner, args, mut recv) = project.get_runner(&settings, device, broadcast)?;
 
-    log::info!("[target: {target}] running .....");
+    if !recv.recv().await.unwrap_or_default() {
+        let msg = format!("[{target}] Failed to build for running .. checkout logs");
+        broadcast::notify_error!(broadcast, "{msg}")?;
+        broadcast::notify_error!(broadcast, "xcodebuild {}", args.join(" "))?;
+        return Err(crate::Error::Run(msg));
+    }
 
-    Ok(runner.run(broadcast).await?)
+    let process = runner.run(broadcast).await?;
+
+    let device_name = device.map(|d| d.to_string()).unwrap_or("macOs".into());
+    broadcast::notify_info!(broadcast, "[{target}] Running on {device_name:?} ⚙")?;
+    broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+    broadcast::log_info!(broadcast, "[{target}] Running on {device_name:?} ⚙")?;
+    broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+
+    Ok(process)
 }

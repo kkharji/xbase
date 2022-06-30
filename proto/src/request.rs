@@ -13,7 +13,6 @@ pub struct BuildRequest {
     pub settings: BuildSettings,
     #[serde(deserialize_with = "value_or_default")]
     pub direction: BufferDirection,
-    #[serde(deserialize_with = "value_or_default")]
     pub ops: Operation,
 }
 

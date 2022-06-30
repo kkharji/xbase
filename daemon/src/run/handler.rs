@@ -25,6 +25,7 @@ impl RunServiceHandler {
         let mut stream = process.spawn_and_stream()?;
         let abort = process.aborter().unwrap();
 
+        // broadcast::notify_info!(broadcast, "[{}] Running ⚙", cfg.target)?;
         let inner = tokio::spawn(async move {
             // TODO: find a better way to close this!
             //
@@ -61,7 +62,7 @@ impl RunServiceHandler {
                             broadcast::log_error!(broadcast, "disconnected, exit: {code}")?;
                         }
 
-                        log::info!("[target: {target}] runner closed");
+                        log::info!("[{target}] Runner Closed");
                         break;
                     }
                 };

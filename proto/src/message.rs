@@ -223,13 +223,13 @@ impl From<ProcessItem> for Message {
             ProcessItem::Exit(code) => {
                 if is_success.unwrap() {
                     Self::Log {
-                        msg: "Success".into(),
+                        msg: Default::default(),
                         level: MessageLevel::Info,
                         pid: None,
                     }
                 } else {
                     Self::Log {
-                        msg: format!("Exit {code}"),
+                        msg: format!("Failed with {code} code"),
                         level: MessageLevel::Error,
                         pid: None,
                     }

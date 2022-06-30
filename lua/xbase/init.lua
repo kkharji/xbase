@@ -1,12 +1,5 @@
 local M = {}
 
-vim.g.xbase = {}
---   bufnr = nil,
---   watchers = vim.empty_dict(),
---   devices = vim.empty_dict(),
---   config = vim.empty_dict(),
--- }
-
 M.lib = require "xbase_editor_lib"
 
 ---Check whether the vim instance should be registered to xbase server.
@@ -25,6 +18,10 @@ M.should_register = function(root, _)
   end
   return false
 end
+
+M.targets = M.lib.targets
+M.runners = M.lib.runners
+M.watching = M.lib.watching
 
 --- Register current neovim client
 M.register = function(root)

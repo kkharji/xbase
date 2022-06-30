@@ -1,17 +1,17 @@
 use super::*;
-use crate::util::fs::which;
+use crate::util::fs::{which, PathExt};
 use crate::watch::Event;
 use crate::{Error, Result};
 use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
+use xcodeproj::XCodeProject;
 
 #[derive(Debug, Serialize, Default)]
 #[serde(default)]
 pub struct TuistProject {
     root: PathBuf,
-    targets: HashMap<String, PBXTargetPlatform>,
+    targets: HashMap<String, TargetInfo>,
     num_clients: i32,
     watchignore: Vec<String>,
     #[serde(skip)]
@@ -35,7 +35,7 @@ impl ProjectData for TuistProject {
         &self.xcodeproj.name()
     }
 
-    fn targets(&self) -> &HashMap<String, PBXTargetPlatform> {
+    fn targets(&self) -> &HashMap<String, TargetInfo> {
         &self.targets
     }
 
@@ -68,6 +68,11 @@ impl ProjectCompile for TuistProject {
         let cache_root = self.build_cache_root()?;
         let arguments = self.compile_arguments();
         let mut compile_commands: Vec<C> = vec![];
+
+        broadcast::notify_info!(broadcast, "[{name}] Compiling ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast::log_info!(broadcast, "[{name}] Compiling ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
 
         // Compile manifests
         let (mut manifest_compile_success, manifest_compile_commands) = {
@@ -120,6 +125,9 @@ impl ProjectCompile for TuistProject {
             return Err(Error::Build(self.name().into()));
         }
 
+        broadcast::notify_info!(broadcast, "[{}] Compiled ", name)?;
+        broadcast::log_info!(broadcast, "[{}] Compiled ", name)?;
+
         compile_commands.extend(manifest_compile_commands.lock().await.to_vec());
         compile_commands.extend(project_compile_commands.lock().await.to_vec());
 
@@ -146,8 +154,12 @@ impl ProjectGenerate for TuistProject {
     }
 
     /// Generate xcodeproj
-    async fn generate(&mut self, _logger: &Arc<Broadcast>) -> Result<()> {
-        log::info!("generating ...");
+    async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
+        let name = self.root().name().unwrap();
+        broadcast::notify_info!(broadcast, "[{name}] Generating ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast::log_info!(broadcast, "[{name}] Generating ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
 
         self.tuist(&["edit", "--permanent"]).await?;
         self.tuist(&["generate", "--no-open"]).await?;
@@ -155,11 +167,28 @@ impl ProjectGenerate for TuistProject {
         let (xcodeproj_path, manifest_path) = self.xcodeproj_paths()?;
         let (xcodeproj_path, manifest_path) = (xcodeproj_path.unwrap(), manifest_path.unwrap());
 
+        broadcast::notify_info!(broadcast, "[{name}] Generated ")?;
+        broadcast::log_info!(broadcast, "[{name}] Generated ")?;
+
         self.manifest = XCodeProject::new(&manifest_path)?;
         self.manifest_path = manifest_path;
         self.xcodeproj = XCodeProject::new(&xcodeproj_path)?;
         self.xcodeproj_path = xcodeproj_path;
-        self.targets = self.xcodeproj.targets_platform();
+
+        for (key, platform) in self.xcodeproj.targets_platform().into_iter() {
+            if self.targets.contains_key(&key) {
+                let info = self.targets.get_mut(&key).unwrap();
+                info.platform = platform;
+            } else {
+                self.targets.insert(
+                    key,
+                    TargetInfo {
+                        platform,
+                        watching: false,
+                    },
+                );
+            }
+        }
 
         Ok(())
     }
@@ -247,9 +276,6 @@ impl Project for TuistProject {
 
                 project.generate(broadcast).await?;
 
-                project.targets = project.xcodeproj.targets_platform();
-                project.manifest_files = project.manifest.build_file_names();
-
                 log::info!("[{}] targets: {:?}", project.name(), project.targets());
 
                 return Ok(project);
@@ -262,7 +288,20 @@ impl Project for TuistProject {
 
         project.xcodeproj = XCodeProject::new(&xcodeproj_path)?;
         project.xcodeproj_path = xcodeproj_path;
-        project.targets = project.xcodeproj.targets_platform();
+        project.targets = project
+            .xcodeproj
+            .targets_platform()
+            .into_iter()
+            .map(|(k, platform)| {
+                (
+                    k,
+                    TargetInfo {
+                        platform,
+                        watching: false,
+                    },
+                )
+            })
+            .collect();
 
         log::info!("[{}] targets: {:?}", project.name(), project.targets());
 

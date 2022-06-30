@@ -10,6 +10,7 @@ pub struct XBaseState {
 pub trait XBaseStateExt {
     fn setup_state(&self) -> LuaResult<()>;
     fn state(&self) -> LuaResult<Ref<XBaseState>>;
+    fn log_bufnr(&self) -> LuaResult<usize>;
     fn state_mut(&self) -> LuaResult<RefMut<XBaseState>>;
 }
 
@@ -20,14 +21,13 @@ impl XBaseStateExt for Lua {
             let bufnr = self
                 .load(chunk! {
                     local bufnr = vim.api.nvim_create_buf(false, true)
-                        vim.api.nvim_buf_set_name(bufnr, "[XBase Logs]")
-                        vim.api.nvim_buf_set_option(bufnr, "filetype", "xcodebuildlog");
+                    vim.api.nvim_buf_set_name(bufnr, "[XBase Logs]")
+                    vim.api.nvim_buf_set_option(bufnr, "filetype", "xcodebuildlog");
                     vim.api.nvim_create_autocmd({"BufEnter"}, {
                         buffer = bufnr,
                         command = "setlocal nonumber norelativenumber scrolloff=3"
                     });
-                    vim.g.xbase.bufnr = bufnr
-                        return bufnr
+                    return bufnr
                 })
                 .eval::<usize>()?;
 
@@ -44,6 +44,9 @@ impl XBaseStateExt for Lua {
     fn state_mut(&self) -> LuaResult<std::cell::RefMut<XBaseState>> {
         self.app_data_mut::<XBaseState>()
             .ok_or_else(|| LuaError::external("XBaseState is not set!"))
+    }
+    fn log_bufnr(&self) -> LuaResult<usize> {
+        Ok(self.state()?.bufnr)
     }
 }
 

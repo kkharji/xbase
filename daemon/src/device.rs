@@ -10,6 +10,12 @@ pub struct Device {
     inner: simctl::Device,
 }
 
+impl std::fmt::Display for Device {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 impl Eq for Device {}
 
 impl PartialEq for Device {

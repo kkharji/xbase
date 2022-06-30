@@ -26,7 +26,7 @@ local mappings = function(_, _)
   return true
 end
 
-local insert_entry = function(acc, picker, command, target, configuration, device)
+local insert_entry = function(acc, picker, command, target, configuration, watchlist, device)
   local item = {
     command = command,
     settings = { target = target, configuration = configuration },
@@ -37,13 +37,15 @@ local insert_entry = function(acc, picker, command, target, configuration, devic
   end
 
   if picker == "Watch" then
-    if util.is_watching(item.settings, command, item.device) then
+    if util.is_watching(item.settings, command, item.device, watchlist) then
       item.ops = "Stop"
       item.kind = command
     else
       item.ops = "Watch"
       item.kind = command
     end
+  else
+    item.ops = "Once"
   end
 
   acc[#acc + 1] = item
@@ -51,16 +53,17 @@ end
 
 local get_selections = function(picker)
   local commands = picker == "Watch" and { "Build", "Run" } or { picker }
-  local project = vim.g.xbase.projects[vim.loop.cwd()]
+  local targets = xbase.targets()
+  local include_devices = picker == "Run" or picker == "Watch"
+  local watchlist = picker == "Watch" and xbase.watching() or {}
 
-  if project == nil then
-    error "No project info found"
+  if targets == nil then
+    error "No targets found"
   end
-
-  local targets = util.get_targets_runners(project)
 
   -- TOOD(core): Support custom project configurations and schemes
   local configurations
+
   if vim.loop.fs_stat(vim.loop.cwd() .. "/Package.swift") then
     configurations = { "Debug" }
   else
@@ -70,31 +73,29 @@ local get_selections = function(picker)
   local results = {}
 
   for _, command in ipairs(commands) do
-    for _, target_info in ipairs(targets) do
-      local target = target_info.name
-      local devices = target_info.runners
-      local include_devices = #devices ~= 0 and command == "Run"
-
+    for target, target_info in pairs(targets) do
       for _, configuration in ipairs(configurations) do
-        if include_devices then
+        local devices = xbase.runners(target_info.platform)
+        if include_devices and command == "Run" and #devices ~= 0 then
           for _, device in ipairs(devices) do
-            insert_entry(results, picker, command, target, configuration, device)
+            insert_entry(results, picker, command, target, configuration, watchlist, device)
           end
         else
-          insert_entry(results, picker, command, target, configuration)
+          insert_entry(results, picker, command, target, configuration, watchlist)
         end
       end
     end
   end
-  if picker == "Run" or picker == "Watch" then
-    table.sort(results, function(a, b)
-      if a.device and b.device then
-        return a.device.is_on and not b.device.is_on
-      else
-        return
-      end
-    end)
-  end
+
+  -- if picker == "Run" or picker == "Watch" then
+  --   table.sort(results, function(a, b)
+  --     if a.device and b.device then
+  --       return a.device.is_on and not b.device.is_on
+  --     else
+  --       return
+  --     end
+  --   end)
+  -- end
 
   return results
 end
@@ -112,7 +113,7 @@ local entry_maker = function(entry)
   local items, parts = {}, {}
   local ti = table.insert
 
-  if entry.ops then
+  if entry.ops and entry.ops ~= "Once" then
     entry.ordinal = string.format("%s %s", entry.ordinal, entry.ops)
     local ops = string.format("%s", entry.ops)
 

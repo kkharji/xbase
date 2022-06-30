@@ -1,17 +1,17 @@
 use super::*;
-use crate::util::fs::which;
+use crate::util::fs::{which, PathExt};
 use crate::watch::Event;
 use crate::{Error, Result};
 use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
+use xcodeproj::XCodeProject;
 
 #[derive(Debug, Serialize, Default)]
 #[serde(default)]
 pub struct XCodeGenProject {
     root: PathBuf,
-    targets: HashMap<String, PBXTargetPlatform>,
+    targets: HashMap<String, TargetInfo>,
     num_clients: i32,
     watchignore: Vec<String>,
     #[serde(skip)]
@@ -27,7 +27,7 @@ impl ProjectData for XCodeGenProject {
         &self.xcodeproj.name()
     }
 
-    fn targets(&self) -> &HashMap<String, PBXTargetPlatform> {
+    fn targets(&self) -> &HashMap<String, TargetInfo> {
         &self.targets
     }
 
@@ -60,6 +60,11 @@ impl ProjectCompile for XCodeGenProject {
         let cache_root = self.build_cache_root()?;
         let mut arguments = self.compile_arguments();
 
+        broadcast::notify_info!(broadcast, "[{name}] Compiling ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast::log_info!(broadcast, "[{name}] Compiling ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+
         arguments.push(format!("SYMROOT={cache_root}"));
 
         log::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
@@ -87,6 +92,9 @@ impl ProjectCompile for XCodeGenProject {
 
         tokio::fs::write(root.join(".compile"), &json).await?;
 
+        broadcast::notify_info!(broadcast, "[{}] Compiled ", name)?;
+        broadcast::log_info!(broadcast, "[{}] Compiled ", name)?;
+
         log::info!("[{name}] compiled successfully");
 
         Ok(())
@@ -107,7 +115,11 @@ impl ProjectGenerate for XCodeGenProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
-        broadcast::notify_info!(broadcast, "generating {} ...", self.name())?;
+        let name = self.root().name().unwrap();
+        broadcast::notify_info!(broadcast, "[{name}] Generating ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast::log_info!(broadcast, "[{name}] Generating ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
 
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
         process.current_dir(self.root());
@@ -117,19 +129,36 @@ impl ProjectGenerate for XCodeGenProject {
             .await
             .unwrap_or_default();
 
-        if success {
-            let xcodeproj_paths = self.get_xcodeproj_paths()?;
+        if !success {
+            return Err(Error::Generate);
+        }
 
-            if xcodeproj_paths.len() > 1 {
-                log::warn!(
-                    "Found more then on xcodeproj, using {:?}",
-                    xcodeproj_paths[0]
+        broadcast::notify_info!(broadcast, "[{name}] Generated ")?;
+        broadcast::log_info!(broadcast, "[{name}] Generated ")?;
+
+        let xcodeproj_paths = self.get_xcodeproj_paths()?;
+
+        if xcodeproj_paths.len() > 1 {
+            log::warn!(
+                "Found more then on xcodeproj, using {:?}",
+                xcodeproj_paths[0]
+            );
+        }
+
+        self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
+        for (key, platform) in self.xcodeproj.targets_platform().into_iter() {
+            if self.targets.contains_key(&key) {
+                let info = self.targets.get_mut(&key).unwrap();
+                info.platform = platform;
+            } else {
+                self.targets.insert(
+                    key,
+                    TargetInfo {
+                        platform,
+                        watching: false,
+                    },
                 );
             }
-            self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
-            self.targets = self.xcodeproj.targets_platform();
-        } else {
-            return Err(Error::Generate);
         }
 
         Ok(())
@@ -160,7 +189,20 @@ impl Project for XCodeGenProject {
 
         if !xcodeproj_paths.is_empty() {
             project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
-            project.targets = project.xcodeproj.targets_platform();
+            project.targets = project
+                .xcodeproj
+                .targets_platform()
+                .into_iter()
+                .map(|(k, platform)| {
+                    (
+                        k,
+                        TargetInfo {
+                            platform,
+                            watching: false,
+                        },
+                    )
+                })
+                .collect();
         } else {
             project.generate(broadcast).await?;
         }

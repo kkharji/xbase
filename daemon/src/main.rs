@@ -1,4 +1,5 @@
 use log::Level;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
@@ -6,6 +7,7 @@ use tokio::net::UnixListener;
 use xbase::constants::*;
 use xbase::util::pid;
 use xbase_proto::*;
+use xcodeproj::pbxproj::PBXTargetPlatform;
 
 #[derive(Clone)]
 struct Server;
@@ -23,9 +25,43 @@ impl xbase_proto::XBase for Server {
         tokio::spawn(async { xbase::run::handle(req).await });
         Ok(())
     }
+
+    async fn watching(self, _: Context, root: PathBuf) -> Result<Vec<String>> {
+        let state = DAEMON_STATE.lock().await;
+        Ok(state
+            .watcher
+            .get(&root)?
+            .listeners
+            .iter()
+            .map(|(k, _)| k.clone())
+            .collect())
+    }
+
     async fn drop(self, _: Context, client: Client) -> Result<()> {
         tokio::spawn(async { xbase::drop::handle(client).await });
         Ok(())
+    }
+    async fn targets(self, _: Context, client: Client) -> Result<HashMap<String, TargetInfo>> {
+        let state = DAEMON_STATE.lock().await;
+        let project = state.projects.get(&client.root)?;
+        Ok(project.targets().clone())
+    }
+    async fn runners(
+        self,
+        _: Context,
+        platform: PBXTargetPlatform,
+    ) -> Result<Vec<HashMap<String, String>>> {
+        DAEMON_STATE
+            .lock()
+            .await
+            .devices
+            .iter()
+            .filter(|(_, d)| d.platform == platform)
+            .map(|(id, d)| {
+                HashMap::from([("id".into(), id.clone()), ("name".into(), d.name.clone())])
+            })
+            .collect::<Vec<HashMap<String, String>>>()
+            .pipe(Ok)
     }
 }
 

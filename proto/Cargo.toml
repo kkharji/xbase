@@ -27,6 +27,7 @@ mlua         = { version = "0.8.0", optional = true  }
 process-stream = { version = "0.4.*", features = ["serde"] }
 tokio    = { version = "1.19.2" }
 linemux = {version = "0.2.3", optional = true}
+xcodeproj = "0.2.12"
 
 [features]
 default = []

@@ -125,7 +125,7 @@ fn register_for_changes(conn: &Conn, id: Id, params: OptionsChangedRequest) -> R
 
     let notification: Message =
         OptionsChangedNotification::new(params.uri, args, uri).try_into()?;
-    log::info!("✅");
+    log::info!("");
 
     conn.send(notification)?;
 

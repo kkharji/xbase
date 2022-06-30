@@ -61,7 +61,6 @@ pub async fn ensure_server_support<'a>(
                 }
                 return Ok(false);
             };
-
             project.update_compile_database(broadcast).await?;
             return Ok(true);
         }

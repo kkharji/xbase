@@ -1,4 +1,4 @@
-use crate::broadcast::Broadcast;
+use crate::broadcast::{self, Broadcast};
 use crate::constants::{State, DAEMON_STATE};
 use crate::util::log_request;
 use crate::watch::{Event, Watchable};
@@ -15,6 +15,8 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     let client = &req.client;
     let root = &req.client.root;
     let broadcast = state.broadcasters.get(&client.root)?;
+    let target = &req.settings.target;
+    let args = &req.settings.to_string();
 
     log_request!("Build", root, req);
 
@@ -24,6 +26,7 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     }
 
     if req.ops.is_watch() {
+        broadcast::notify_info!(broadcast, "[{target}] Watching  with '{args}'")?;
         state.watcher.get_mut(&req.client.root)?.add(req)?;
     } else {
         state
@@ -43,12 +46,24 @@ impl Watchable for BuildRequest {
         _event: &Event,
         broadcast: &Arc<Broadcast>,
     ) -> Result<()> {
-        // let is_once = self.ops.is_once();
-        let (root, config) = (&self.client.root, &self.settings);
-
+        let is_once = self.ops.is_once();
+        let config = &self.settings;
+        let root = &self.client.root;
+        let target = &self.settings.target;
         let project = state.projects.get(root)?;
 
-        project.build(&config, None, broadcast)?;
+        if is_once {
+            broadcast::notify_info!(broadcast, "[{target}] Building ⚙")?;
+        }
+        let (args, mut recv) = project.build(&config, None, broadcast)?;
+
+        if !recv.recv().await.unwrap_or_default() {
+            let verb = if is_once { "building" } else { "Rebuilding" };
+            broadcast::notify_error!(broadcast, "[{target}] {verb} Failed, checkout logs")?;
+            broadcast::log_error!(broadcast, "[{target}] ran args {}", args.join(" "))?;
+        } else {
+            broadcast::notify_info!(broadcast, "[{target}] Built ")?;
+        };
 
         Ok(())
     }
