@@ -19,20 +19,26 @@ impl BroadcastHandler for Lua {
 
     fn handle(&self, msg: Message) -> Self::Result {
         match msg {
-            Message::Notify { msg, level, .. } => self.notify(msg, level),
-            Message::Log { msg, level, .. } => self.log(msg, level),
+            Message::Notify { msg, level, .. } => self.notify(msg, level)?,
+            Message::Log { msg, level, .. } => self.log(msg, level)?,
             Message::Execute(task) => match task {
-                Task::UpdateStatusline(state) => state.to_string().pipe(|s| {
-                    self.load(chunk!(vim.g.xbase_watch_build_status = $s))
-                        .exec()
-                }),
+                Task::UpdateStatusline(state) => {
+                    state.to_string().pipe(|s| {
+                        self.load(chunk!(vim.g.xbase_watch_build_status = $s))
+                            .exec()
+                    })?;
+                }
                 Task::OpenLogger => {
                     // TODO: Make auto open logger on error configurable
                     self.load(chunk!(require("xbase.log").toggle(nil, false)))
-                        .exec()
+                        .exec()?;
+                }
+                Task::ReloadLspServer => {
+                    self.load(chunk!(vim.cmd "LspRestart")).exec()?;
                 }
             },
         }
+        Ok(())
     }
 }
 

@@ -113,6 +113,7 @@ impl std::fmt::Display for StatuslineState {
 pub enum Task {
     UpdateStatusline(StatuslineState),
     OpenLogger,
+    ReloadLspServer,
 }
 
 /// Message Kind

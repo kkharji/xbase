@@ -260,4 +260,8 @@ impl Broadcast {
     pub fn open_logger(&self) {
         self.tx.send(Message::Execute(Task::OpenLogger)).ok();
     }
+
+    pub fn reload_lsp_server(&self) {
+        self.tx.send(Message::Execute(Task::ReloadLspServer)).ok();
+    }
 }

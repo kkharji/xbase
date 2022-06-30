@@ -161,6 +161,7 @@ pub trait ProjectCompile: ProjectData {
     fn on_compile_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.name();
         if success {
+            broadcast.reload_lsp_server();
             broadcast.success(format!("[{name}] Compiled "));
             broadcast.log_step(format!("[{name}] Compiled "));
             Ok(())
