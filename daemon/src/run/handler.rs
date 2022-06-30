@@ -1,4 +1,4 @@
-use crate::broadcast::{self, Broadcast};
+use crate::broadcast::Broadcast;
 use crate::{constants::DAEMON_STATE, Result};
 use process_stream::ProcessExt;
 use process_stream::{Process, StreamExt};
@@ -25,7 +25,7 @@ impl RunServiceHandler {
         let mut stream = process.spawn_and_stream()?;
         let abort = process.aborter().unwrap();
 
-        // broadcast::notify_info!(broadcast, "[{}] Running ⚙", cfg.target)?;
+        // broadcast.notify_info(format!("[{}] Running ⚙", cfg.target)?;
         let inner = tokio::spawn(async move {
             // TODO: find a better way to close this!
             //
@@ -47,19 +47,19 @@ impl RunServiceHandler {
                 match output {
                     Output(msg) => {
                         if !msg.contains("ignoring singular matrix") {
-                            broadcast::log_info!(broadcast, "{msg}")?;
+                            broadcast.log_info(msg);
                         }
                     }
                     Error(msg) => {
-                        broadcast::log_error!(broadcast, "{msg}")?;
+                        broadcast.log_error(msg);
                     }
                     // TODO: this should be skipped when user re-run the app
                     Exit(code) => {
                         let success = &code == "0";
                         if success {
-                            broadcast::log_info!(broadcast, "disconnected")?;
+                            broadcast.log_info("disconnected");
                         } else {
-                            broadcast::log_error!(broadcast, "disconnected, exit: {code}")?;
+                            broadcast.log_error(format!("disconnected, exit: {code}"));
                         }
 
                         log::info!("[{target}] Runner Closed");

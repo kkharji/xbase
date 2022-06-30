@@ -64,7 +64,7 @@ impl XBase for Lua {
 
     fn register(&self, root: Option<String>) -> LuaResult<()> {
         if ensure_daemon() {
-            self.info("new instance initialized, connecting ..")?;
+            self.info("new instance initialized")?;
         }
 
         let root = if let Some(root) = root {
@@ -78,7 +78,7 @@ impl XBase for Lua {
         // Setup State (skipped if already set)
         self.setup_state()?;
 
-        self.info(format!("[{}] Connected", root.as_path().name().unwrap()))?;
+        self.info(format!("[{}] Connected ", root.as_path().name().unwrap()))?;
 
         Ok(())
     }

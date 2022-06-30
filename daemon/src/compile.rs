@@ -1,5 +1,5 @@
 //! Module for generating Compilation Database.
-use crate::broadcast::{self, Broadcast};
+use crate::broadcast::Broadcast;
 use crate::watch::Event;
 use crate::{constants::State, Result};
 use std::path::PathBuf;
@@ -48,7 +48,7 @@ pub async fn ensure_server_support<'a>(
     let is_swift_project = root.join("Package.swift").exists();
 
     if !is_swift_project && ensure_server_config(root).await.is_err() {
-        broadcast::notify_error!(broadcast, "fail to ensure build server configuration!")?;
+        broadcast.error("fail to ensure build server configuration!");
     };
 
     if let Some(event) = event {

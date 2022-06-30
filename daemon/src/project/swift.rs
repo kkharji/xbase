@@ -121,13 +121,10 @@ impl ProjectGenerate for SwiftProject {
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let mut process: Process = vec!["/usr/bin/swift", "build"].into();
+        let name = self.name();
         process.current_dir(self.root());
 
-        broadcast::notify_info!(
-            broadcast,
-            "Building and compiling swift project {}",
-            self.name()
-        )?;
+        broadcast.info(format!("[{name}] Building and compiling swift project"));
 
         let success = broadcast
             .consume(Box::new(process))?

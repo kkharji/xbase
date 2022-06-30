@@ -1,4 +1,4 @@
-use crate::broadcast::{self, Broadcast};
+use crate::broadcast::Broadcast;
 use crate::constants::{State, DAEMON_STATE};
 use crate::util::log_request;
 use crate::watch::{Event, Watchable};
@@ -26,7 +26,8 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
     }
 
     if req.ops.is_watch() {
-        broadcast::notify_info!(broadcast, "[{target}] Watching  with '{args}'")?;
+        broadcast.info(format!("[{target}] Watching  with '{args}'"));
+
         state.watcher.get_mut(&req.client.root)?.add(req)?;
     } else {
         state
@@ -53,16 +54,19 @@ impl Watchable for BuildRequest {
         let project = state.projects.get(root)?;
 
         if is_once {
-            broadcast::notify_info!(broadcast, "[{target}] Building ⚙")?;
+            broadcast.info(format!("[{target}] Building ⚙"));
         }
         let (args, mut recv) = project.build(&config, None, broadcast)?;
 
         if !recv.recv().await.unwrap_or_default() {
             let verb = if is_once { "building" } else { "Rebuilding" };
-            broadcast::notify_error!(broadcast, "[{target}] {verb} Failed, checkout logs")?;
-            broadcast::log_error!(broadcast, "[{target}] ran args {}", args.join(" "))?;
+            broadcast.error(format!("[{target}] {verb} Failed, checkout logs"));
+            broadcast.log_error(format!(
+                "[{target}] build args `xcodebuild {}`",
+                args.join(" ")
+            ));
         } else {
-            broadcast::notify_info!(broadcast, "[{target}] Built ")?;
+            broadcast.info(format!("[{target}] Built "));
         };
 
         Ok(())

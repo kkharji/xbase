@@ -3,7 +3,7 @@ mod swift;
 mod tuist;
 mod xcodegen;
 
-use crate::broadcast::{self, Broadcast};
+use crate::broadcast::Broadcast;
 use crate::Result;
 use crate::{device::*, run::*, util::*, watch::*};
 use anyhow::Context;
@@ -87,10 +87,10 @@ pub trait ProjectBuild: ProjectData {
             args.extend_from_slice(&["-project".into(), format!("{}.xcodeproj", name)]);
         }
 
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-        broadcast::log_info!(broadcast, "[{target}] Building")?;
-        broadcast::log_debug!(broadcast, "[{target}] {}", args.join(" "))?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
+        broadcast.log_info(format!("[{target}] Building"));
+        broadcast.log_debug(format!("[{target}] {}", args.join(" ")));
+        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
 
         let recv = broadcast.consume(Box::new(XCLogger::new(self.root(), &args)?))?;
 
@@ -155,9 +155,9 @@ pub trait ProjectCompile: ProjectData {
     /// Function be executed when generation starts
     fn on_compile_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.name();
-        broadcast::notify_info!(broadcast, "[{name}] Compiling ⚙")?;
-        broadcast::log_info!(broadcast, "[{name}] Compiling ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast.info(format!("[{name}] Compiling ⚙"));
+        broadcast.log_info(format!("[{name}] Compiling ⚙"));
+        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
         Ok(())
     }
 
@@ -165,16 +165,15 @@ pub trait ProjectCompile: ProjectData {
     fn on_compile_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.name();
         if success {
-            broadcast::notify_info!(broadcast, "[{name}] Compiled ")?;
-            broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-            broadcast::log_info!(broadcast, "[{name}] Compiled ")?;
-            broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+            broadcast.info(format!("[{name}] Compiled "));
+            broadcast.log_info(format!("{}", crate::util::fmt::separator()));
+            broadcast.log_info(format!("[{name}] Compiled "));
+            broadcast.log_info(format!("{}", crate::util::fmt::separator()));
             Ok(())
         } else {
-            broadcast::notify_error!(
-                broadcast,
+            broadcast.error(format!(
                 "[{name}] Failed to generated compile commands (see logs)"
-            )?;
+            ));
             Err(crate::Error::Compile)
         }
     }
@@ -192,10 +191,10 @@ pub trait ProjectGenerate: ProjectData {
     /// Function be executed when generation starts
     fn on_generate_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.root().name().unwrap();
-        broadcast::notify_info!(broadcast, "[{name}] Generating ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-        broadcast::log_info!(broadcast, "[{name}] Generating ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast.info(format!("[{name}] Generating ⚙"));
+        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
+        broadcast.log_info(format!("[{name}] Generating ⚙"));
+        broadcast.log_info(format!("{}", crate::util::fmt::separator()));
         Ok(())
     }
 
@@ -203,11 +202,11 @@ pub trait ProjectGenerate: ProjectData {
     fn on_generate_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
         let name = self.root().name().unwrap();
         if success {
-            broadcast::notify_info!(broadcast, "[{name}] Generated ")?;
-            broadcast::log_info!(broadcast, "[{name}] Generated ")?;
+            broadcast.info(format!("[{name}] Generated "));
+            broadcast.log_info(format!("[{name}] Generated "));
             Ok(())
         } else {
-            broadcast::notify_error!(broadcast, "[{name}] Failed to generated project (see logs)")?;
+            broadcast.error(format!("[{name}] Failed to generated project (see logs)"));
             Err(crate::Error::Generate)
         }
     }

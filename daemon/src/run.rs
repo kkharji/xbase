@@ -3,7 +3,7 @@ mod handler;
 mod service;
 mod simulator;
 
-use crate::broadcast::{self, Broadcast};
+use crate::broadcast::Broadcast;
 use crate::constants::State;
 use crate::constants::DAEMON_STATE;
 use crate::device::Device;
@@ -46,7 +46,7 @@ pub async fn handle(req: RunRequest) -> Result<()> {
     if req.ops.is_watch() {
         let watcher = state.watcher.get(&req.client.root)?;
         if watcher.contains_key(key) {
-            broadcast::notify_warn!(broadcast, "Already watching with {key}!!")?;
+            broadcast.warn(format!("Already watching with {key}!!"));
         } else {
             let run_service = RunService::new(state, req, &broadcast).await?;
             let watcher = state.watcher.get_mut(&client.root)?;
@@ -56,7 +56,7 @@ pub async fn handle(req: RunRequest) -> Result<()> {
         let watcher = state.watcher.get_mut(&req.client.root)?;
         let listener = watcher.remove(&req.to_string())?;
         listener.discard(state).await?;
-        broadcast::notify_info!(broadcast, "[{}] Wathcer Stopped", &req.settings.target)?;
+        broadcast.info(format!("[{}] Wathcer Stopped", &req.settings.target));
     }
 
     log::info!("{sep}",);
@@ -80,18 +80,18 @@ async fn get_runner<'a>(
 
     if !recv.recv().await.unwrap_or_default() {
         let msg = format!("[{target}] Failed to build for running .. checkout logs");
-        broadcast::notify_error!(broadcast, "{msg}")?;
-        broadcast::notify_error!(broadcast, "xcodebuild {}", args.join(" "))?;
+        broadcast.error(&msg);
+        broadcast.log_error(format!("xcodebuild {}", args.join(" ")));
         return Err(crate::Error::Run(msg));
     }
 
     let process = runner.run(broadcast).await?;
 
     let device_name = device.map(|d| d.to_string()).unwrap_or("macOs".into());
-    broadcast::notify_info!(broadcast, "[{target}] Running on {device_name:?} ⚙")?;
-    broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-    broadcast::log_info!(broadcast, "[{target}] Running on {device_name:?} ⚙")?;
-    broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+    broadcast.info(format!("[{target}] Running on {device_name:?} ⚙"));
+    broadcast.log_info(format!("{}", crate::util::fmt::separator()));
+    broadcast.log_info(format!("[{target}] Running on {device_name:?} ⚙"));
+    broadcast.log_info(format!("{}", crate::util::fmt::separator()));
 
     Ok(process)
 }
