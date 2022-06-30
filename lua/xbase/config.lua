@@ -7,10 +7,7 @@ config.values = _XBASECONFIG
 ---@class xbaseOptions
 local defaults = {
   --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
-  --- TODO(nvim): Use log_level to set tracing log level
   log_level = "info",
-  --- Default log buffer direction: { "horizontal", "vertical", "float" }
-  default_log_buffer_direction = "horizontal",
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },
@@ -26,6 +23,17 @@ local defaults = {
       "iPhone 13 Pro",
       "iPad (9th generation)",
     },
+  },
+  --- Log buffer configurations
+  log_buffer = {
+    --- Whether toggling the buffer should auto focus to it?
+    focus = true,
+    --- Split Log buffer height
+    height = 20,
+    --- Vsplit Log buffer width
+    width = 75,
+    --- Default log buffer direction: { "horizontal", "vertical" }
+    default_direction = "horizontal",
   },
   --- Mappings
   mappings = {
@@ -85,7 +93,11 @@ local check_type = function(dv, mv, trace)
 
   --- hmm I'm not sure about this.
   if dv == nil and not skip then
-    return print(("Invalid configuration key: `%s`"):format(trace))
+    if trace == "default_log_buffer_direction" then
+      error(("default_log_buffer_direction no longer valid, use log_buffer.default_direction instead"):format(trace))
+    else
+      error(("Invalid configuration key: `%s`"):format(trace))
+    end
   elseif dtype ~= mtype and not skip then
     return print(("Unexpcted configuration value for `%s`, expected %s, got %s"):format(trace, dtype, mtype))
   end

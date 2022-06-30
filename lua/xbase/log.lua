@@ -3,7 +3,7 @@ local M = { bufnr = nil }
 
 function M.setup()
   M.bufnr = vim.api.nvim_create_buf(false, true)
-  local mappings = require("xbase.config").values.mappings
+  local cfg = require("xbase.config").values
 
   vim.api.nvim_buf_set_name(M.bufnr, "[XBase Logs]")
   vim.api.nvim_buf_set_option(M.bufnr, "filetype", "xclog")
@@ -14,7 +14,7 @@ function M.setup()
     end,
   })
 
-  util.bind(mappings, M.bufnr)
+  util.bind(cfg.mappings, M.bufnr)
   vim.keymap.set("n", "q", "close", { buffer = M.bufnr })
 
   return M.bufnr
@@ -22,6 +22,7 @@ end
 
 function M.toggle(vsplit, force)
   local cfg = require("xbase.config").values
+  local curr_win = vim.api.nvim_get_current_win()
 
   local bufnr = M.bufnr
   local win = vim.fn.win_findbuf(bufnr)[1]
@@ -34,7 +35,7 @@ function M.toggle(vsplit, force)
   end
 
   if vsplit == nil then
-    local default = cfg.default_log_buffer_direction
+    local default = cfg.log_buffer.default_direction
     if default == "horizontal" then
       vsplit = false
     else
@@ -44,12 +45,17 @@ function M.toggle(vsplit, force)
 
   local cmd = vsplit and "vert sbuffer" or "sbuffer"
   local open = string.format("%s %s", cmd, bufnr)
+
   vim.cmd(open)
 
-  -- TODO: make height and width configurable
   if vsplit == false then
-    vim.api.nvim_win_set_height(0, 20)
+    vim.api.nvim_win_set_height(0, cfg.log_buffer.height)
   else
+    vim.api.nvim_win_set_width(0, cfg.log_buffer.width)
+  end
+
+  if not cfg.log_buffer.focus and curr_win ~= win then
+    vim.api.nvim_set_current_win(curr_win)
   end
 end
 
@@ -65,9 +71,9 @@ function M.log(msg, level)
 
   vim.api.nvim_buf_set_lines(M.bufnr, row, -1, false, { msg })
 
-  vim.schedule(function()
-    M.update_cursor_position(line_count)
-  end)
+  --- FIXME: Sometimes getting Error log.lua:89: Cursor position outside buffer
+  -- Ignoring ..
+  pcall(M.update_cursor_position, line_count)
 end
 
 function M.update_cursor_position(line_count)
