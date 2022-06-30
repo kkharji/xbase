@@ -11,8 +11,8 @@ use barebone::BareboneProject;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use xbase_proto::PathExt;
 use xbase_proto::{BuildSettings, TargetInfo};
+use xbase_proto::{PathExt, StatuslineState};
 use xclog::{XCBuildSettings, XCLogger};
 use {swift::*, tuist::*, xcodegen::*};
 
@@ -174,6 +174,7 @@ pub trait ProjectCompile: ProjectData {
             broadcast.error(format!(
                 "[{name}] Failed to generated compile commands (see logs)"
             ));
+            broadcast.update_statusline(StatuslineState::Failure);
             Err(crate::Error::Compile)
         }
     }
@@ -207,6 +208,7 @@ pub trait ProjectGenerate: ProjectData {
             Ok(())
         } else {
             broadcast.error(format!("[{name}] Failed to generated project (see logs)"));
+            broadcast.update_statusline(StatuslineState::Failure);
             Err(crate::Error::Generate)
         }
     }

@@ -5,7 +5,7 @@ use crate::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::MutexGuard;
-use xbase_proto::BuildRequest;
+use xbase_proto::{BuildRequest, StatuslineState};
 
 /// Handle build Request
 pub async fn handle(req: BuildRequest) -> Result<()> {
@@ -24,6 +24,7 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
 
     if req.ops.is_watch() {
         broadcast.info(format!("[{target}] Watching  with '{args}'"));
+        broadcast.update_statusline(StatuslineState::Watching);
 
         state.watcher.get_mut(&req.root)?.add(req)?;
     } else {
@@ -41,6 +42,7 @@ impl Watchable for BuildRequest {
         _event: &Event,
         broadcast: &Arc<Broadcast>,
     ) -> Result<()> {
+        broadcast.update_statusline(StatuslineState::Processing);
         let is_once = self.ops.is_once();
         let config = &self.settings;
         let root = &self.root;
@@ -59,8 +61,14 @@ impl Watchable for BuildRequest {
                 "[{target}] build args `xcodebuild {}`",
                 args.join(" ")
             ));
+            broadcast.update_statusline(StatuslineState::Failure);
         } else {
             broadcast.info(format!("[{target}] Built "));
+            if is_once {
+                broadcast.update_statusline(StatuslineState::Success);
+            } else {
+                broadcast.update_statusline(StatuslineState::Watching);
+            }
         };
 
         Ok(())

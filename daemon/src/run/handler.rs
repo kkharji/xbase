@@ -5,6 +5,7 @@ use process_stream::{Process, StreamExt};
 use std::path::PathBuf;
 use std::sync::Weak;
 use tokio::task::JoinHandle;
+use xbase_proto::StatuslineState;
 
 /// Run Service Task Handler
 pub struct RunServiceHandler {
@@ -58,8 +59,10 @@ impl RunServiceHandler {
                         let success = &code == "0";
                         if success {
                             broadcast.log_info("disconnected");
+                            broadcast.update_statusline(StatuslineState::Success);
                         } else {
                             broadcast.log_error(format!("disconnected, exit: {code}"));
+                            broadcast.update_statusline(StatuslineState::Failure);
                         }
 
                         log::info!("[{target}] Runner Closed");

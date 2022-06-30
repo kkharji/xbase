@@ -33,9 +33,9 @@ impl RunService {
     pub async fn new(
         state: &mut MutexGuard<'_, State>,
         req: RunRequest,
-        logger: &Arc<Broadcast>,
+        broadcast: &Arc<Broadcast>,
     ) -> Result<Self> {
-        let weak_logger = Arc::downgrade(&logger);
+        let weak_logger = Arc::downgrade(&broadcast);
         let key = req.to_string();
         let RunRequest {
             root,
@@ -47,8 +47,15 @@ impl RunService {
         let device = state.devices.from_lookup(device);
         let is_once = req.ops.is_once();
 
-        let process =
-            get_runner(state, &root, &settings, device.as_ref(), is_once, &logger).await?;
+        let process = get_runner(
+            state,
+            &root,
+            &settings,
+            device.as_ref(),
+            is_once,
+            &broadcast,
+        )
+        .await?;
 
         let handler = RunServiceHandler::new(&key, target, &root, process, weak_logger)?
             .pipe(Mutex::new)
@@ -70,7 +77,7 @@ impl Watchable for RunService {
         &self,
         state: &MutexGuard<State>,
         _event: &Event,
-        logger: &Arc<Broadcast>,
+        broadcast: &Arc<Broadcast>,
     ) -> Result<()> {
         let Self {
             key,
@@ -91,8 +98,8 @@ impl Watchable for RunService {
             key,
             target,
             root,
-            get_runner(state, root, settings, device, false, &logger).await?,
-            Arc::downgrade(logger),
+            get_runner(state, root, settings, device, false, &broadcast).await?,
+            Arc::downgrade(broadcast),
         )?;
 
         Ok(())

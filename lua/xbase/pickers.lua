@@ -47,6 +47,9 @@ local insert_entry = function(acc, picker, command, target, configuration, watch
   else
     item.ops = "Once"
   end
+  if not item.root then
+    item.root = vim.loop.cwd()
+  end
 
   acc[#acc + 1] = item
 end

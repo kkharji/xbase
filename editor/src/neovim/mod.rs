@@ -50,8 +50,10 @@ impl Broadcast for Lua {
         }
     }
 
-    fn update_statusline(&self, _state: StatuslineState) -> Self::Result {
-        todo!()
+    fn update_statusline(&self, state: StatuslineState) -> Self::Result {
+        let value = state.to_string();
+        self.load(chunk!(vim.g.xbase_watch_build_status = $value))
+            .exec()
     }
 }
 
@@ -172,13 +174,11 @@ impl NvimGlobal for Lua {
             return Ok(());
         }
         let notify: LuaFunction = self.vim()?.get("notify")?;
-        let msg = format!("xbase: {}", msg.as_ref());
-        notify.call((msg, level as u8))
+        notify.call((msg.as_ref(), level as u8))
     }
 
     // TODO: Respect user configuration, Only log the level the user set.
     // TODO: Change line color based on level
-    // TODO: Fix first line is empty
     fn log<S: AsRef<str>>(&self, msg: S, _level: MessageLevel) -> LuaResult<()> {
         let msg = msg.as_ref().trim();
 

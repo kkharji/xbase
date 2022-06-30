@@ -82,8 +82,6 @@ M.toggle_log_buffer = function(vsplit)
   end)
 
   vim.keymap.set("n", "q", "close", { buffer = true })
-  vim.cmd "call feedkeys('G')"
-  vim.cmd "call feedkeys('zt')"
 end
 
 local function bind(config)

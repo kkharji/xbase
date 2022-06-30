@@ -4,15 +4,14 @@ mod service;
 mod simulator;
 
 use crate::broadcast::Broadcast;
-use crate::constants::State;
-use crate::constants::DAEMON_STATE;
+use crate::constants::{State, DAEMON_STATE};
 use crate::device::Device;
 use crate::Result;
 use process_stream::Process;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::MutexGuard;
-use xbase_proto::{BuildSettings, RunRequest};
+use xbase_proto::{BuildSettings, RunRequest, StatuslineState};
 
 pub use service::RunService;
 pub use {bin::*, simulator::*};
@@ -39,10 +38,12 @@ pub async fn handle(req: RunRequest) -> Result<()> {
     if req.ops.is_once() {
         // TODO(run): might want to keep track of ran services
         RunService::new(state, req, &broadcast).await?;
+
         return Ok(Default::default());
     }
 
     if req.ops.is_watch() {
+        broadcast.update_statusline(StatuslineState::Watching);
         let watcher = state.watcher.get(&req.root)?;
         if watcher.contains_key(key) {
             broadcast.warn(format!("Already watching with {key}!!"));
@@ -68,10 +69,12 @@ async fn get_runner<'a>(
     device: Option<&Device>,
     _is_once: bool,
     broadcast: &Arc<Broadcast>,
-) -> Result<process_stream::Process> {
+) -> Result<Process> {
     let target = &settings.target;
     let project = state.projects.get(root)?;
     let (runner, args, mut recv) = project.get_runner(&settings, device, broadcast)?;
+
+    broadcast.update_statusline(StatuslineState::Processing);
 
     if !recv.recv().await.unwrap_or_default() {
         let msg = format!("[{target}] Failed to build for running .. checkout logs");
@@ -87,6 +90,8 @@ async fn get_runner<'a>(
     broadcast.log_info(format!("{}", crate::util::fmt::separator()));
     broadcast.log_info(format!("[{target}] Running on {device_name:?} ⚙"));
     broadcast.log_info(format!("{}", crate::util::fmt::separator()));
+
+    broadcast.update_statusline(StatuslineState::Running);
 
     Ok(process)
 }

@@ -92,6 +92,19 @@ pub enum StatuslineState {
     Running,
 }
 
+impl std::fmt::Display for StatuslineState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            StatuslineState::Success => "success",
+            StatuslineState::Failure => "failure",
+            StatuslineState::Processing => "processing",
+            StatuslineState::Watching => "watching",
+            StatuslineState::Running => "running",
+        };
+        write!(f, "{value}")
+    }
+}
+
 /// Tasks that the clients should execute
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Task {
@@ -194,7 +207,7 @@ impl From<ProcessItem> for Message {
                     }
                 } else {
                     Self::Log {
-                        msg: format!("Failed with {code} code"),
+                        msg: format!("[Error] {code} code"),
                         level: MessageLevel::Error,
                     }
                 }
