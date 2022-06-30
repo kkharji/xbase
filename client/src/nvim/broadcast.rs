@@ -1,4 +1,4 @@
-use super::global::NvimNotify;
+use super::NvimGlobal;
 use crate::runtime::{rpc, rt};
 use crate::BroadcastHandler;
 use mlua::{chunk, prelude::*};
