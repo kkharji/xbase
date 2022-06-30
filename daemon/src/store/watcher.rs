@@ -1,12 +1,11 @@
-use crate::broadcast::Broadcast;
 use crate::watch::WatchService;
 use crate::Result;
+use crate::{broadcast::Broadcast, util::fs};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use xbase_proto::IntoResult;
+use xbase_proto::{IntoResult, PathExt};
 
-use crate::util::fs::{self, PathExt};
 #[derive(Default, Debug)]
 pub struct WatchStore(HashMap<PathBuf, WatchService>);
 

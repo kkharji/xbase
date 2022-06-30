@@ -4,7 +4,7 @@ use crate::Result;
 use xbase_proto::Client;
 
 /// handle drop request
-pub async fn handle(Client { pid, root }: Client) -> Result<()> {
+pub async fn handle(Client { root, .. }: Client) -> Result<()> {
     let state = DAEMON_STATE.clone();
     let ref mut state = state.lock().await;
 

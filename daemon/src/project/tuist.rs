@@ -1,5 +1,5 @@
 use super::*;
-use crate::util::fs::{which, PathExt};
+use crate::util::fs::which;
 use crate::watch::Event;
 use crate::{Error, Result};
 use process_stream::Process;
@@ -51,13 +51,6 @@ impl ProjectData for TuistProject {
         &self.watchignore
     }
 }
-
-#[async_trait::async_trait]
-impl ProjectBuild for TuistProject {}
-
-#[async_trait::async_trait]
-impl ProjectRun for TuistProject {}
-
 #[async_trait::async_trait]
 impl ProjectCompile for TuistProject {
     async fn update_compile_database(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
@@ -69,11 +62,7 @@ impl ProjectCompile for TuistProject {
         let arguments = self.compile_arguments();
         let mut compile_commands: Vec<C> = vec![];
 
-        broadcast::notify_info!(broadcast, "[{name}] Compiling ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-        broadcast::log_info!(broadcast, "[{name}] Compiling ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-
+        self.on_compile_start(broadcast)?;
         // Compile manifests
         let (mut manifest_compile_success, manifest_compile_commands) = {
             let mut arguments = arguments.clone();
@@ -114,24 +103,14 @@ impl ProjectCompile for TuistProject {
             (recv, xccommands)
         };
 
-        if !(project_compile_success.recv().await.unwrap_or_default()
-            && manifest_compile_success.recv().await.unwrap_or_default())
-        {
-            broadcast::notify_error!(
-                broadcast,
-                "Fail to generated compile commands for {}",
-                self.name()
-            )?;
-            return Err(Error::Build(self.name().into()));
-        }
+        let success = !(project_compile_success.recv().await.unwrap_or_default()
+            && manifest_compile_success.recv().await.unwrap_or_default());
 
-        broadcast::notify_info!(broadcast, "[{}] Compiled ", name)?;
-        broadcast::log_info!(broadcast, "[{}] Compiled ", name)?;
+        self.on_compile_finish(success, broadcast)?;
 
         compile_commands.extend(manifest_compile_commands.lock().await.to_vec());
         compile_commands.extend(project_compile_commands.lock().await.to_vec());
 
-        log::debug!("[{}] compiled successfully", self.name());
         let json = serde_json::to_vec_pretty(&compile_commands)?;
         tokio::fs::write(root.join(".compile"), &json).await?;
 
@@ -155,11 +134,7 @@ impl ProjectGenerate for TuistProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
-        let name = self.root().name().unwrap();
-        broadcast::notify_info!(broadcast, "[{name}] Generating ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-        broadcast::log_info!(broadcast, "[{name}] Generating ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        self.on_generate_start(broadcast)?;
 
         self.tuist(&["edit", "--permanent"]).await?;
         self.tuist(&["generate", "--no-open"]).await?;
@@ -167,8 +142,7 @@ impl ProjectGenerate for TuistProject {
         let (xcodeproj_path, manifest_path) = self.xcodeproj_paths()?;
         let (xcodeproj_path, manifest_path) = (xcodeproj_path.unwrap(), manifest_path.unwrap());
 
-        broadcast::notify_info!(broadcast, "[{name}] Generated ")?;
-        broadcast::log_info!(broadcast, "[{name}] Generated ")?;
+        self.on_generate_finish(true, broadcast)?;
 
         self.manifest = XCodeProject::new(&manifest_path)?;
         self.manifest_path = manifest_path;
@@ -308,3 +282,9 @@ impl Project for TuistProject {
         Ok(project)
     }
 }
+
+#[async_trait::async_trait]
+impl ProjectBuild for TuistProject {}
+
+#[async_trait::async_trait]
+impl ProjectRun for TuistProject {}

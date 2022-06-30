@@ -16,6 +16,7 @@ pub use tarpc::server::{BaseChannel, Channel};
 pub use tokio_serde::formats::Json;
 pub use tokio_util::codec::length_delimited::LengthDelimitedCodec;
 pub use types::*;
+pub use util::PathExt;
 use xcodeproj::pbxproj::PBXTargetPlatform;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

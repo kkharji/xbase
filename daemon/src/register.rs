@@ -1,4 +1,3 @@
-use crate::broadcast;
 use crate::compile;
 use crate::constants::DAEMON_STATE;
 use crate::util::log_request;
@@ -8,7 +7,7 @@ use xbase_proto::Client;
 use xbase_proto::OK;
 
 /// Handle RegisterRequest
-pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
+pub async fn handle(Client { root, .. }: Client) -> Result<PathBuf> {
     log_request!("Register", root);
 
     let state = DAEMON_STATE.clone();
@@ -25,13 +24,6 @@ pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
         let name: String;
 
         if let Ok(project) = state.projects.get_mut(&root) {
-            name = project.name().to_string();
-
-            broadcast::notify_info!(
-                broadcast,
-                pid,
-                "[{name}] connected to an existing instance "
-            )?;
             project.inc_clients();
         } else {
             state.projects.register(&root, &broadcast).await?;
@@ -43,11 +35,8 @@ pub async fn handle(Client { pid, root }: Client) -> Result<PathBuf> {
                 .watcher
                 .add(&root, watchignore, &name, &broadcast)
                 .await?;
-            broadcast::notify_info!(broadcast, pid, "[{name}] Connected ")?;
         }
-        if compile::ensure_server_support(state, &root, None, &broadcast).await? {
-            broadcast::notify_info!(broadcast, pid, "[{name}] Compiled ")?;
-        }
+        compile::ensure_server_support(state, &root, None, &broadcast).await?;
 
         OK(())
     });

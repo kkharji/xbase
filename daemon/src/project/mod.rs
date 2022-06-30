@@ -12,6 +12,7 @@ use process_stream::ProcessExt;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use xbase_proto::PathExt;
 use xbase_proto::{BuildSettings, TargetInfo};
 use xclog::{XCBuildSettings, XCLogger};
 use {swift::*, tuist::*, xcodegen::*};
@@ -150,6 +151,33 @@ pub trait ProjectCompile: ProjectData {
         .map(ToString::to_string)
         .collect()
     }
+
+    /// Function be executed when generation starts
+    fn on_compile_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
+        let name = self.name();
+        broadcast::notify_info!(broadcast, "[{name}] Compiling ⚙")?;
+        broadcast::log_info!(broadcast, "[{name}] Compiling ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        Ok(())
+    }
+
+    /// Function be executed when generation starts
+    fn on_compile_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
+        let name = self.name();
+        if success {
+            broadcast::notify_info!(broadcast, "[{name}] Compiled ")?;
+            broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+            broadcast::log_info!(broadcast, "[{name}] Compiled ")?;
+            broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+            Ok(())
+        } else {
+            broadcast::notify_error!(
+                broadcast,
+                "[{name}] Failed to generated compile commands (see logs)"
+            )?;
+            Err(crate::Error::Compile)
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -160,6 +188,29 @@ pub trait ProjectGenerate: ProjectData {
     }
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()>;
+
+    /// Function be executed when generation starts
+    fn on_generate_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
+        let name = self.root().name().unwrap();
+        broadcast::notify_info!(broadcast, "[{name}] Generating ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        broadcast::log_info!(broadcast, "[{name}] Generating ⚙")?;
+        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        Ok(())
+    }
+
+    /// Function be executed when generation starts
+    fn on_generate_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
+        let name = self.root().name().unwrap();
+        if success {
+            broadcast::notify_info!(broadcast, "[{name}] Generated ")?;
+            broadcast::log_info!(broadcast, "[{name}] Generated ")?;
+            Ok(())
+        } else {
+            broadcast::notify_error!(broadcast, "[{name}] Failed to generated project (see logs)")?;
+            Err(crate::Error::Generate)
+        }
+    }
 }
 
 #[async_trait::async_trait]

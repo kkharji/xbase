@@ -6,6 +6,7 @@ pub mod pid;
 
 use process_stream::{ProcessItem, ProcessStream, StreamExt};
 use std::path::PathBuf;
+use xbase_proto::PathExt;
 
 /// Consume given stream and return whether the stream exist with 0
 /// TODO(project): log build and compile logs to client
@@ -51,5 +52,3 @@ macro_rules! log_request {
 }
 
 pub(crate) use log_request;
-
-use self::fs::PathExt;

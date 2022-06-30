@@ -21,14 +21,14 @@ pub struct Listener;
 
 impl Listener {
     /// Register a project and initialize command listener if the project isn't already initialized
-    pub fn init_or_skip(lua: &Lua, root: PathBuf) -> LuaResult<()> {
+    pub fn init_or_skip(lua: &Lua, root: &PathBuf) -> LuaResult<()> {
         let mut listeners = LISTENERS.lock().unwrap();
-        if !listeners.contains_key(&root) {
+        if !listeners.contains_key(root) {
             let (reader, writer) = os_pipe::pipe()?;
 
             Listener::start_reader(lua, reader)?;
             let writer = Listener::start_writer(writer, root.clone());
-            listeners.insert(root, writer);
+            listeners.insert(root.clone(), writer);
         }
         Ok(())
     }

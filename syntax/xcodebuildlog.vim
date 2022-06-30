@@ -6,8 +6,8 @@ let s:cpo_save = &cpo
 set cpo&vim
 
 
-syn match   XbaseOperations   "\(Executing\|Compiling\|Generating\|Processing\|Emitting\|Copying\|Validating\|Signing\|Linking\|RegisterLaunchServices\|\Installing\|Booting\|Launching\|Writing\)"
-syn match   XbaseSuccess   "\(Executed\|Compiled\|Generated\|Processed\|Emitted\|Copied\|Validated\|Signed\|Linked\|Installed\|Booted\|Launched\)"
+syn match   XbaseOperations   "\(Executing\|Compiling\|Generating\|Processing\|Emitting\|Copying\|Validating\|Signing\|Linking\|RegisterLaunchServices\|\Installing\|Booting\|Launching\|Writing\|Touching\)"
+syn match   XbaseSuccess      "\(Executed\|Compiled\|Generated\|Processed\|Emitted\|Copied\|Validated\|Signed\|Linked\|Installed\|Booted\|Launched\)"
 syn match   XbaseEntitlement  "Entitlement"
 syn region  XbaseScope        display oneline start='^\[' end='\]'
 syn match   XbaseLogError     "\(\[Error\]\)"

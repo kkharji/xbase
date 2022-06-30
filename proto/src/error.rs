@@ -20,6 +20,8 @@ pub enum Error {
     Run(String),
     #[error("Failed to generate project definition")]
     Generate,
+    #[error("Failed to generate compile commands")]
+    Compile,
     #[error("Failed to parse project definition: {0}")]
     DefinitionParsing(String),
     #[error("No project definition found")]
@@ -77,6 +79,7 @@ impl From<&Error> for ErrorInner {
             Error::JoinError(_) => res.kind = "JoinError".into(),
             Error::SendError(_) => res.kind = "SendError".into(),
             Error::MessageParse(_) => res.kind = "MessageParse".into(),
+            Error::Compile => res.kind = "Compile".into(),
         };
         res
     }

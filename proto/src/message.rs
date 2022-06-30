@@ -209,7 +209,11 @@ impl From<ProcessItem> for Message {
                     }
                 } else {
                     Self::Log {
-                        msg: value,
+                        msg: if value == "Resolving Packages" {
+                            Default::default()
+                        } else {
+                            value
+                        },
                         level: MessageLevel::Info,
                         pid: None,
                     }

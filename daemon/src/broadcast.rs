@@ -1,5 +1,4 @@
 #![allow(unused_imports, unused_macros)]
-use crate::util::fs::PathExt;
 use crate::Result;
 use process_stream::*;
 use std::path::{Path, PathBuf};
@@ -9,7 +8,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{mpsc::*, Mutex, Notify};
 use tokio::task::JoinHandle;
-use xbase_proto::{Client, Message, StatuslineState, Task};
+use xbase_proto::{Client, Message, PathExt, StatuslineState, Task};
 
 /// Boradcast server to send task to clients
 #[derive(Debug)]

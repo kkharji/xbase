@@ -23,7 +23,6 @@ pub async fn ensure_server_config(root: &PathBuf) -> Result<()> {
         json!({
             "name": "Xbase",
             "argv": [&*SERVER_BINARY_PATH],
-            // TODO(daemon): if buildServer.version ~= 0.2 it should be removed and regenerated
             "version": "0.2",
             "bspVersion": "0.2",
             "languages": ["swift", "objective-c", "objective-cpp", "c", "cpp"]
@@ -43,7 +42,7 @@ pub async fn ensure_server_support<'a>(
     root: &PathBuf,
     event: Option<&Event>,
     broadcast: &Arc<Broadcast>,
-) -> Result<bool> {
+) -> Result<()> {
     let compile_path = root.join(".compile");
     let compile_exists = compile_path.exists();
     let is_swift_project = root.join("Package.swift").exists();
@@ -55,41 +54,18 @@ pub async fn ensure_server_support<'a>(
     if let Some(event) = event {
         let project = state.projects.get_mut(root)?;
         if project.should_generate(event) {
-            if let Err(e) = project.generate(broadcast).await {
-                for line in e.to_string().split("\n") {
-                    broadcast::notify_error!(broadcast, "{line}")?;
-                }
-                return Ok(false);
-            };
+            project.generate(broadcast).await?;
             project.update_compile_database(broadcast).await?;
-            return Ok(true);
         }
     }
 
     if !is_swift_project && !compile_exists {
-        broadcast::notify_info!(
-            broadcast,
-            "⚙ Generating compile database (may take few seconds) .."
-        )?;
-
-        if let Err(err) = state
+        state
             .projects
             .get(&root)?
             .update_compile_database(broadcast)
             .await
-        {
-            broadcast::notify_error!(
-                broadcast,
-                "Fail to regenerate compilation database!, checkout logs"
-            )?;
-            for line in err.to_string().split("\n") {
-                broadcast::log_error!(broadcast, "{line}")?;
-            }
-
-            return Ok(false);
-        }
-        Ok(true)
-    } else {
-        Ok(false)
+            .ok();
     }
+    Ok(())
 }

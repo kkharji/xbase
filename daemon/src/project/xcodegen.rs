@@ -1,7 +1,7 @@
 use super::*;
-use crate::util::fs::{which, PathExt};
+use crate::util::fs::which;
 use crate::watch::Event;
-use crate::{Error, Result};
+use crate::Result;
 use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
@@ -45,25 +45,15 @@ impl ProjectData for XCodeGenProject {
 }
 
 #[async_trait::async_trait]
-impl ProjectBuild for XCodeGenProject {}
-
-#[async_trait::async_trait]
-impl ProjectRun for XCodeGenProject {}
-
-#[async_trait::async_trait]
 impl ProjectCompile for XCodeGenProject {
     async fn update_compile_database(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         use xclog::XCCompilationDatabase as CC;
 
-        let name = self.name();
         let root = self.root();
         let cache_root = self.build_cache_root()?;
         let mut arguments = self.compile_arguments();
 
-        broadcast::notify_info!(broadcast, "[{name}] Compiling ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-        broadcast::log_info!(broadcast, "[{name}] Compiling ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        self.on_compile_start(broadcast)?;
 
         arguments.push(format!("SYMROOT={cache_root}"));
 
@@ -78,24 +68,12 @@ impl ProjectCompile for XCodeGenProject {
             .await
             .unwrap_or_default();
 
-        if !success {
-            broadcast::notify_error!(
-                broadcast,
-                "Fail to generated compile commands for {}",
-                self.name()
-            )?;
-            return Err(Error::Build(self.name().into()));
-        }
+        self.on_compile_finish(success, broadcast)?;
 
         let compile_db = CC::new(compile_commands.lock().await.to_vec());
         let json = serde_json::to_vec_pretty(&compile_db)?;
 
         tokio::fs::write(root.join(".compile"), &json).await?;
-
-        broadcast::notify_info!(broadcast, "[{}] Compiled ", name)?;
-        broadcast::log_info!(broadcast, "[{}] Compiled ", name)?;
-
-        log::info!("[{name}] compiled successfully");
 
         Ok(())
     }
@@ -115,34 +93,25 @@ impl ProjectGenerate for XCodeGenProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
-        let name = self.root().name().unwrap();
-        broadcast::notify_info!(broadcast, "[{name}] Generating ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
-        broadcast::log_info!(broadcast, "[{name}] Generating ⚙")?;
-        broadcast::log_info!(broadcast, "{}", crate::util::fmt::separator())?;
+        self.on_generate_start(broadcast)?;
 
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
         process.current_dir(self.root());
+
         let success = broadcast
             .consume(Box::new(process))?
             .recv()
             .await
             .unwrap_or_default();
 
-        if !success {
-            return Err(Error::Generate);
-        }
-
-        broadcast::notify_info!(broadcast, "[{name}] Generated ")?;
-        broadcast::log_info!(broadcast, "[{name}] Generated ")?;
+        self.on_generate_finish(success, broadcast)?;
 
         let xcodeproj_paths = self.get_xcodeproj_paths()?;
+        let name = self.name();
 
         if xcodeproj_paths.len() > 1 {
-            log::warn!(
-                "Found more then on xcodeproj, using {:?}",
-                xcodeproj_paths[0]
-            );
+            let using = xcodeproj_paths[0].display();
+            log::warn!("[{name}] Found more then on xcodeproj, using {using}",);
         }
 
         self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
@@ -211,3 +180,9 @@ impl Project for XCodeGenProject {
         Ok(project)
     }
 }
+
+#[async_trait::async_trait]
+impl ProjectBuild for XCodeGenProject {}
+
+#[async_trait::async_trait]
+impl ProjectRun for XCodeGenProject {}

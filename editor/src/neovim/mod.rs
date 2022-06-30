@@ -73,10 +73,12 @@ impl XBase for Lua {
             self.cwd()?
         };
 
-        Listener::init_or_skip(self, root)?;
+        Listener::init_or_skip(self, &root)?;
 
         // Setup State (skipped if already set)
         self.setup_state()?;
+
+        self.info(format!("[{}] Connected", root.as_path().name().unwrap()))?;
 
         Ok(())
     }

@@ -4,36 +4,6 @@ use std::{fmt::Debug, path::Path};
 use tap::Pipe;
 use xbase_proto::BuildSettings;
 
-pub trait PathExt {
-    fn name(&self) -> Option<String>;
-    fn unique_name(&self) -> Option<String>;
-    fn abbrv(&self) -> Result<&Path>;
-}
-
-impl PathExt for Path {
-    fn name(&self) -> Option<String> {
-        self.file_name()
-            .and_then(|os| os.to_str())
-            .map(ToString::to_string)
-    }
-
-    fn unique_name(&self) -> Option<String> {
-        self.strip_prefix(self.ancestors().nth(3)?)
-            .ok()?
-            .display()
-            .to_string()
-            .replace("/", "_")
-            .pipe(Some)
-    }
-
-    fn abbrv(&self) -> Result<&Path> {
-        let ancestors = self.ancestors().nth(3);
-        let ancestors = ancestors
-            .ok_or_else(|| crate::Error::Unexpected("Getting 3 parent of a path".into()))?;
-        Ok(self.strip_prefix(ancestors)?)
-    }
-}
-
 pub fn get_dirname_dir_root(path: impl AsRef<Path>) -> Option<String> {
     let path = path.as_ref();
     path.strip_prefix(path.ancestors().nth(2)?)
