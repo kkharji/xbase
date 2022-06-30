@@ -57,6 +57,7 @@ pub async fn handle(req: RunRequest) -> Result<()> {
         let listener = watcher.remove(&req.to_string())?;
         listener.discard(state).await?;
         broadcast.info(format!("[{}] Wathcer Stopped", &req.settings.target));
+        broadcast.update_statusline(StatuslineState::Clear);
     }
 
     Ok(())

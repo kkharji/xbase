@@ -32,13 +32,13 @@ The main product of [xbase] reside, it handle requests and data defined in [prot
 
 The Helper build server implementing [BSP] protocol required because [sourcekit-lsp] can't define compile arguments required to _jump to definition_ and _symbol definition_.
 
-### [editor] crate
+### [client] crate
 
 The neovim editor library. provide convenient and backed function to run in neovim runtime
 
 [sourcekit]: ./sourcekit/
 [daemon]: ./daemon/
-[editor]: ./editor/
+[client]: ./client/
 [proto]: ./proto/
 [xbase]: https://github.com/tami5/xbase
 [BSP]: https://build-server-protocol.github.io

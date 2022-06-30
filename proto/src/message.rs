@@ -88,8 +88,10 @@ pub enum StatuslineState {
     Processing,
     /// Something is being watched.
     Watching,
-    ///  that is currently running.
+    /// that is currently running.
     Running,
+    /// Clear statusline
+    Clear,
 }
 
 impl std::fmt::Display for StatuslineState {
@@ -100,6 +102,7 @@ impl std::fmt::Display for StatuslineState {
             StatuslineState::Processing => "processing",
             StatuslineState::Watching => "watching",
             StatuslineState::Running => "running",
+            StatuslineState::Clear => "",
         };
         write!(f, "{value}")
     }

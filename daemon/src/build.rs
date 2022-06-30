@@ -28,7 +28,9 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
 
         state.watcher.get_mut(&req.root)?.add(req)?;
     } else {
+        broadcast.info(format!("[{}] Wathcer Stopped", &req.settings.target));
         state.watcher.get_mut(&req.root)?.remove(&req.to_string())?;
+        broadcast.update_statusline(StatuslineState::Clear);
     }
 
     Ok(())
