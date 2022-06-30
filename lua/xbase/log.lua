@@ -85,7 +85,7 @@ function M.update_cursor_position(line_count)
 
   if not is_focused then
     vim.api.nvim_win_set_cursor(winid, { line_count + 1, 0 })
-    vim.fn.win_execute(winid, "call feedkeys('zt')", false)
+    -- vim.fn.win_execute(winid, "call feedkeys('zt')", false)
     return
   end
 
@@ -94,7 +94,7 @@ function M.update_cursor_position(line_count)
   if diff <= 2 then
     vim.api.nvim_win_set_cursor(winid, { line_count + 1, 0 })
     -- TODO: make this behavior configurable
-    vim.fn.win_execute(winid, "call feedkeys('zt')", false)
+    -- vim.fn.win_execute(winid, "call feedkeys('zt')", false)
   end
 end
 

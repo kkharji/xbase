@@ -2,7 +2,8 @@ use super::*;
 use crate::util::fs::which;
 use crate::watch::Event;
 use crate::{Error, Result};
-use process_stream::Process;
+use futures::StreamExt;
+use process_stream::{Process, ProcessExt};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
 use xcodeproj::XCodeProject;
@@ -203,10 +204,17 @@ impl TuistProject {
 
         process.args(args);
         process.current_dir(self.root());
-        let process = Box::new(process);
+        let mut logs = process.spawn_and_stream()?.collect::<Vec<_>>().await;
+        let success = logs.pop().unwrap().is_success().unwrap_or_default();
 
-        let success = broadcast.consume(process)?.recv().await.unwrap_or_default();
         if !success {
+            broadcast.error("Tuist Project Generation failed, checkout logs ..");
+            let logs = logs.into_iter().map(|p| p.to_string()).collect::<Vec<_>>();
+
+            for log in logs {
+                broadcast.error(log)
+            }
+
             return Err(Error::Generate);
         }
 

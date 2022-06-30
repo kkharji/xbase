@@ -28,7 +28,6 @@ impl BroadcastHandler for Lua {
                 }),
                 Task::OpenLogger => {
                     // TODO: Make auto open logger on error configurable
-                    self.info("opening logger")?;
                     self.load(chunk!(require("xbase.log").toggle())).exec()
                 }
             },

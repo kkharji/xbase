@@ -203,6 +203,7 @@ pub trait ProjectGenerate: ProjectData {
             broadcast.error(format!("[{name}] Failed to generated project (see logs)"));
             broadcast.update_statusline(StatuslineState::Failure);
             broadcast.open_logger();
+
             Err(crate::Error::Generate)
         }
     }

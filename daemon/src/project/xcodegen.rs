@@ -2,7 +2,8 @@ use super::*;
 use crate::util::fs::which;
 use crate::watch::Event;
 use crate::Result;
-use process_stream::Process;
+use futures::StreamExt;
+use process_stream::{Process, ProcessExt};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
 use xcodeproj::XCodeProject;
@@ -98,12 +99,17 @@ impl ProjectGenerate for XCodeGenProject {
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
         process.current_dir(self.root());
 
-        let success = broadcast
-            .consume(Box::new(process))?
-            .recv()
-            .await
-            .unwrap_or_default();
+        let mut logs = process.spawn_and_stream()?.collect::<Vec<_>>().await;
+        let success = logs.pop().unwrap().is_success().unwrap_or_default();
 
+        if !success {
+            broadcast.error("Tuist Project Generation failed, checkout logs ..");
+            let logs = logs.into_iter().map(|p| p.to_string()).collect::<Vec<_>>();
+
+            for log in logs {
+                broadcast.error(log)
+            }
+        }
         self.on_generate_finish(success, broadcast)?;
 
         let xcodeproj_paths = self.get_xcodeproj_paths()?;
