@@ -45,15 +45,17 @@ end
 
 function M.bind(config)
   local pickers = require "xbase.pickers"
-  M.try_map(config.mappings.build_picker, pickers.build)
-  M.try_map(config.mappings.run_picker, pickers.run)
-  M.try_map(config.mappings.watch_picker, pickers.watch)
-  M.try_map(config.mappings.all_picker, pickers.actions)
-  M.try_map(config.mappings.toggle_split_log_buffer, function()
-    require("xbase").toggle_log_buffer(false)
+  local m = config.mappings
+  M.try_map(m.build_picker, pickers.build)
+  M.try_map(m.run_picker, pickers.run)
+  M.try_map(m.watch_picker, pickers.watch)
+  M.try_map(m.all_picker, pickers.actions)
+  M.try_map(m.toggle_split_log_buffer, function()
+    require("xbase.log").toggle(false)
   end)
-  M.try_map(config.mappings.toggle_vsplit_log_buffer, function()
-    require("xbase").toggle_log_buffer(true)
+
+  M.try_map(m.toggle_vsplit_log_buffer, function()
+    require("xbase.log").toggle(true)
   end)
 end
 

@@ -43,7 +43,7 @@ impl Broadcast {
                 Ok(())
             }
             Err(err) => {
-                lua.error(err.to_string()).ok();
+                lua.notify(err.to_string(), MessageLevel::Error).ok();
                 Ok(())
             }
         }

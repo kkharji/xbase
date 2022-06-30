@@ -1,30 +1,7 @@
-use std::collections::HashMap;
 use xbase_proto::*;
-use xcodeproj::pbxproj::PBXTargetPlatform;
 
 mod nvim;
 mod runtime;
-
-pub trait XBase {
-    type Error;
-    /// Register project at given root or cwd.
-    fn register(&self, root: Option<String>) -> Result<bool, Self::Error>;
-    /// Send build request to client
-    fn build(&self, req: BuildRequest) -> Result<(), Self::Error>;
-    /// Send run request to client
-    fn run(&self, req: RunRequest) -> Result<(), Self::Error>;
-    /// Send drop request to client
-    fn drop(&self, root: Option<String>) -> Result<(), Self::Error>;
-    /// Send targets for given root
-    fn targets(&self, root: Option<String>) -> Result<HashMap<String, TargetInfo>, Self::Error>;
-    /// Send targets for given root
-    fn runners(
-        &self,
-        platform: PBXTargetPlatform,
-    ) -> Result<Vec<HashMap<String, String>>, Self::Error>;
-    /// Get currently watched tagets and configuration
-    fn watching(&self, root: Option<String>) -> Result<Vec<String>, Self::Error>;
-}
 
 /// Broadcast server function handler.
 ///
@@ -52,6 +29,17 @@ pub trait BroadcastHandler {
         }
         Ok(vec)
     }
+}
+
+#[macro_export]
+macro_rules! request {
+    ($method:ident, $($arg:tt)*) => {
+        rt().block_on(async move {
+            let rpc = rpc().await;
+            let ctx = context::current();
+            rpc.$method(ctx, $($arg)*).await?
+        })
+    };
 }
 
 #[mlua::lua_module]

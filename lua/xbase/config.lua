@@ -85,9 +85,9 @@ local check_type = function(dv, mv, trace)
 
   --- hmm I'm not sure about this.
   if dv == nil and not skip then
-    return log.error(("Invalid configuration key: `%s`"):format(trace))
+    return print(("Invalid configuration key: `%s`"):format(trace))
   elseif dtype ~= mtype and not skip then
-    return log.error(("Unexpcted configuration value for `%s`, expected %s, got %s"):format(trace, dtype, mtype))
+    return print(("Unexpcted configuration value for `%s`, expected %s, got %s"):format(trace, dtype, mtype))
   end
 
   return dtype
@@ -130,6 +130,7 @@ config.set = function(opts)
       config.values = _XBASECONFIG
     end
   end
+  config.values.log_level = vim.log.levels[string.upper(config.values.log_level)]
 end
 
 config.set()
