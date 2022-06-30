@@ -7,41 +7,31 @@ function M.setup()
 
   vim.api.nvim_buf_set_name(M.bufnr, "[XBase Logs]")
   vim.api.nvim_buf_set_option(M.bufnr, "filetype", "xclog")
-  vim.api.nvim_create_autocmd({ "Filetype" }, {
-    pattern = "xclog",
-    callback = function()
-      -- TODO: make scrolloff configurable
-      vim.cmd "setlocal nonumber norelativenumber scrolloff=4"
-      vim.cmd "call feedkeys('G')"
-    end,
-  })
   vim.api.nvim_create_autocmd({ "BufEnter" }, {
     buffer = M.bufnr,
     callback = function()
-      -- TODO: make scrolloff configurable
       vim.cmd "setlocal nonumber norelativenumber scrolloff=4"
-
-      vim.cmd "call feedkeys('G')"
     end,
   })
 
-  util.try_map(mappings.toggle_vsplit_log_buffer, function()
-    -- vim.cmd "close"
-    M.toggle(true)
-  end, M.bufnr)
-
-  util.try_map(mappings.toggle_split_log_buffer, function()
-    -- vim.cmd "close"
-    M.toggle(false)
-  end, M.bufnr)
-
+  util.bind(mappings, M.bufnr)
   vim.keymap.set("n", "q", "close", { buffer = M.bufnr })
 
   return M.bufnr
 end
 
-function M.toggle(vsplit)
+function M.toggle(vsplit, force)
   local cfg = require("xbase.config").values
+
+  local bufnr = M.bufnr
+  local win = vim.fn.win_findbuf(bufnr)[1]
+
+  if win and force then
+    vim.api.nvim_win_close(win, false)
+  end
+  if win and not force then
+    return
+  end
 
   if vsplit == nil then
     local default = cfg.default_log_buffer_direction
@@ -52,15 +42,8 @@ function M.toggle(vsplit)
     end
   end
 
-  local bufnr = M.bufnr
-  local win = vim.fn.win_findbuf(bufnr)[1]
   local cmd = vsplit and "vert sbuffer" or "sbuffer"
   local open = string.format("%s %s", cmd, bufnr)
-
-  if win then
-    vim.api.nvim_win_close(win, false)
-  end
-
   vim.cmd(open)
 
   -- TODO: make height and width configurable
@@ -82,7 +65,9 @@ function M.log(msg, level)
 
   vim.api.nvim_buf_set_lines(M.bufnr, row, -1, false, { msg })
 
-  M.update_cursor_position(line_count)
+  vim.schedule(function()
+    M.update_cursor_position(line_count)
+  end)
 end
 
 function M.update_cursor_position(line_count)
@@ -103,7 +88,6 @@ function M.update_cursor_position(line_count)
 
   if diff <= 2 then
     vim.api.nvim_win_set_cursor(winid, { line_count + 1, 0 })
-    -- TODO: make this behavior configurable
     -- vim.fn.win_execute(winid, "call feedkeys('zt')", false)
   end
 end

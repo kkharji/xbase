@@ -42,20 +42,19 @@ function M.try_map(key, fun, bufnr)
   end
 end
 
-function M.bind(config)
+function M.bind(m, bufnr)
   local pickers = require "xbase.pickers"
-  local m = config.mappings
-  M.try_map(m.build_picker, pickers.build)
-  M.try_map(m.run_picker, pickers.run)
-  M.try_map(m.watch_picker, pickers.watch)
-  M.try_map(m.all_picker, pickers.actions)
+  M.try_map(m.build_picker, pickers.build, bufnr)
+  M.try_map(m.run_picker, pickers.run, bufnr)
+  M.try_map(m.watch_picker, pickers.watch, bufnr)
+  M.try_map(m.all_picker, pickers.actions, bufnr)
   M.try_map(m.toggle_split_log_buffer, function()
-    require("xbase.log").toggle(false)
-  end)
+    require("xbase.log").toggle(false, true)
+  end, bufnr)
 
   M.try_map(m.toggle_vsplit_log_buffer, function()
-    require("xbase.log").toggle(true)
-  end)
+    require("xbase.log").toggle(true, true)
+  end, bufnr)
 end
 
 function M.feline_provider()

@@ -41,8 +41,7 @@ hi def link XbaseLogLaunched   healthSuccess
 
 syn match HideAa "\`" conceal
 
-
-let b:current_syntax = "xcodebuildlog"
+let b:current_syntax = "xclog"
 
 let &cpo = s:cpo_save
 unlet s:cpo_save

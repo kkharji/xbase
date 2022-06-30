@@ -21,18 +21,27 @@ M.setup = function(opts)
     if M.lib.register(root) then
       vim.cmd [[ autocmd VimLeavePre * lua require'xbase'.drop()]]
       if config.mappings.enable then
-        util.bind(config)
+        util.bind(config.mappings)
       end
-    end
 
-    vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
-      pattern = { "*.m", "*.swift", "*.c", "*.yml" },
-      callback = function()
-        if config.mappings.enable then
-          util.bind(config)
-        end
-      end,
-    })
+      vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+        pattern = { "*.m", "*.swift", "*.c", "*.yml" },
+        callback = function()
+          if config.mappings.enable then
+            util.bind(config.mappings)
+          end
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufEnter" }, {
+        pattern = "xclog",
+        callback = function()
+          if config.mappings.enable then
+            util.bind(config.mappings)
+          end
+        end,
+      })
+    end
   end)
 end
 

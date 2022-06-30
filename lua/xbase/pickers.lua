@@ -213,8 +213,9 @@ M.actions = function(opts)
     },
     attach_mappings = function(_, _)
       a.select_default:replace(function(bufnr)
-        a.close(bufnr)
         local selected = s.get_selected_entry()
+
+        a.close(bufnr)
         if not selected then
           print "No selection"
           return
