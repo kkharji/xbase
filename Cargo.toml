@@ -7,7 +7,7 @@ members = [
   # Main xbase daemon
   "daemon",
   # library to communicate with the daemon
-  "editor",
+  "client",
 ]
 
 [profile.dev]

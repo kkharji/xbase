@@ -61,6 +61,6 @@ pub trait Broadcast {
 }
 
 #[mlua::lua_module]
-fn xbase_editor_lib(_lua: &mlua::Lua) -> mlua::Result<neovim::XBaseUserData> {
+fn xbase_client(_lua: &mlua::Lua) -> mlua::Result<neovim::XBaseUserData> {
     Ok(neovim::XBaseUserData)
 }

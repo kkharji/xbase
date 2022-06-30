@@ -1,6 +1,6 @@
 local M = {}
 
-M.lib = require "xbase_editor_lib"
+M.lib = require "xbase_client"
 
 ---Check whether the vim instance should be registered to xbase server.
 ---@param root string: current working directory

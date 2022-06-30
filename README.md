@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./media/logo.png" alt="drawing" style="width:400px;"/>
+<img src="./.github/media/logo.png" alt="drawing" style="width:400px;"/>
 </P>
 
 An XCode replacement-ish *development environment* that aims to be your reliable XCode alternative to develop exciting new [apple] software products 🚀.
@@ -231,7 +231,7 @@ killall xbase xbase-sourcekit-helper
 
 Watch build service.
 
-![](./media/statusline_watch.gif)
+![](./.github/media/statusline_watch.gif)
 
 On error it opens a log buffer where you can inspect what went wrong, otherwise only the
 statusline get updated.

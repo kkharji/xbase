@@ -2466,7 +2466,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xbase-editor-lib"
+name = "xbase-client"
 version = "0.2.0"
 dependencies = [
  "async-trait",
