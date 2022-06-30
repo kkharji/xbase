@@ -103,8 +103,8 @@ impl ProjectCompile for TuistProject {
             (recv, xccommands)
         };
 
-        let success = !(project_compile_success.recv().await.unwrap_or_default()
-            && manifest_compile_success.recv().await.unwrap_or_default());
+        let success = project_compile_success.recv().await.unwrap_or_default()
+            && manifest_compile_success.recv().await.unwrap_or_default();
 
         self.on_compile_finish(success, broadcast)?;
 

@@ -162,7 +162,7 @@ pub trait ProjectCompile: ProjectData {
         let name = self.name();
         if success {
             broadcast.info(format!("[{name}] Compiled "));
-            broadcast.log_info(format!("[{name}] Compiled "));
+            broadcast.log_step(format!("[{name}] Compiled "));
             Ok(())
         } else {
             broadcast.error(format!(
@@ -196,7 +196,7 @@ pub trait ProjectGenerate: ProjectData {
         let name = self.root().name().unwrap();
         if success {
             broadcast.info(format!("[{name}] Generated "));
-            broadcast.log_info(format!("[{name}] Generated "));
+            broadcast.log_step(format!("[{name}] Generated "));
             Ok(())
         } else {
             broadcast.error(format!("[{name}] Failed to generated project (see logs)"));
