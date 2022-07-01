@@ -1,12 +1,9 @@
 use super::NvimGlobal;
-use crate::runtime::{rpc, rt};
+use crate::runtime::{roots, rpc, rt};
 use crate::BroadcastHandler;
 use mlua::{chunk, prelude::*};
-use once_cell::sync::Lazy;
 use os_pipe::{PipeReader, PipeWriter};
-use std::collections::HashSet;
 use std::os::unix::io::IntoRawFd;
-use std::sync::Mutex;
 use std::thread::JoinHandle;
 use std::{io::Write, path::PathBuf};
 use tokio::{
@@ -15,21 +12,19 @@ use tokio::{
 };
 use xbase_proto::*;
 
-static BROADCASTERS: Lazy<Mutex<HashSet<PathBuf>>> = Lazy::new(Default::default);
-
 pub struct Broadcast;
 
 impl Broadcast {
     /// Register a project and initialize command listener if the project isn't already initialized
     pub fn init_or_skip(lua: &Lua, root: &PathBuf) -> LuaResult<()> {
-        let mut broadcast = BROADCASTERS.lock().unwrap();
-        if !broadcast.contains(root) {
+        let mut roots = roots().lock().unwrap();
+        if !roots.contains(root) {
             let (reader, writer) = os_pipe::pipe()?;
 
             Broadcast::start_reader(lua, reader)?;
             Broadcast::start_writer(writer, root.clone());
 
-            broadcast.insert(root.clone());
+            roots.insert(root.clone());
         }
         Ok(())
     }

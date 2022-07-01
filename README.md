@@ -45,7 +45,7 @@ As a long-time vim user who has previously developed a several lua/nvim plugins,
 * **Auto-start/stop main background daemon**\
     Daemon will start and stop automatically based on the number of connected client instances.
 * **Multi Target/Project Support**\
-    Work on multiple projects at one nvim instance at the same time. TODO
+    Work on multiple projects at one nvim instance at the same time.
 * **Simulator Support**\
     Run your products on simulators relative to your target's platform. (+ watch build and ran on change)
 * **Runtime/Build Logging**\

@@ -4,7 +4,7 @@ mod request;
 mod types;
 mod util;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 pub use error::*;
@@ -47,7 +47,7 @@ pub trait XBase {
     ///
     /// Drop project at a given root
     ///
-    async fn drop(root: PathBuf) -> Result<()>;
+    async fn drop(roots: HashSet<PathBuf>) -> Result<()>;
     ///
     /// Return targets for client projects
     ///

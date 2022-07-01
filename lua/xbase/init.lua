@@ -8,6 +8,44 @@ M.drop = M.lib.drop
 M.build = M.lib.build
 M.run = M.lib.run
 local util = require "xbase.util"
+M.init = false
+
+M.try_attach = function(root, config)
+  if not M.lib.register(root) then
+    return
+  end
+  if not M.init then
+    M.init = true
+    vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
+      pattern = "*",
+      callback = function()
+        M.drop()
+      end,
+    })
+
+    vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+      pattern = { "*.m", "*.swift", "*.c", "*.yml" },
+      callback = function()
+        if config.mappings.enable then
+          util.bind(config.mappings)
+        end
+      end,
+    })
+
+    vim.api.nvim_create_autocmd({ "BufEnter" }, {
+      pattern = "xclog",
+      callback = function()
+        if config.mappings.enable then
+          util.bind(config.mappings)
+        end
+      end,
+    })
+  end
+
+  if config.mappings.enable then
+    util.bind(config.mappings)
+  end
+end
 
 M.setup = function(opts)
   vim.schedule(function()
@@ -17,31 +55,14 @@ M.setup = function(opts)
     config.set(opts)
     local config = config.values
 
-    -- TODO: run try register on switch directories
-    if M.lib.register(root) then
-      vim.cmd [[ autocmd VimLeavePre * lua require'xbase'.drop()]]
-      if config.mappings.enable then
-        util.bind(config.mappings)
-      end
+    M.try_attach(root, config)
 
-      vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
-        pattern = { "*.m", "*.swift", "*.c", "*.yml" },
-        callback = function()
-          if config.mappings.enable then
-            util.bind(config.mappings)
-          end
-        end,
-      })
-
-      vim.api.nvim_create_autocmd({ "BufEnter" }, {
-        pattern = "xclog",
-        callback = function()
-          if config.mappings.enable then
-            util.bind(config.mappings)
-          end
-        end,
-      })
-    end
+    vim.api.nvim_create_autocmd({ "DirChanged" }, {
+      pattern = "*",
+      callback = function()
+        M.try_attach(vim.loop.cwd(), config)
+      end,
+    })
   end)
 end
 

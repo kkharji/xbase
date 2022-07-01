@@ -7,7 +7,7 @@ pub use global::*;
 
 use crate::{runtime::*, BroadcastHandler};
 use mlua::{chunk, prelude::*};
-use std::str::FromStr;
+use std::{collections::HashSet, path::PathBuf, str::FromStr};
 use tap::Pipe;
 use xbase_proto::*;
 use xcodeproj::pbxproj::PBXTargetPlatform;
@@ -47,13 +47,14 @@ impl mlua::UserData for XBaseUserData {
     where
         M: mlua::UserDataMethods<'lua, Self>,
     {
-        m.add_function("register", |lua, root: Option<String>| -> LuaResult<bool> {
-            let root = lua.root(root)?;
+        m.add_function("register", |lua, root: String| -> LuaResult<bool> {
+            let root = PathBuf::from(root);
 
-            if !(root.join("project.yml").exists()
-                || root.join("Project.swift").exists()
-                || root.join("Package.swift").exists()
-                || wax::walk("*.xcodeproj", &root).to_lua_err()?.count() != 0)
+            if roots().lock().unwrap().contains(&root)
+                || !(root.join("project.yml").exists()
+                    || root.join("Project.swift").exists()
+                    || root.join("Package.swift").exists()
+                    || wax::walk("*.xcodeproj", &root).to_lua_err()?.count() != 0)
             {
                 return Ok(false);
             }
@@ -79,8 +80,18 @@ impl mlua::UserData for XBaseUserData {
             request!(run, req).to_lua_err()
         });
 
-        m.add_function("drop", |lua, root: Option<String>| {
-            request!(drop, lua.root(root)?).to_lua_err()
+        m.add_function("drop", |_lua, root: Option<String>| {
+            let mut curr_roots = roots().lock().unwrap();
+            let roots = if let Some(root) = root {
+                let root = PathBuf::from(root);
+                curr_roots.remove(&root);
+                HashSet::from([root])
+            } else {
+                let roots = HashSet::from_iter(curr_roots.iter().map(Clone::clone));
+                curr_roots.clear();
+                roots
+            };
+            request!(drop, roots).to_lua_err()
         });
 
         m.add_function("targets", |lua, root: Option<String>| {

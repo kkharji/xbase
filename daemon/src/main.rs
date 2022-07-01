@@ -1,5 +1,5 @@
 use log::Level;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
@@ -37,7 +37,7 @@ impl xbase_proto::XBase for Server {
             .collect())
     }
 
-    async fn drop(self, _: Context, root: PathBuf) -> Result<()> {
+    async fn drop(self, _: Context, root: HashSet<PathBuf>) -> Result<()> {
         tokio::spawn(async { xbase::drop::handle(root).await });
         Ok(())
     }

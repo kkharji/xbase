@@ -2,6 +2,9 @@ local util = require "xbase.util"
 local M = { bufnr = nil }
 
 function M.setup()
+  if M.bufnr then
+    return
+  end
   M.bufnr = vim.api.nvim_create_buf(false, true)
   local cfg = require("xbase.config").values
 
