@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 # Libraries
 tap             = "1.0.1"
 once_cell = "1.12.0"
-serde_json      = "1.0.81"
+serde_json      = "1.0.82"
 
 # RPC & Runtime
 tokio           = { version = "1.19.2", features = ["net", "rt-multi-thread", "sync", "parking_lot"] }
