@@ -1,35 +1,38 @@
 use crate::watch::WatchService;
 use crate::Result;
-use serde::Serialize;
+use crate::{broadcast::Broadcast, util::fs};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use xbase_proto::{Client, IntoResult};
+use std::sync::Arc;
+use xbase_proto::{IntoResult, PathExt};
 
-use crate::util::fs;
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug)]
 pub struct WatchStore(HashMap<PathBuf, WatchService>);
 
 impl WatchStore {
     pub async fn add(
         &mut self,
-        client: &Client,
+        root: &PathBuf,
         watchignore: Vec<String>,
         name: &str,
+        logger: &Arc<Broadcast>,
     ) -> Result<()> {
-        let handler = WatchService::new(client.to_owned(), watchignore).await?;
+        let handler = WatchService::new(root.into(), watchignore, Arc::downgrade(&logger)).await?;
         log::info!("[{}] added", name);
-        self.0.insert(client.root.clone(), handler);
+        self.0.insert(root.clone(), handler);
         Ok(())
     }
 
-    pub fn remove(&mut self, client: &Client) {
-        if let Some(handle) = self.0.get(&client.root) {
+    pub fn remove(&mut self, root: &PathBuf) -> Result<()> {
+        if let Some(handle) = self.0.get(root) {
             handle.handler.abort();
         };
 
-        log::info!("[{}] removed", client.abbrev_root());
+        log::info!("[{}] removed", root.as_path().abbrv()?.display());
 
-        self.0.remove(&client.root);
+        self.0.remove(root);
+
+        Ok(())
     }
 
     pub fn get(&self, root: &PathBuf) -> Result<&WatchService> {

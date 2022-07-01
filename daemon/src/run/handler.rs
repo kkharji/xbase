@@ -1,8 +1,11 @@
-#![allow(dead_code)]
+use crate::broadcast::Broadcast;
 use crate::{constants::DAEMON_STATE, Result};
+use process_stream::ProcessExt;
 use process_stream::{Process, StreamExt};
+use std::path::PathBuf;
+use std::sync::Weak;
 use tokio::task::JoinHandle;
-use xbase_proto::Client;
+use xbase_proto::StatuslineState;
 
 /// Run Service Task Handler
 pub struct RunServiceHandler {
@@ -15,13 +18,15 @@ impl RunServiceHandler {
     pub fn new(
         key: &String,
         target: &String,
-        client: &Client,
+        root: &PathBuf,
         mut process: Process,
+        broadcast: Weak<Broadcast>,
     ) -> Result<Self> {
-        let (key, target, client) = (key.clone(), target.clone(), client.clone());
+        let (key, target, root) = (key.clone(), target.clone(), root.clone());
         let mut stream = process.spawn_and_stream()?;
-        let kill_send = process.clone_kill_sender().unwrap();
+        let abort = process.aborter().unwrap();
 
+        // broadcast.notify_info(format!("[{}] Running ⚙", cfg.target)?;
         let inner = tokio::spawn(async move {
             // TODO: find a better way to close this!
             //
@@ -29,41 +34,38 @@ impl RunServiceHandler {
             while let Some(output) = stream.next().await {
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
-                let ref mut logger = match state.clients.get(&client.pid) {
-                    Ok(nvim) => nvim.logger(),
-                    Err(_) => {
-                        log::warn!("Nvim Instance closed, closing runner ..");
-                        state.watcher.get_mut(&client.root)?.listeners.remove(&key);
-                        kill_send.send(()).await.ok();
+                let ref mut broadcast = match broadcast.upgrade() {
+                    Some(broadcast) => broadcast,
+                    None => {
+                        log::warn!("No client instance listening, closing runner ..");
+                        state.watcher.get_mut(&root)?.listeners.remove(&key);
+                        abort.notify_waiters();
                         break;
                     }
                 };
-
-                logger.set_title(format!("Run:{target}"));
 
                 use process_stream::ProcessItem::*;
                 match output {
                     Output(msg) => {
                         if !msg.contains("ignoring singular matrix") {
-                            logger.append(msg).await?;
+                            broadcast.log_info(msg);
                         }
                     }
                     Error(msg) => {
-                        logger.append(format!("[Error] {msg}")).await?;
+                        broadcast.log_error(msg);
                     }
                     // TODO: this should be skipped when user re-run the app
                     Exit(code) => {
                         let success = &code == "0";
                         if success {
-                            logger.append(format!("disconnected")).await?;
+                            broadcast.log_info("disconnected");
+                            broadcast.update_statusline(StatuslineState::Success);
                         } else {
-                            logger
-                                .append(format!("[Error]: disconnected, exit: {code}"))
-                                .await?;
+                            broadcast.log_error(format!("disconnected, exit: {code}"));
+                            broadcast.update_statusline(StatuslineState::Failure);
                         }
-                        logger.set_status_end(success, !success).await?;
 
-                        log::info!("[target: {target}] runner closed");
+                        log::info!("[{target}] Runner Closed");
                         break;
                     }
                 };

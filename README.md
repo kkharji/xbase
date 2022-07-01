@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./media/logo.png" alt="drawing" style="width:400px;"/>
+<img src="./.github/media/logo.png" alt="drawing" style="width:400px;"/>
 </P>
 
 An XCode replacement-ish *development environment* that aims to be your reliable XCode alternative to develop exciting new [apple] software products 🚀.
@@ -170,9 +170,7 @@ require("xbase.util").feline_provider() -- append to feline setup function
 -- NOTE: Defaults
 {
   --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
-  log_level = "debug",
-  --- Default log buffer direction: { "horizontal", "vertical", "float" }
-  default_log_buffer_direction = "horizontal",
+  log_level = "info",
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },
@@ -189,6 +187,18 @@ require("xbase.util").feline_provider() -- append to feline setup function
       "iPad (9th generation)",
     },
   },
+  --- Log buffer configurations
+  log_buffer = {
+    --- Whether toggling the buffer should auto focus to it?
+    focus = true,
+    --- Split Log buffer height
+    height = 20,
+    --- Vsplit Log buffer width
+    width = 75,
+    --- Default log buffer direction: { "horizontal", "vertical" }
+    default_direction = "horizontal",
+  },
+  --- Mappings
   mappings = {
     --- Whether xbase mapping should be disabled.
     enable = true,
@@ -204,7 +214,7 @@ require("xbase.util").feline_provider() -- append to feline setup function
     toggle_split_log_buffer = "<leader>ls",
     --- vertical toggle log buffer
     toggle_vsplit_log_buffer = "<leader>lv",
-  }
+  },
 }
 ```
 
@@ -231,7 +241,7 @@ killall xbase xbase-sourcekit-helper
 
 Watch build service.
 
-![](./media/statusline_watch.gif)
+![](./.github/media/statusline_watch.gif)
 
 On error it opens a log buffer where you can inspect what went wrong, otherwise only the
 statusline get updated.

@@ -1,80 +1,77 @@
-use crate::constants::DAEMON_STATE;
-use crate::state::State;
+use crate::broadcast::Broadcast;
+use crate::constants::{State, DAEMON_STATE};
 use crate::watch::{Event, Watchable};
-use crate::RequestHandler;
 use crate::Result;
 use async_trait::async_trait;
+use std::sync::Arc;
 use tokio::sync::MutexGuard;
-use xbase_proto::BuildRequest;
+use xbase_proto::{BuildRequest, StatuslineState};
 
-#[async_trait]
-impl RequestHandler for BuildRequest {
-    async fn handle(self) -> Result<()>
-    where
-        Self: Sized + std::fmt::Debug,
-    {
-        let state = DAEMON_STATE.clone();
-        let ref mut state = state.lock().await;
+/// Handle build Request
+pub async fn handle(req: BuildRequest) -> Result<()> {
+    let state = DAEMON_STATE.clone();
+    let ref mut state = state.lock().await;
+    let broadcast = state.broadcasters.get(&req.root)?;
+    let target = &req.settings.target;
+    // let args = &req.settings.to_string();
 
-        let (title, sep) = crate::util::handler_log_content("Build", &self.client);
-        log::info!("{sep}");
-        log::info!("{title}");
-        log::trace!("\n\n{:#?}\n", &self);
-        log::info!("{sep}");
+    log::trace!("{:#?}", req);
 
-        if self.ops.is_once() {
-            return self.trigger(state, &Event::default()).await;
-        }
-
-        if self.ops.is_watch() {
-            state
-                .clients
-                .get(&self.client.pid)?
-                .set_watching(true)
-                .await?;
-            state.watcher.get_mut(&self.client.root)?.add(self)?;
-        } else {
-            state
-                .clients
-                .get(&self.client.pid)?
-                .set_watching(false)
-                .await?;
-            state
-                .watcher
-                .get_mut(&self.client.root)?
-                .remove(&self.to_string())?;
-        }
-
-        state.sync_client_state().await?;
-
-        Ok(())
+    if req.ops.is_once() {
+        req.trigger(state, &Event::default(), &broadcast).await?;
+        return Ok(());
     }
+
+    if req.ops.is_watch() {
+        broadcast.success(format!("[{target}] Watching "));
+        broadcast.update_statusline(StatuslineState::Watching);
+        state.watcher.get_mut(&req.root)?.add(req)?;
+    } else {
+        broadcast.info(format!("[{}] Wathcer Stopped", &req.settings.target));
+        state.watcher.get_mut(&req.root)?.remove(&req.to_string())?;
+        broadcast.update_statusline(StatuslineState::Clear);
+    }
+
+    Ok(())
 }
 
 #[async_trait]
 impl Watchable for BuildRequest {
-    async fn trigger(&self, state: &MutexGuard<State>, _event: &Event) -> Result<()> {
+    async fn trigger(
+        &self,
+        state: &MutexGuard<State>,
+        _event: &Event,
+        broadcast: &Arc<Broadcast>,
+    ) -> Result<()> {
+        broadcast.update_statusline(StatuslineState::Processing);
         let is_once = self.ops.is_once();
-        let (root, config) = (&self.client.root, &self.settings);
-        let (stream, args) = state.projects.get(root)?.build(&config, None)?;
-        let nvim = state.clients.get(&self.client.pid)?;
-        let logger = &mut nvim.logger();
+        let config = &self.settings;
+        let root = &self.root;
+        let target = &self.settings.target;
+        let project = state.projects.get(root)?;
 
-        logger.set_title(format!(
-            "{}:{}",
-            if is_once { "Build" } else { "Rebuild" },
-            config.target
-        ));
+        if is_once {
+            broadcast.info(format!("[{target}] Building ⚙"));
+        }
+        let (args, mut recv) = project.build(&config, None, broadcast)?;
 
-        log::info!("[target: {}] building .....", self.settings.target);
-        let success = logger.consume_build_logs(stream, false, !is_once).await?;
-        if !success {
-            let ref msg = format!("Failed: {} ", config.to_string());
-            nvim.echo_err(msg).await?;
-            log::error!("[target: {}] failed to be built", self.settings.target);
-            log::error!("[ran: 'xcodebuild {}']", args.join(" "));
+        if !recv.recv().await.unwrap_or_default() {
+            let verb = if is_once { "building" } else { "Rebuilding" };
+            broadcast.error(format!("[{target}] {verb} Failed "));
+            broadcast.log_error(format!(
+                "[{target}] build args `xcodebuild {}`",
+                args.join(" ")
+            ));
+            broadcast.update_statusline(StatuslineState::Failure);
+            broadcast.open_logger();
         } else {
-            log::info!("[target: {}] built successfully", self.settings.target);
+            broadcast.success(format!("[{target}] Built "));
+            broadcast.log_info(format!("[{target}] Built Successfully "));
+            if is_once {
+                broadcast.update_statusline(StatuslineState::Success);
+            } else {
+                broadcast.update_statusline(StatuslineState::Watching);
+            }
         };
 
         Ok(())

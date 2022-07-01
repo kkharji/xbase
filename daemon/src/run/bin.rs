@@ -1,4 +1,4 @@
-use crate::run::Logger;
+use crate::run::Broadcast;
 use crate::{Error, Result};
 use process_stream::Process;
 use std::path::{Path, PathBuf};
@@ -24,7 +24,7 @@ impl BinRunner {
 
 #[async_trait::async_trait]
 impl Runner for BinRunner {
-    async fn run<'a>(&self, _logger: &mut Logger<'a>) -> Result<Process> {
+    async fn run<'a>(&self, _logger: &Broadcast) -> Result<Process> {
         if !self.path.exists() {
             return Err(Error::Run(format!("{:?} doesn't exist!", self.path)));
         }

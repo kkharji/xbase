@@ -18,8 +18,10 @@ pub enum Error {
     Build(String),
     #[error("Failed to run target/scheme: {0}")]
     Run(String),
-    #[error("Failed to generate project definition: {0}")]
-    Generate(String),
+    #[error("Failed to generate project definition")]
+    Generate,
+    #[error("Failed to generate compile commands")]
+    Compile,
     #[error("Failed to parse project definition: {0}")]
     DefinitionParsing(String),
     #[error("No project definition found")]
@@ -31,6 +33,12 @@ pub enum Error {
     #[cfg(feature = "client")]
     #[error("{0}")]
     RPC(#[from] tarpc::client::RpcError),
+    #[error("{0}")]
+    JoinError(#[from] tokio::task::JoinError),
+    #[error("{0}")]
+    SendError(String),
+    #[error("Failed to parse broadcast message: {0}")]
+    MessageParse(String),
 }
 
 impl From<ErrorInner> for Error {
@@ -39,10 +47,12 @@ impl From<ErrorInner> for Error {
             "Setup" => Self::Setup(v.message),
             "Build" => Self::Build(v.message),
             "Run" => Self::Run(v.message),
-            "Generate" => Self::Generate(v.message),
+            "Generate" => Self::Generate,
             "DefinitionParsing" => Self::DefinitionParsing(v.message),
             "DefinitionLocating" => Self::DefinitionLocating,
             "DefinitionMutliFound" => Self::DefinitionMutliFound,
+            "SendError" => Self::SendError(v.message),
+            "MessageParse" => Self::MessageParse(v.message),
             _ => Self::Unexpected(v.message),
         }
     }
@@ -59,13 +69,17 @@ impl From<&Error> for ErrorInner {
             Error::Lookup(_, _) => res.kind = "Lookup".into(),
             Error::Build(_) => res.kind = "Build".into(),
             Error::Run(_) => res.kind = "Run".into(),
-            Error::Generate(_) => res.kind = "Generate".into(),
+            Error::Generate => res.kind = "Generate".into(),
             Error::DefinitionParsing(_) => res.kind = "DefinitionParsing".into(),
             Error::DefinitionLocating => res.kind = "DefinitionLocating".into(),
             Error::DefinitionMutliFound => res.kind = "DefinitionMutliFound".into(),
             Error::Unexpected(_) => res.kind = "General".into(),
             #[cfg(feature = "client")]
             Error::RPC(_) => res.kind = "RPC".into(),
+            Error::JoinError(_) => res.kind = "JoinError".into(),
+            Error::SendError(_) => res.kind = "SendError".into(),
+            Error::MessageParse(_) => res.kind = "MessageParse".into(),
+            Error::Compile => res.kind = "Compile".into(),
         };
         res
     }
@@ -172,44 +186,9 @@ impl From<simctl::Error> for Error {
 }
 
 #[cfg(feature = "server")]
-use nvim_rs::error::{CallError as NvimCallError, LoopError as NvimLoopError};
-
-#[cfg(feature = "server")]
-impl From<Box<NvimCallError>> for Error {
-    fn from(e: Box<NvimCallError>) -> Self {
-        use nvim_rs::error::*;
-        Self::Unexpected(match &*e {
-            NvimCallError::SendError(e, method) => {
-                let err_msg = match e {
-                    EncodeError::BufferError(e) => e.to_string(),
-                    EncodeError::WriterError(e) => e.to_string(),
-                };
-                format!("{method}(...): {err_msg}")
-            }
-            NvimCallError::DecodeError(ref e, method) => {
-                let err_msg = e.to_string();
-                format!("{method}(...): {err_msg}")
-            }
-            NvimCallError::NeovimError(code, method) => {
-                format!("{method}(...): error code {code:?}")
-            }
-            NvimCallError::WrongValueType(v) => format!("Wrong Value Type: {v:?}"),
-            _ => e.to_string(),
-        })
-    }
-}
-
-#[cfg(feature = "server")]
-impl From<NvimLoopError> for Error {
-    fn from(e: NvimLoopError) -> Self {
-        use nvim_rs::error::*;
-        Self::Unexpected(match e {
-            LoopError::MsgidNotFound(id) => format!("Message with id not found {id}"),
-            LoopError::DecodeError(_, _) => format!("Unable to read message"),
-            LoopError::InternalSendResponseError(_, res) => {
-                format!("Unable to send message: {res:?}")
-            }
-        })
+impl<T: std::fmt::Debug> From<tokio::sync::mpsc::error::SendError<T>> for Error {
+    fn from(v: tokio::sync::mpsc::error::SendError<T>) -> Self {
+        Self::SendError(format!("Channel closed, unable to send `{:?}`", v))
     }
 }
 

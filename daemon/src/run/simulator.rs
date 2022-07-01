@@ -1,11 +1,12 @@
+use crate::broadcast::Broadcast;
 use crate::device::Device;
-use crate::nvim::Logger;
 use crate::run::Runner;
 use crate::util::{fmt, pid};
 use crate::{Error, Result};
 use process_stream::Process;
 use std::path::PathBuf;
 use tap::Pipe;
+use tokio::process::Command;
 use xclog::XCBuildSettings;
 
 /// Simulator Device runner
@@ -17,10 +18,11 @@ pub struct SimulatorRunner {
 
 #[async_trait::async_trait]
 impl Runner for SimulatorRunner {
-    async fn run<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
-        self.boot(logger).await?;
-        self.install(logger).await?;
-        self.launch(logger).await
+    async fn run<'a>(&self, broadcast: &Broadcast) -> Result<Process> {
+        broadcast.log_step(format!("[{}] Connecting", self.device.name));
+        self.boot(broadcast).await?;
+        self.install(broadcast).await?;
+        self.launch(broadcast).await
     }
 }
 
@@ -33,53 +35,48 @@ impl SimulatorRunner {
         }
     }
 
-    pub async fn boot<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
+    pub async fn boot<'a>(&self, broadcast: &Broadcast) -> Result<()> {
         match pid::get_by_name("Simulator") {
             Err(Error::Lookup(_, _)) => {
                 let msg = format!("[Simulator] Launching");
-                log::info!("{msg}");
-                logger.append(msg).await?;
-                tokio::process::Command::new("open")
+                broadcast.log_info(msg);
+                Command::new("open")
                     .args(&["-a", "Simulator"])
                     .spawn()?
                     .wait()
                     .await?;
-                let msg = format!("[Simulator] Connected");
-                logger.append(msg).await?;
-                logger.append(fmt::separator()).await?;
+                broadcast.log_info("[Simulator] Connected");
+                broadcast.log_info(format!("{}", fmt::separator()));
             }
             Err(err) => {
                 let msg = err.to_string();
-                log::error!("{msg}");
-                logger.append(msg).await?;
+                broadcast.log_error(msg);
             }
             _ => {}
         }
 
-        logger.append(self.booting_msg()).await?;
+        broadcast.log_info(self.booting_msg());
         if let Err(e) = self.device.boot() {
             let err: Error = e.into();
             let err_msg = err.to_string();
             if !err_msg.contains("current state Booted") {
-                logger.append(err_msg).await?;
-                logger.set_status_end(false, true).await?;
-                return Err(err);
+                broadcast.log_error(err_msg);
             }
         }
         Ok(())
     }
 
-    pub async fn install<'a>(&self, logger: &mut Logger<'a>) -> Result<()> {
-        logger.append(self.installing_msg()).await?;
+    pub async fn install<'a>(&self, broadcast: &Broadcast) -> Result<()> {
+        broadcast.log_info(self.installing_msg());
         self.device
             .install(&self.output_dir)
-            .pipe(|res| self.ok_or_abort(res, logger))
+            .pipe(|res| self.ok_or_abort(res, broadcast))
             .await?;
         Ok(())
     }
 
-    pub async fn launch<'a>(&self, logger: &mut Logger<'a>) -> Result<Process> {
-        logger.append(self.launching_msg()).await?;
+    pub async fn launch<'a>(&self, broadcast: &Broadcast) -> Result<Process> {
+        broadcast.log_info(self.launching_msg());
         let mut process = Process::new("xcrun");
         let args = &[
             "simctl",
@@ -92,8 +89,8 @@ impl SimulatorRunner {
 
         process.args(args);
 
-        logger.append(self.connected_msg()).await?;
-        logger.append(fmt::separator()).await?;
+        broadcast.log_info(self.connected_msg());
+        broadcast.log_info(fmt::separator());
 
         Ok(process)
     }
@@ -101,12 +98,11 @@ impl SimulatorRunner {
     async fn ok_or_abort<'a, T>(
         &self,
         res: simctl::Result<T>,
-        logger: &mut Logger<'a>,
+        broadcast: &Broadcast,
     ) -> Result<()> {
         if let Err(e) = res {
             let error: Error = e.into();
-            logger.append(error.to_string()).await?;
-            logger.set_status_end(false, true).await?;
+            broadcast.log_error(error.to_string());
             Err(error)
         } else {
             Ok(())
@@ -114,18 +110,18 @@ impl SimulatorRunner {
     }
 
     fn booting_msg(&self) -> String {
-        format!("Booting {}", self.device.name)
+        format!("[{}] Booting", self.device.name)
     }
 
     fn installing_msg(&self) -> String {
-        format!("Installing {}", self.app_id)
+        format!("[{}] Installing {}", self.device.name, self.app_id)
     }
 
     fn launching_msg(&self) -> String {
-        format!("Launching {}", self.app_id)
+        format!("[{}] Launching {}", self.device.name, self.app_id)
     }
 
     fn connected_msg(&self) -> String {
-        format!("Connected")
+        format!("[{}] Connected", self.device.name)
     }
 }

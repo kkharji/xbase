@@ -3,16 +3,15 @@ mod handler;
 mod service;
 mod simulator;
 
-use crate::constants::DAEMON_STATE;
+use crate::broadcast::Broadcast;
+use crate::constants::{State, DAEMON_STATE};
 use crate::device::Device;
-use crate::nvim::Logger;
-use crate::state::State;
-use crate::Error;
-use crate::{RequestHandler, Result};
-use async_trait::async_trait;
+use crate::Result;
 use process_stream::Process;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::MutexGuard;
-use xbase_proto::{BuildSettings, Client, RunRequest};
+use xbase_proto::{BuildSettings, RunRequest, StatuslineState};
 
 pub use service::RunService;
 pub use {bin::*, simulator::*};
@@ -20,107 +19,77 @@ pub use {bin::*, simulator::*};
 #[async_trait::async_trait]
 pub trait Runner {
     /// Run Project
-    async fn run<'a>(&self, logger: &mut Logger<'a>) -> Result<Process>;
+    async fn run<'a>(&self, broadcast: &Broadcast) -> Result<Process>;
 }
 
-#[async_trait]
-impl RequestHandler for RunRequest {
-    async fn handle(self) -> Result<()>
-    where
-        Self: Sized + std::fmt::Debug,
-    {
-        let (title, sep) = crate::util::handler_log_content("Run", &self.client);
-        log::info!("{sep}");
-        log::info!("{title}");
-        log::trace!("\n\n{:#?}\n", &self);
-        log::info!("{sep}");
+/// Handle RunRequest
+/// TODO: Watch runners
+pub async fn handle(req: RunRequest) -> Result<()> {
+    let root = req.root.clone();
 
-        let ref key = self.to_string();
-        let state = DAEMON_STATE.clone();
-        let ref mut state = state.lock().await;
+    log::trace!("{:#?}", req);
 
-        if self.ops.is_once() {
-            // TODO(run): might want to keep track of ran services
-            RunService::new(state, self).await?;
-            return Ok(());
-        }
+    let ref key = req.to_string();
+    let state = DAEMON_STATE.clone();
+    let ref mut state = state.lock().await;
+    let broadcast = state.broadcasters.get_or_init(&root).await?;
+    let broadcast = broadcast.upgrade().unwrap();
 
-        let client = self.client.clone();
-        if self.ops.is_watch() {
-            let watcher = state.watcher.get(&self.client.root)?;
-            if watcher.contains_key(key) {
-                state
-                    .clients
-                    .get(&self.client.pid)?
-                    .echo_err("Already watching with {key}!!")
-                    .await?;
-            } else {
-                let pid = self.client.pid.to_owned();
-                let run_service = RunService::new(state, self).await?;
-                let watcher = state.watcher.get_mut(&client.root)?;
-                watcher.add(run_service)?;
-                state.clients.get(&pid)?.set_watching(true).await?;
-            }
-        } else {
-            log::info!("[target: {}] stopping .....", &self.settings.target);
-            let watcher = state.watcher.get_mut(&self.client.root)?;
-            let listener = watcher.remove(&self.to_string())?;
-            state
-                .clients
-                .get(&self.client.pid)?
-                .set_watching(false)
-                .await?;
-            listener.discard(state).await?;
-        }
+    if req.ops.is_once() {
+        // TODO(run): might want to keep track of ran services
+        RunService::new(state, req, &broadcast).await?;
 
-        state.sync_client_state().await?;
-
-        log::info!("{sep}",);
-        log::info!("{sep}",);
-
-        Ok(())
+        return Ok(Default::default());
     }
+
+    if req.ops.is_watch() {
+        broadcast.update_statusline(StatuslineState::Watching);
+        let watcher = state.watcher.get(&req.root)?;
+        if watcher.contains_key(key) {
+            broadcast.warn(format!("Already watching with {key}!!"));
+        } else {
+            let run_service = RunService::new(state, req, &broadcast).await?;
+            let watcher = state.watcher.get_mut(&root)?;
+            watcher.add(run_service)?;
+        }
+    } else {
+        let watcher = state.watcher.get_mut(&req.root)?;
+        let listener = watcher.remove(&req.to_string())?;
+        listener.discard(state).await?;
+        broadcast.info(format!("[{}] Watcher Stopped", &req.settings.target));
+        broadcast.update_statusline(StatuslineState::Clear);
+    }
+
+    Ok(())
 }
 
 async fn get_runner<'a>(
     state: &'a MutexGuard<'_, State>,
-    client: &Client,
+    root: &PathBuf,
     settings: &BuildSettings,
     device: Option<&Device>,
-    is_once: bool,
-) -> Result<process_stream::Process> {
-    let root = &client.root;
-    let nvim = state.clients.get(&client.pid)?;
-
-    let logger = &mut nvim.logger();
-
-    if !is_once {
-        logger.open_win().await?;
-        logger.set_running(false).await?;
-    }
-
+    _is_once: bool,
+    broadcast: &Arc<Broadcast>,
+) -> Result<Process> {
     let target = &settings.target;
-    let (runner, stream, args) = state.projects.get(root)?.get_runner(&settings, device)?;
+    let project = state.projects.get(root)?;
+    let device_name = device.map(|d| d.to_string()).unwrap_or("macOs".into());
+    broadcast.info(format!("[{target}({device_name})] Running ⚙"));
+    let (runner, args, mut recv) = project.get_runner(&settings, device, broadcast)?;
 
-    logger.set_title(format!("Build:{target}"));
-    log::info!("[target: {target}] building .....");
+    broadcast.update_statusline(StatuslineState::Processing);
 
-    let success = logger.consume_build_logs(stream, true, !is_once).await?;
-    if !success {
-        let msg = format!("[target: {target}] failed to be built",);
-        logger.nvim.echo_err(&msg).await?;
-        log::error!("[target: {target}] failed to be built");
-        log::error!("[ran: 'xcodebuild {}']", args.join(" "));
-        return Err(Error::Build(msg));
-    } else {
-        log::info!("[target: {target}] built successfully");
+    if !recv.recv().await.unwrap_or_default() {
+        let msg = format!("[{target}] Failed to build for running ");
+        broadcast.error(&msg);
+        broadcast.log_error(format!("xcodebuild {}", args.join(" ")));
+        broadcast.open_logger();
+        return Err(crate::Error::Run(msg));
     }
 
-    logger.set_title(format!("Run:{target}"));
-    logger.set_running(true).await?;
+    let process = runner.run(broadcast).await?;
 
-    let process = runner.run(logger).await?;
-    log::info!("[target: {target}] running .....");
+    broadcast.update_statusline(StatuslineState::Running);
 
     Ok(process)
 }

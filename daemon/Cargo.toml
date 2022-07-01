@@ -25,7 +25,7 @@ futures               = { version = "0.3.21" }
 async-trait           = { version = "0.1.52" }
 async-stream          = { version = "0.3.3" }
 parity-tokio-ipc      = { version = "0.9.0" }
-process-stream        = { version = "0.2.*" }
+process-stream        = { version = "0.4.*", features = ["serde"] }
 xcodeproj             = { version = "0.2.*" }
 
 # Filesystem watcher
@@ -36,12 +36,9 @@ wax                   = { version = "0.5.0" }
 # Static
 lazy_static           = { version = "1.4.0" }
 
-# Nvim
-nvim-rs               = { version = "0.4.0", features = ["use_tokio"] }
-
 # Other
 tap                   = "1.0.1"
-xclog                 = { version  = "0.2.*",  features = ["with_tracing"] }
+xclog                 = { version  = "0.3.*",  features = ["with_tracing"] }
 simctl                = { git = "https://github.com/xbase-lab/simctl" }
 derive-deref-rs       = { version = "0.1.1"}
 shell-words           = { version  = "1.1.0" }
@@ -53,3 +50,8 @@ paste = "1.0.7"
 which = "4.2.5"
 erased-serde = "0.3.21"
 tarpc = { version = "0.29.0", features = ["serde-transport", "tokio1", "serde1"] }
+linemux = "0.2.3"
+os_pipe = "1.0.1"
+
+[dev-dependencies]
+tracing-test = "0.2.2"

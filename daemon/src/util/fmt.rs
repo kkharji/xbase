@@ -4,9 +4,9 @@ pub fn as_section(content: String) -> String {
     let len = content.len();
     let rep = 73 - len;
     if rep > 0 {
-        let sep = "-".repeat(rep);
+        let sep = ".".repeat(rep);
         if empty_string {
-            content.push_str("-");
+            content.push_str(".");
         }
         content.push_str(&sep);
     }
@@ -14,5 +14,5 @@ pub fn as_section(content: String) -> String {
 }
 
 pub fn separator() -> String {
-    "-".repeat(73)
+    ".".repeat(73)
 }

@@ -1,20 +1,19 @@
 mod event;
-mod serialize;
-
 pub use event::{Event, EventKind};
 
+use crate::broadcast::Broadcast;
 use crate::compile::ensure_server_support;
-use crate::{constants::DAEMON_STATE, state::State, Result};
+use crate::{constants::State, constants::DAEMON_STATE, Result};
 use async_trait::async_trait;
 use log::{error, info, trace};
 use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::SystemTime;
 use tokio::sync::mpsc::channel;
 use tokio::{sync::MutexGuard, task::JoinHandle};
-use xbase_proto::{Client, IntoResult};
+use xbase_proto::{IntoResult, PathExt};
 
 #[derive(derive_deref_rs::Deref)]
 pub struct WatchService {
@@ -34,7 +33,12 @@ pub struct InternalState {
 #[async_trait]
 pub trait Watchable: ToString + Send + Sync + 'static {
     /// Trigger Restart of Watchable.
-    async fn trigger(&self, state: &MutexGuard<State>, event: &Event) -> Result<()>;
+    async fn trigger(
+        &self,
+        state: &MutexGuard<State>,
+        event: &Event,
+        broadcast: &Arc<Broadcast>,
+    ) -> Result<()>;
 
     /// A function that controls whether a a Watchable should restart
     async fn should_trigger(&self, state: &MutexGuard<State>, event: &Event) -> bool;
@@ -47,43 +51,15 @@ pub trait Watchable: ToString + Send + Sync + 'static {
 }
 
 impl WatchService {
-    pub async fn new(client: Client, ignore_pattern: Vec<String>) -> Result<Self> {
+    pub async fn new(
+        root: PathBuf,
+        ignore_pattern: Vec<String>,
+        broadcast: Weak<Broadcast>,
+    ) -> Result<Self> {
         let listeners = Default::default();
-
-        async fn try_to_recompile<'a>(
-            event: &Event,
-            client: &Client,
-            state: &mut MutexGuard<'a, State>,
-        ) -> Result<()> {
-            let recompiled = event.is_create_event()
-                || event.is_remove_event()
-                || event.is_content_update_event()
-                || event.is_rename_event() && !event.is_seen();
-
-            if recompiled {
-                let ensure = ensure_server_support(state, client, Some(event)).await;
-                match ensure {
-                    Err(err) => {
-                        log::error!("Ensure server support Errored!! {err:?} ");
-                    }
-                    Ok(true) => {
-                        let ref name = client.abbrev_root();
-                        state
-                            .clients
-                            .echo_msg(&client.root, name, "new compilation database generated ✅")
-                            .await;
-                        info!("[{name}] recompiled successfully");
-                    }
-                    _ => (),
-                }
-            };
-
-            Ok(())
-        }
 
         let handler = tokio::spawn(async move {
             let mut discards = vec![];
-            let ref root = client.root;
             let internal_state = InternalState::default();
 
             let (tx, mut rx) = channel::<notify::Event>(1);
@@ -93,7 +69,7 @@ impl WatchService {
                 }
             })
             .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
-            w.watch(&client.root, Recursive)
+            w.watch(&root, Recursive)
                 .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
             w.configure(Config::NoticeEvents(true))
                 .map_err(|e| crate::Error::Unexpected(e.to_string()))?;
@@ -119,10 +95,23 @@ impl WatchService {
 
                 let state = DAEMON_STATE.clone();
                 let ref mut state = state.lock().await;
+                let broadcast = match broadcast.upgrade() {
+                    Some(broadcast) => broadcast,
+                    None => {
+                        error!(r"No broadcast found for {root:?}, dropping watcher ..");
+                        return Ok(());
+                    }
+                };
 
-                try_to_recompile(event, &client, state).await?;
+                if event.is_create_event()
+                    || event.is_remove_event()
+                    || event.is_content_update_event()
+                    || event.is_rename_event() && !event.is_seen()
+                {
+                    ensure_server_support(state, &root, Some(event), &broadcast).await?;
+                };
 
-                let watcher = match state.watcher.get(root) {
+                let watcher = match state.watcher.get(&root) {
                     Ok(w) => w,
                     Err(err) => {
                         error!(r#"Unable to get watcher for {root:?}: {err}"#);
@@ -138,12 +127,12 @@ impl WatchService {
                         }
                         discards.push(key.to_string());
                     } else if listener.should_trigger(state, event).await {
-                        if let Err(err) = listener.trigger(state, event).await {
+                        if let Err(err) = listener.trigger(state, event, &broadcast).await {
                             error!("trigger errored for `{key}`!: {err}");
                         }
                     }
                 }
-                let watcher = state.watcher.get_mut(root).unwrap();
+                let watcher = state.watcher.get_mut(&root).unwrap();
 
                 for key in discards.iter() {
                     info!("[{key:?}] discarded");
@@ -156,7 +145,7 @@ impl WatchService {
                 info!("{event} consumed successfully");
             }
 
-            info!("Dropped {:?}!!", client.root);
+            info!("Dropped {:?}!!", root.as_path().abbrv()?.display());
 
             Ok(())
         });
@@ -208,5 +197,20 @@ impl InternalState {
     #[must_use]
     pub fn last_path(&self) -> Arc<Mutex<PathBuf>> {
         self.last_path.clone()
+    }
+}
+
+impl std::fmt::Debug for WatchService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let listners = self
+            .listeners
+            .iter()
+            .map(|(key, _)| key.to_string())
+            .collect::<Vec<String>>();
+
+        f.debug_struct("WatchService")
+            .field("listners", &listners)
+            .field("handler", &self.handler)
+            .finish()
     }
 }

@@ -1,12 +1,10 @@
 use super::*;
 use crate::watch::Event;
 use crate::{Error, Result};
-use futures::StreamExt;
-use process_stream::{Process, ProcessItem};
+use process_stream::Process;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
 use tokio::process::Command;
-use xbase_proto::Client;
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
 #[derive(Debug, Serialize, Default)]
@@ -14,8 +12,8 @@ use xcodeproj::pbxproj::PBXTargetPlatform;
 pub struct SwiftProject {
     name: String,
     root: PathBuf,
-    targets: HashMap<String, PBXTargetPlatform>,
-    clients: Vec<i32>,
+    targets: HashMap<String, TargetInfo>,
+    num_clients: i32,
     watchignore: Vec<String>,
 }
 
@@ -28,16 +26,16 @@ impl ProjectData for SwiftProject {
         &self.name
     }
 
-    fn targets(&self) -> &HashMap<String, PBXTargetPlatform> {
+    fn targets(&self) -> &HashMap<String, TargetInfo> {
         &self.targets
     }
 
-    fn clients(&self) -> &Vec<i32> {
-        &self.clients
+    fn clients(&self) -> &i32 {
+        &self.num_clients
     }
 
-    fn clients_mut(&mut self) -> &mut Vec<i32> {
-        &mut self.clients
+    fn clients_mut(&mut self) -> &mut i32 {
+        &mut self.num_clients
     }
 
     fn watchignore(&self) -> &Vec<String> {
@@ -51,30 +49,16 @@ impl ProjectBuild for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-    ) -> Result<(StringStream, Vec<String>)> {
-        log::info!("Building {}", cfg.target);
-
+        broadcast: &Arc<Broadcast>,
+    ) -> Result<(Vec<String>, tokio::sync::mpsc::Receiver<bool>)> {
         let args = vec!["build", "--target", &cfg.target];
         let mut process = Process::new("/usr/bin/swift");
 
         process.args(&args);
         process.current_dir(self.root());
+        let recv = broadcast.consume(Box::new(process))?;
 
-        let mut stream = process.spawn_and_stream()?;
-        let stream = stream! {
-            while let Some(output) =  stream.next().await {
-                if let ProcessItem::Exit(v) = output {
-                    if !v.eq("0") {
-                        yield String::from("FAILED")
-                    }
-                } else {
-                    log::trace!("{output}");
-                    yield output.to_string()
-                }
-
-            }
-        };
-        Ok((stream.boxed(), vec![]))
+        Ok((vec![], recv))
     }
 }
 
@@ -84,8 +68,13 @@ impl ProjectRun for SwiftProject {
         &self,
         cfg: &BuildSettings,
         _device: Option<&Device>,
-    ) -> Result<(Box<dyn Runner + Send + Sync>, StringStream, Vec<String>)> {
-        let (build_stream, args) = self.build(cfg, None)?;
+        broadcast: &Arc<Broadcast>,
+    ) -> Result<(
+        Box<dyn Runner + Send + Sync>,
+        Vec<String>,
+        tokio::sync::mpsc::Receiver<bool>,
+    )> {
+        let (args, recv) = self.build(cfg, None, broadcast)?;
 
         let output = std::process::Command::new("/usr/bin/swift")
             .args(["build", "--show-bin-path"])
@@ -94,6 +83,7 @@ impl ProjectRun for SwiftProject {
 
         if !output.status.success() {
             let stderr = String::from_utf8(output.stderr).unwrap();
+            broadcast.open_logger();
             return Err(Error::Run(format!(
                 "Getting target bin path failed {stderr}"
             )));
@@ -105,17 +95,13 @@ impl ProjectRun for SwiftProject {
 
         log::info!("Running {:?} via {bin_path:?}", self.name());
 
-        Ok((
-            Box::new(BinRunner::from_path(&bin_path)),
-            build_stream,
-            args,
-        ))
+        Ok((Box::new(BinRunner::from_path(&bin_path)), args, recv))
     }
 }
 
 #[async_trait::async_trait]
 impl ProjectCompile for SwiftProject {
-    async fn update_compile_database(&self) -> Result<()> {
+    async fn update_compile_database(&self, _logger: &Arc<Broadcast>) -> Result<()> {
         // No Compile database needed for swif projects
         Ok(())
     }
@@ -134,17 +120,27 @@ impl ProjectGenerate for SwiftProject {
     }
 
     /// Generate xcodeproj
-    async fn generate(&mut self) -> Result<()> {
-        log::info!("Building and compiling swift project {}", self.name());
-
+    async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let mut process: Process = vec!["/usr/bin/swift", "build"].into();
-
+        let name = self.root().name().unwrap();
         process.current_dir(self.root());
 
-        let (success, logs) = consume_and_log(process.spawn_and_stream()?.boxed()).await;
+        broadcast.info(format!("[{name}] Compiling"));
+        broadcast.log_step(format!("[{name}] Compiling"));
+
+        let success = broadcast
+            .consume(Box::new(process))?
+            .recv()
+            .await
+            .unwrap_or_default();
 
         if !success {
-            return Err(Error::Generate(logs.join("\n")));
+            broadcast.error(format!("[{name}] Failed to compiled "));
+            broadcast.open_logger();
+            return Err(Error::Generate);
+        } else {
+            broadcast.success(format!("[{name}] Compiled "));
+            broadcast.log_step(format!("[{name}] Compiled "));
         }
 
         self.update_project_info().await?;
@@ -157,21 +153,19 @@ impl ProjectGenerate for SwiftProject {
 
 #[async_trait::async_trait]
 impl Project for SwiftProject {
-    async fn new(client: &Client) -> Result<Self> {
-        let Client { root, pid, .. } = client;
-
+    async fn new(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<Self> {
         let watchignore = generate_watchignore(root).await;
 
         let mut project = Self {
             root: root.clone(),
             watchignore,
-            clients: vec![pid.clone()],
+            num_clients: 1,
             ..Self::default()
         };
 
         if !root.join(".build").exists() {
             log::info!("no .build directory found at {root:?}");
-            project.generate().await?;
+            project.generate(broadcast).await?;
             return Ok(project);
         } else {
             project.update_project_info().await?;
@@ -235,7 +229,13 @@ impl SwiftProject {
                     .map(|s| s == "test")
                     .unwrap_or_default()
                 {
-                    Some((name, PBXTargetPlatform::MacOS))
+                    Some((
+                        name,
+                        TargetInfo {
+                            platform: PBXTargetPlatform::MacOS,
+                            watching: false,
+                        },
+                    ))
                 } else {
                     None
                 }

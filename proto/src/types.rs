@@ -1,34 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, path::PathBuf};
+use std::fmt::Display;
 use strum::{Display as EnumDisplay, EnumString};
+use xcodeproj::pbxproj::PBXTargetPlatform;
 
 #[cfg(feature = "neovim")]
 use mlua::prelude::*;
 
-/// Client data
-#[derive(Clone, Default, Debug, Deserialize, Serialize)]
-pub struct Client {
-    pub pid: i32,
-    pub root: PathBuf,
-    pub address: String,
-}
-
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for Client {
-    fn from_lua(value: LuaValue<'a>, lua: &'a Lua) -> LuaResult<Self> {
-        Self::new(lua, {
-            if let LuaValue::String(ref root) = value {
-                Some(root.to_string_lossy().to_string())
-            } else {
-                None
-            }
-        })
-    }
-}
-
 /// Build Configuration to run
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
-#[serde(untagged)]
 pub enum BuildConfiguration {
     Debug,
     Release,
@@ -53,7 +32,6 @@ impl<'a> FromLua<'a> for BuildConfiguration {
 ///
 /// Should request be executed once, stoped (if watched) or start new watch service?
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
-#[serde(untagged)]
 pub enum Operation {
     Watch,
     Stop,
@@ -62,7 +40,7 @@ pub enum Operation {
 
 #[cfg(feature = "neovim")]
 impl<'a> FromLua<'a> for Operation {
-    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
+    fn from_lua(value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
         use std::str::FromStr;
         if let LuaValue::String(value) = value {
             let value = value.to_string_lossy();
@@ -101,6 +79,25 @@ impl<'a> FromLua<'a> for BuildSettings {
     }
 }
 
+/// Fields required to build a project
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TargetInfo {
+    /// Configuration to build with, default Debug
+    pub platform: PBXTargetPlatform,
+    /// Scheme to build with
+    pub watching: bool,
+}
+
+#[cfg(feature = "neovim")]
+impl<'a> ToLua<'a> for TargetInfo {
+    fn to_lua(self, lua: &'a Lua) -> LuaResult<LuaValue<'a>> {
+        let table = lua.create_table()?;
+        table.set("platform", self.platform.to_string())?;
+        table.set("watching", self.watching)?;
+        Ok(LuaValue::Table(table))
+    }
+}
+
 /// Log Buffer open direction
 #[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
 #[strum(ascii_case_insensitive)]
@@ -129,7 +126,7 @@ impl<'a> FromLua<'a> for BufferDirection {
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DeviceLookup {
     pub name: Option<String>,
-    pub udid: Option<String>,
+    pub id: Option<String>,
 }
 
 #[cfg(feature = "neovim")]
@@ -138,7 +135,7 @@ impl<'a> FromLua<'a> for DeviceLookup {
         if let LuaValue::Table(table) = value {
             Ok(Self {
                 name: table.get("name").ok(),
-                udid: table.get("udid").ok(),
+                id: table.get("id").ok(),
             })
         } else {
             Ok(Self::default())
@@ -201,33 +198,6 @@ impl Operation {
     #[must_use]
     pub fn is_once(&self) -> bool {
         matches!(self, Self::Once)
-    }
-}
-
-impl Client {
-    #[cfg(feature = "neovim")]
-    pub fn new(lua: &Lua, root: Option<String>) -> LuaResult<Self> {
-        use crate::util::address;
-        use crate::util::cwd;
-        Ok(Self {
-            pid: std::process::id() as i32,
-            address: address(lua)?,
-            root: if let Some(v) = root { v } else { cwd(lua)? }.into(),
-        })
-    }
-
-    pub fn abbrev_root(&self) -> String {
-        let abbr = || {
-            let path = &self.root;
-            Some(
-                path.strip_prefix(path.ancestors().nth(3)?)
-                    .ok()?
-                    .display()
-                    .to_string(),
-            )
-        };
-
-        abbr().unwrap_or_default()
     }
 }
 

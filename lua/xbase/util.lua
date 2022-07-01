@@ -1,57 +1,9 @@
 local config = require("xbase.config").values
+
 local M = {}
----@param platform Platform
-local get_devices = function(platform)
-  local devices = {}
 
-  if platform then
-    for _, device in pairs(vim.g.xbase.devices) do
-      if platform == device.platform then
-        table.insert(devices, {
-          name = device.info.name,
-          udid = device.info.udid,
-          is_on = device.info.state ~= "Shutdown",
-        })
-      end
-    end
-  end
-
-  return devices
-end
-
----Get Targets from project
----To Support Multi Platform targets
----@param project Project
-M.get_targets_runners = function(project)
-  local targets = {}
-
-  for name, platform in pairs(project.targets) do
-    table.insert(targets, {
-      name = name,
-      runners = get_devices(platform),
-    })
-  end
-
-  return targets
-end
-
-M.reload_lsp_servers = function()
-  -- local clients = require("lspconfig.util").get_managed_clients()
-  -- local ids = ""
-  -- for _, client in ipairs(clients) do
-  --   if client.name == "sourcekit" then
-  --     ids = ids .. client.id
-  --   end
-  -- end
-
-  print "Restarting Servers"
-  vim.cmd "LspRestart"
-end
-
-M.is_watching = function(config, command, device)
+function M.is_watching(config, command, device, watchlist)
   local root = vim.loop.cwd()
-  local watching = vim.g.xbase.watcher[root]
-
   local base_key = string.format("-configuration %s", config.configuration)
   local key
 
@@ -75,10 +27,37 @@ M.is_watching = function(config, command, device)
 
   key = key .. " -target " .. config.target
 
-  return watching[key] ~= nil
+  for _, watching_key in pairs(watchlist) do
+    if key == watching_key then
+      return true
+    end
+  end
+
+  return false
 end
 
-M.feline_provider = function()
+function M.try_map(key, fun, bufnr)
+  if type(key) == "string" then
+    vim.keymap.set("n", key, fun, { buffer = bufnr and bufnr or true })
+  end
+end
+
+function M.bind(m, bufnr)
+  local pickers = require "xbase.pickers"
+  M.try_map(m.build_picker, pickers.build, bufnr)
+  M.try_map(m.run_picker, pickers.run, bufnr)
+  M.try_map(m.watch_picker, pickers.watch, bufnr)
+  M.try_map(m.all_picker, pickers.actions, bufnr)
+  M.try_map(m.toggle_split_log_buffer, function()
+    require("xbase.log").toggle(false, true)
+  end, bufnr)
+
+  M.try_map(m.toggle_vsplit_log_buffer, function()
+    require("xbase.log").toggle(true, true)
+  end, bufnr)
+end
+
+function M.feline_provider()
   return {
     provider = function(_)
       icon = {}
@@ -86,10 +65,10 @@ M.feline_provider = function()
       local config = config.statusline
       local status = vim.g.xbase_watch_build_status
 
-      if status == "running" then
+      if status == "processing" then
         icon.str = config.running.icon
         icon.hl = { fg = config.running.color }
-      elseif status == "device_running" then
+      elseif status == "running" then
         icon.str = config.device_running.icon
         icon.hl = { fg = config.device_running.color }
       elseif status == "success" then

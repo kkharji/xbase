@@ -3,15 +3,14 @@ use crate::watch::Event;
 use crate::{Error, Result};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
-use xbase_proto::Client;
-use xcodeproj::{pbxproj::PBXTargetPlatform, XCodeProject};
+use xcodeproj::XCodeProject;
 
 #[derive(Debug, Serialize, Default)]
 #[serde(default)]
 pub struct BareboneProject {
     root: PathBuf,
-    targets: HashMap<String, PBXTargetPlatform>,
-    clients: Vec<i32>,
+    targets: HashMap<String, TargetInfo>,
+    num_clients: i32,
     watchignore: Vec<String>,
     #[serde(skip)]
     xcodeproj: XCodeProject,
@@ -26,16 +25,16 @@ impl ProjectData for BareboneProject {
         &self.xcodeproj.name()
     }
 
-    fn targets(&self) -> &HashMap<String, PBXTargetPlatform> {
+    fn targets(&self) -> &HashMap<String, TargetInfo> {
         &self.targets
     }
 
-    fn clients(&self) -> &Vec<i32> {
-        &self.clients
+    fn clients(&self) -> &i32 {
+        &self.num_clients
     }
 
-    fn clients_mut(&mut self) -> &mut Vec<i32> {
-        &mut self.clients
+    fn clients_mut(&mut self) -> &mut i32 {
+        &mut self.num_clients
     }
 
     fn watchignore(&self) -> &Vec<String> {
@@ -51,12 +50,11 @@ impl ProjectRun for BareboneProject {}
 
 #[async_trait::async_trait]
 impl ProjectCompile for BareboneProject {
-    async fn update_compile_database(&self) -> Result<()> {
-        use xclog::XCCompilationDatabase as CC;
-
+    async fn update_compile_database(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
         let (name, root) = (self.name(), self.root());
         let cache_root = self.build_cache_root()?;
         let mut args = self.compile_arguments();
+        self.on_compile_start(broadcast)?;
 
         args.push(format!("SYMROOT={cache_root}"));
 
@@ -74,10 +72,13 @@ impl ProjectCompile for BareboneProject {
         }
 
         log::info!("xcodebuild {}", args.join(" "));
+        let xclogger = XCLogger::new(&root, &args)?;
+        let xccommands = xclogger.compile_commands.clone();
+        let mut recv = broadcast.consume(Box::new(xclogger))?;
 
-        let compile_commands = CC::generate(&root, &args).await?.to_vec();
-        let json = serde_json::to_vec_pretty(&compile_commands)?;
+        self.on_compile_finish(recv.recv().await.unwrap_or_default(), broadcast)?;
 
+        let json = serde_json::to_vec_pretty(&xccommands.lock().await.to_vec())?;
         tokio::fs::write(root.join(".compile"), &json).await?;
 
         Ok(())
@@ -86,11 +87,11 @@ impl ProjectCompile for BareboneProject {
 
 #[async_trait::async_trait]
 impl ProjectGenerate for BareboneProject {
-    fn should_generate(&self, event: &Event) -> bool {
-        event.is_create_event() || event.is_remove_event() || event.is_rename_event()
+    fn should_generate(&self, _event: &Event) -> bool {
+        false
     }
 
-    async fn generate(&mut self) -> Result<()> {
+    async fn generate(&mut self, _logger: &Arc<Broadcast>) -> Result<()> {
         log::error!("New File created or removed but generate barebone project is not supported");
 
         Ok(())
@@ -99,13 +100,11 @@ impl ProjectGenerate for BareboneProject {
 
 #[async_trait::async_trait]
 impl Project for BareboneProject {
-    async fn new(client: &Client) -> Result<Self> {
-        let Client { root, pid, .. } = client;
-
+    async fn new(root: &PathBuf, _logger: &Arc<Broadcast>) -> Result<Self> {
         let mut project = Self {
             root: root.clone(),
             watchignore: generate_watchignore(root).await,
-            clients: vec![pid.clone()],
+            num_clients: 1,
             ..Self::default()
         };
 
@@ -122,7 +121,20 @@ impl Project for BareboneProject {
         };
 
         project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
-        project.targets = project.xcodeproj.targets_platform();
+        project.targets = project
+            .xcodeproj
+            .targets_platform()
+            .into_iter()
+            .map(|(k, platform)| {
+                (
+                    k,
+                    TargetInfo {
+                        platform,
+                        watching: false,
+                    },
+                )
+            })
+            .collect();
 
         log::info!("targets: {:?}", project.targets());
         Ok(project)

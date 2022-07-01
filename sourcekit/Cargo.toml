@@ -6,7 +6,7 @@ description = "sourcekit helper that provide build-server sourcekit can use to p
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-xclog                 = "0.2.*"
+xclog                 = "0.3.*"
 serde                 = {version = "1.0.137", features = ["derive"]}
 bsp-server            = "0.1.*"
 # TODO(sourcekit-helper): remove dirs crate
