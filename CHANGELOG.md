@@ -1,13 +1,95 @@
 # Changelog
 ## 🔥 [Unreleased](https://github.com/tami5/xbase)
 ### <!-- 0 -->Features
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/a307197fc66836e2a3de44bf74879627d03b8760">Use vim.notify</a></b> <code>#editor</code></summary></details></dd></dl>
+
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/73801509728418db3a6a3633ed6b189766ad11c3">Support xcworkspace (#101)</a></b> <code>#general</code> <u><b>....</b></u></summary><br />
 
 - When xcworkspace exists, use it instead of xcodeproj when compiling and recompiling projects.
 - When xcworkspace exists, build target are passed with `-scheme` flag, so targets and scheme need to have the same name.
 - speed up tuist setup through compiling the Manifest scheme instead of each target</details></dd></dl>
 
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/d9a2c288bd3838965b82c970334e143a0543a68a">Support multiple projects within a single instance</a></b> <code>#general</code></summary></details></dd></dl>
+
+### <!-- 1 -->Bug Fixes
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/bace0e278b3d009da7cd6ade4cc4b21155e1c802">Remove old logging interface</a></b> <code>#nvim</code> <u><b>....</b></u></summary><br />
+
+This errors when the users add no longer supported or invalid configuration key</details></dd></dl>
+
 ### <!-- 2 -->Refactor
+<dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/526e17ceaa5bdaf70df634a04eff08849a09d29c">Move out nvim specific logic (#103)</a></b> <code>#daemon</code> <u><b>....</b></u></summary><br />
+
+* init
+
+* chore(deps): update xclog and process-stream + refactor
+
+* ref: setup shared logger
+
+* ref: remove nvim-rs
+
+* feat: broadcast server
+
+* fix(editor): receiving multiple messages at the same time
+
+This just a hack because I couldn't pinpoint why is the client is
+receiving a bulk of message separated by newline
+
+* ref(editor): rename BroadcastMessage to Broadcast
+
+* feat(nvim): setup logger
+
+* fix: run/build commands
+
+* ref: logs
+
+* ref: remove log macros
+
+* ref: remove log_request
+
+* ref: remove client type, use root only
+
+* fix: status line updates
+
+* ref: rename editor to client
+
+* fix: watch status
+
+* feat(nvim): support custom notify
+
+* feat: respect user log level
+
+* enh(logger): format
+
+* fix(tuist): generate compile commands
+
+* ref: rename neovim to nvim
+
+* chore: cleanup
+
+* ref: move make try_register part of register
+
+* ref(client): register return bool
+
+* ref: move logging functionality to lua
+
+* ref: clean up
+
+* fix: open logger on error
+
+* feat: append generation logs on error only
+
+* ref(nvim): move logger buffer mappings to setup
+
+* fix(nvim): change log buffer change position if already opened
+
+* feat(nvim): add custom configurations for log_buffer
+
+* chore: add icon to error messages
+
+* feat(messages): success level
+
+* feat: update lsp server on compile files reloaded</details></dd></dl>
+
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/d5b4ea1ec33d6aea4f13f869cfcdcdb6a105b86e">Switch to tarpc framework</a></b> <code>#general</code></summary></details></dd></dl>
 
 <dl><dd><details><summary><b><a href="https://github.com/tami5/xbase/commit/f45bfbd40eb20cc7ced7c79943331bb0af8e2368">Rename lualib to editor-lib</a></b> <code>#general</code></summary></details></dd></dl>
