@@ -1,6 +1,4 @@
-#![allow(dead_code)]
-
-use crate::watch::InternalState;
+use super::state::InternalState;
 use notify::{Event as NotifyEvent, EventKind as NotifyEventKind};
 use std::{
     fmt,
