@@ -1,17 +1,18 @@
 use super::handler::RunServiceHandler;
 use crate::broadcast::Broadcast;
+use crate::project::ProjectImplementer;
 use crate::run::get_runner;
+use crate::store::devices;
+use crate::watch::WatchService;
 use crate::{
-    constants::State,
     device::Device,
     watch::{Event, Watchable},
     Result,
 };
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use tap::Pipe;
-use tokio::sync::Mutex;
-use tokio::sync::MutexGuard;
+use tokio::sync::{Mutex, OwnedMutexGuard};
 use xbase_proto::{BuildSettings, RunRequest};
 
 /// Run Service
@@ -31,9 +32,10 @@ impl std::fmt::Display for RunService {
 
 impl RunService {
     pub async fn new(
-        state: &mut MutexGuard<'_, State>,
+        project: &mut OwnedMutexGuard<ProjectImplementer>,
         req: RunRequest,
         broadcast: &Arc<Broadcast>,
+        watcher: Weak<Mutex<WatchService>>,
     ) -> Result<Self> {
         let weak_logger = Arc::downgrade(&broadcast);
         let key = req.to_string();
@@ -44,20 +46,12 @@ impl RunService {
             ..
         } = req;
         let target = &settings.target;
-        let device = state.devices.from_lookup(device);
+        let device = devices().from_lookup(device);
         let is_once = req.ops.is_once();
 
-        let process = get_runner(
-            state,
-            &root,
-            &settings,
-            device.as_ref(),
-            is_once,
-            &broadcast,
-        )
-        .await?;
+        let process = get_runner(project, &settings, device.as_ref(), is_once, &broadcast).await?;
 
-        let handler = RunServiceHandler::new(&key, target, &root, process, weak_logger)?
+        let handler = RunServiceHandler::new(&key, target, process, weak_logger, watcher)?
             .pipe(Mutex::new)
             .pipe(Arc::new);
 
@@ -75,16 +69,12 @@ impl RunService {
 impl Watchable for RunService {
     async fn trigger(
         &self,
-        state: &MutexGuard<State>,
+        project: &mut OwnedMutexGuard<ProjectImplementer>,
         _event: &Event,
         broadcast: &Arc<Broadcast>,
+        watcher: Weak<Mutex<WatchService>>,
     ) -> Result<()> {
-        let Self {
-            key,
-            root,
-            settings,
-            ..
-        } = self;
+        let Self { key, settings, .. } = self;
 
         let mut handler = self.handler.clone().lock_owned().await;
 
@@ -97,16 +87,16 @@ impl Watchable for RunService {
         *handler = RunServiceHandler::new(
             key,
             target,
-            root,
-            get_runner(state, root, settings, device, false, &broadcast).await?,
+            get_runner(project, settings, device, false, &broadcast).await?,
             Arc::downgrade(broadcast),
+            watcher,
         )?;
 
         Ok(())
     }
 
     /// A function that controls whether a a Watchable should restart
-    async fn should_trigger(&self, _state: &MutexGuard<State>, event: &Event) -> bool {
+    async fn should_trigger(&self, event: &Event) -> bool {
         event.is_content_update_event()
             || event.is_rename_event()
             || event.is_create_event()
@@ -115,12 +105,12 @@ impl Watchable for RunService {
     }
 
     /// A function that controls whether a watchable should be droped
-    async fn should_discard(&self, _state: &MutexGuard<State>, _event: &Event) -> bool {
+    async fn should_discard(&self, _event: &Event) -> bool {
         false
     }
 
     /// Drop watchable for watching a given file system
-    async fn discard(&self, _state: &MutexGuard<State>) -> Result<()> {
+    async fn discard(&self) -> Result<()> {
         let handler = self.handler.clone().lock_owned().await;
         handler.process().abort();
         handler.inner().abort();

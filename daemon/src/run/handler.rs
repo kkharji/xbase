@@ -1,9 +1,10 @@
 use crate::broadcast::Broadcast;
-use crate::{constants::DAEMON_STATE, Result};
+use crate::watch::WatchService;
+use crate::Result;
 use process_stream::ProcessExt;
 use process_stream::{Process, StreamExt};
-use std::path::PathBuf;
 use std::sync::Weak;
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use xbase_proto::StatuslineState;
 
@@ -18,27 +19,26 @@ impl RunServiceHandler {
     pub fn new(
         key: &String,
         target: &String,
-        root: &PathBuf,
         mut process: Process,
         broadcast: Weak<Broadcast>,
+        watcher: Weak<Mutex<WatchService>>,
     ) -> Result<Self> {
-        let (key, target, root) = (key.clone(), target.clone(), root.clone());
+        let (key, target) = (key.clone(), target.clone());
         let mut stream = process.spawn_and_stream()?;
         let abort = process.aborter().unwrap();
 
-        // broadcast.notify_info(format!("[{}] Running ⚙", cfg.target)?;
         let inner = tokio::spawn(async move {
             // TODO: find a better way to close this!
             //
             // Right now it just wait till the user try print something
             while let Some(output) = stream.next().await {
-                let state = DAEMON_STATE.clone();
-                let ref mut state = state.lock().await;
                 let ref mut broadcast = match broadcast.upgrade() {
                     Some(broadcast) => broadcast,
                     None => {
                         log::warn!("No client instance listening, closing runner ..");
-                        state.watcher.get_mut(&root)?.listeners.remove(&key);
+                        if let Some(watcher) = watcher.upgrade() {
+                            watcher.lock().await.listeners.remove(&key);
+                        }
                         abort.notify_waiters();
                         break;
                     }

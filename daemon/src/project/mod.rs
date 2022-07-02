@@ -7,14 +7,12 @@ use crate::broadcast::Broadcast;
 use crate::Result;
 use crate::{device::*, run::*, util::*, watch::*};
 use anyhow::Context;
-use barebone::BareboneProject;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use xbase_proto::{BuildSettings, TargetInfo};
 use xbase_proto::{PathExt, StatuslineState};
 use xclog::{XCBuildSettings, XCLogger};
-use {swift::*, tuist::*, xcodegen::*};
 
 /// Project Data
 pub trait ProjectData: std::fmt::Debug {
@@ -164,6 +162,7 @@ pub trait ProjectCompile: ProjectData {
             broadcast.reload_lsp_server();
             broadcast.success(format!("[{name}] Compiled "));
             broadcast.log_step(format!("[{name}] Compiled "));
+            broadcast.update_statusline(StatuslineState::Success);
             Ok(())
         } else {
             broadcast.error(format!("[{name}] Failed to generate compile commands "));
@@ -211,37 +210,67 @@ pub trait ProjectGenerate: ProjectData {
 #[async_trait::async_trait]
 /// Project Extension that can be built, ran and regenerated
 pub trait Project:
-    ProjectData
-    + ProjectBuild
-    + ProjectRun
-    + ProjectCompile
-    + ProjectGenerate
-    + Sync
-    + Send
-    + erased_serde::Serialize
+    ProjectData + ProjectBuild + ProjectRun + ProjectCompile + ProjectGenerate + Sync + Send
 {
     /// Create new project
     async fn new(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<Self>
     where
         Self: Sized;
+
+    /// Ensure Daemon support for given project
+    async fn ensure_server_support(
+        &mut self,
+        event: Option<&Event>,
+        broadcast: &Arc<Broadcast>,
+    ) -> Result<()> {
+        use crate::constants::BUILD_SERVER_CONFIG;
+        use tokio::fs::File;
+        use tokio::io::AsyncWriteExt;
+
+        let root = self.root();
+        let compile_path = root.join(".compile");
+        let is_swift_project = root.join("Package.swift").exists();
+
+        if !is_swift_project {
+            let build_server_path = root.join("buildServer.json");
+            if !build_server_path.exists() {
+                // NOTE: Use broadcast
+                log::info!("Creating {:?}", build_server_path);
+                let mut build_server_file = File::create(build_server_path).await?;
+                build_server_file.write_all(&BUILD_SERVER_CONFIG).await?;
+                build_server_file.sync_all().await?;
+                build_server_file.shutdown().await?;
+            }
+        };
+
+        if let Some(event) = event {
+            if self.should_generate(event) {
+                self.generate(broadcast).await?;
+                self.update_compile_database(broadcast).await?;
+            }
+        }
+
+        if !is_swift_project && !compile_path.exists() {
+            self.update_compile_database(broadcast).await.ok();
+        }
+        Ok(())
+    }
 }
 
-erased_serde::serialize_trait_object!(Project);
+/// Alias for Box Project
+pub type ProjectImplementer = Box<dyn Project + Send + Sync>;
 
 /// Create a project from given client
-pub async fn project(
-    root: &PathBuf,
-    broadcast: &Arc<Broadcast>,
-) -> Result<Box<dyn Project + Send + Sync>> {
-    if root.join("project.yml").exists() {
-        Ok(Box::new(XCodeGenProject::new(root, broadcast).await?))
+pub async fn project(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<ProjectImplementer> {
+    Ok(if root.join("project.yml").exists() {
+        Box::new(xcodegen::XCodeGenProject::new(root, broadcast).await?)
     } else if root.join("Project.swift").exists() {
-        Ok(Box::new(TuistProject::new(root, broadcast).await?))
+        Box::new(tuist::TuistProject::new(root, broadcast).await?)
     } else if root.join("Package.swift").exists() {
-        Ok(Box::new(SwiftProject::new(root, broadcast).await?))
+        Box::new(swift::SwiftProject::new(root, broadcast).await?)
     } else {
-        Ok(Box::new(BareboneProject::new(root, broadcast).await?))
-    }
+        Box::new(barebone::BareboneProject::new(root, broadcast).await?)
+    })
 }
 
 async fn generate_watchignore<P: AsRef<Path>>(root: P) -> Vec<String> {

@@ -4,13 +4,13 @@ mod service;
 mod simulator;
 
 use crate::broadcast::Broadcast;
-use crate::constants::{State, DAEMON_STATE};
 use crate::device::Device;
+use crate::project::ProjectImplementer;
+use crate::store::TryGetDaemonObject;
 use crate::Result;
 use process_stream::Process;
-use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::MutexGuard;
+use tokio::sync::OwnedMutexGuard;
 use xbase_proto::{BuildSettings, RunRequest, StatuslineState};
 
 pub use service::RunService;
@@ -30,32 +30,32 @@ pub async fn handle(req: RunRequest) -> Result<()> {
     log::trace!("{:#?}", req);
 
     let ref key = req.to_string();
-    let state = DAEMON_STATE.clone();
-    let ref mut state = state.lock().await;
-    let broadcast = state.broadcasters.get_or_init(&root).await?;
-    let broadcast = broadcast.upgrade().unwrap();
+    let broadcast = root.try_get_broadcast().await?;
+    let mut project = root.try_get_project().await?;
+
+    let watcher = req.root.try_get_mutex_watcher().await?;
+    let weak_watcher = Arc::downgrade(&watcher);
 
     if req.ops.is_once() {
         // TODO(run): might want to keep track of ran services
-        RunService::new(state, req, &broadcast).await?;
+        RunService::new(&mut project, req, &broadcast, weak_watcher).await?;
 
         return Ok(Default::default());
     }
 
+    let mut watcher = watcher.lock().await;
+
     if req.ops.is_watch() {
         broadcast.update_statusline(StatuslineState::Watching);
-        let watcher = state.watcher.get(&req.root)?;
         if watcher.contains_key(key) {
             broadcast.warn(format!("Already watching with {key}!!"));
         } else {
-            let run_service = RunService::new(state, req, &broadcast).await?;
-            let watcher = state.watcher.get_mut(&root)?;
+            let run_service = RunService::new(&mut project, req, &broadcast, weak_watcher).await?;
             watcher.add(run_service)?;
         }
     } else {
-        let watcher = state.watcher.get_mut(&req.root)?;
         let listener = watcher.remove(&req.to_string())?;
-        listener.discard(state).await?;
+        listener.discard().await?;
         broadcast.info(format!("[{}] Watcher Stopped", &req.settings.target));
         broadcast.update_statusline(StatuslineState::Clear);
     }
@@ -64,17 +64,17 @@ pub async fn handle(req: RunRequest) -> Result<()> {
 }
 
 async fn get_runner<'a>(
-    state: &'a MutexGuard<'_, State>,
-    root: &PathBuf,
+    project: &mut OwnedMutexGuard<ProjectImplementer>,
     settings: &BuildSettings,
     device: Option<&Device>,
     _is_once: bool,
     broadcast: &Arc<Broadcast>,
 ) -> Result<Process> {
     let target = &settings.target;
-    let project = state.projects.get(root)?;
     let device_name = device.map(|d| d.to_string()).unwrap_or("macOs".into());
+
     broadcast.info(format!("[{target}({device_name})] Running ⚙"));
+
     let (runner, args, mut recv) = project.get_runner(&settings, device, broadcast)?;
 
     broadcast.update_statusline(StatuslineState::Processing);

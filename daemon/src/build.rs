@@ -1,34 +1,38 @@
 use crate::broadcast::Broadcast;
-use crate::constants::{State, DAEMON_STATE};
-use crate::watch::{Event, Watchable};
+use crate::project::ProjectImplementer;
+use crate::store::TryGetDaemonObject;
+use crate::watch::{Event, WatchService, Watchable};
 use crate::Result;
 use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::sync::MutexGuard;
+use std::sync::{Arc, Weak};
+use tokio::sync::{Mutex, OwnedMutexGuard};
 use xbase_proto::{BuildRequest, StatuslineState};
 
 /// Handle build Request
 pub async fn handle(req: BuildRequest) -> Result<()> {
-    let state = DAEMON_STATE.clone();
-    let ref mut state = state.lock().await;
-    let broadcast = state.broadcasters.get(&req.root)?;
+    let broadcast = req.root.try_get_broadcast().await?;
     let target = &req.settings.target;
     // let args = &req.settings.to_string();
 
     log::trace!("{:#?}", req);
 
     if req.ops.is_once() {
-        req.trigger(state, &Event::default(), &broadcast).await?;
+        let mut project = req.root.try_get_project().await?;
+
+        req.trigger(&mut project, &Event::default(), &broadcast, Weak::new())
+            .await?;
         return Ok(());
     }
+
+    let mut watcher = req.root.try_get_watcher().await?;
 
     if req.ops.is_watch() {
         broadcast.success(format!("[{target}] Watching "));
         broadcast.update_statusline(StatuslineState::Watching);
-        state.watcher.get_mut(&req.root)?.add(req)?;
+        watcher.add(req)?;
     } else {
         broadcast.info(format!("[{}] Wathcer Stopped", &req.settings.target));
-        state.watcher.get_mut(&req.root)?.remove(&req.to_string())?;
+        watcher.remove(&req.to_string())?;
         broadcast.update_statusline(StatuslineState::Clear);
     }
 
@@ -39,16 +43,15 @@ pub async fn handle(req: BuildRequest) -> Result<()> {
 impl Watchable for BuildRequest {
     async fn trigger(
         &self,
-        state: &MutexGuard<State>,
+        project: &mut OwnedMutexGuard<ProjectImplementer>,
         _event: &Event,
         broadcast: &Arc<Broadcast>,
+        _watcher: Weak<Mutex<WatchService>>,
     ) -> Result<()> {
         broadcast.update_statusline(StatuslineState::Processing);
         let is_once = self.ops.is_once();
         let config = &self.settings;
-        let root = &self.root;
         let target = &self.settings.target;
-        let project = state.projects.get(root)?;
 
         if is_once {
             broadcast.info(format!("[{target}] Building ⚙"));
@@ -78,7 +81,7 @@ impl Watchable for BuildRequest {
     }
 
     /// A function that controls whether a a Watchable should restart
-    async fn should_trigger(&self, _state: &MutexGuard<State>, event: &Event) -> bool {
+    async fn should_trigger(&self, event: &Event) -> bool {
         event.is_content_update_event()
             || event.is_rename_event()
             || event.is_create_event()
@@ -87,12 +90,12 @@ impl Watchable for BuildRequest {
     }
 
     /// A function that controls whether a watchable should be droped
-    async fn should_discard(&self, _state: &MutexGuard<State>, _event: &Event) -> bool {
+    async fn should_discard(&self, _event: &Event) -> bool {
         false
     }
 
     /// Drop watchable for watching a given file system
-    async fn discard(&self, _state: &MutexGuard<State>) -> Result<()> {
+    async fn discard(&self) -> Result<()> {
         Ok(())
     }
 }

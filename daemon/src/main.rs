@@ -5,6 +5,7 @@ use tap::Pipe;
 use tokio::fs::{metadata, read_to_string, remove_file, write};
 use tokio::net::UnixListener;
 use xbase::constants::*;
+use xbase::store::{devices, TryGetDaemonObject};
 use xbase::util::pid;
 use xbase_proto::*;
 use xcodeproj::pbxproj::PBXTargetPlatform;
@@ -27,34 +28,26 @@ impl xbase_proto::XBase for Server {
     }
 
     async fn watching(self, _: Context, root: PathBuf) -> Result<Vec<String>> {
-        let state = DAEMON_STATE.lock().await;
-        Ok(state
-            .watcher
-            .get(&root)?
-            .listeners
-            .iter()
-            .map(|(k, _)| k.clone())
-            .collect())
+        root.try_get_watcher()
+            .await
+            .map(|w| w.listeners.iter().map(|(k, _)| k.clone()).collect())
     }
 
     async fn drop(self, _: Context, root: HashSet<PathBuf>) -> Result<()> {
         tokio::spawn(async { xbase::drop::handle(root).await });
         Ok(())
     }
+
     async fn targets(self, _: Context, root: PathBuf) -> Result<HashMap<String, TargetInfo>> {
-        let state = DAEMON_STATE.lock().await;
-        let project = state.projects.get(&root)?;
-        Ok(project.targets().clone())
+        root.try_get_project().await.map(|p| p.targets().clone())
     }
+
     async fn runners(
         self,
         _: Context,
         platform: PBXTargetPlatform,
     ) -> Result<Vec<HashMap<String, String>>> {
-        DAEMON_STATE
-            .lock()
-            .await
-            .devices
+        devices()
             .iter()
             .filter(|(_, d)| d.platform == platform)
             .map(|(id, d)| {
