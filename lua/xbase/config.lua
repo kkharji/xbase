@@ -122,6 +122,22 @@ consume_opts = function(startkey, d, m)
   end
 end
 
+config.set_log_level = function(new)
+  if type(new) == "string" then
+    config.values.log_level = vim.log.levels[string.upper(new)]
+    _XBASECONFIG.log_level = vim.log.levels[string.upper(new)]
+  elseif type(new) == "number" then
+    config.values.log_level = new
+    _XBASECONFIG.log_level = new
+  elseif type(config.values.log_level) == "string" then
+    local value = vim.log.levels[string.upper(config.values.log_level)]
+    config.values.log_level = value
+    _XBASECONFIG.log_level = value
+  elseif not (type(config.values.log_level) == "number") or config.values.log_level == nil then
+    config.values.log_level = 3
+    _XBASECONFIG.log_level = 3
+  end
+end
 --- Set or extend defaults configuration
 ---@param opts table?
 config.set = function(opts)
@@ -142,7 +158,8 @@ config.set = function(opts)
       config.values = _XBASECONFIG
     end
   end
-  config.values.log_level = vim.log.levels[string.upper(config.values.log_level)]
+
+  config.set_log_level(_XBASECONFIG.log_level)
 end
 
 config.set()
