@@ -110,7 +110,7 @@ use {
     run = 'make install', -- make free_space (not recommended, longer build time)
     requires = {
       "nvim-lua/plenary.nvim",
-      "nvim-telescope/telescope.nvim"
+      "nvim-telescope/telescope.nvim",
       "neovim/nvim-lspconfig"
     },
     config = function()
