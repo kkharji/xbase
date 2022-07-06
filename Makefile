@@ -11,10 +11,15 @@ lint:
 	nix-shell -p lua51Packages.luacheck --command 'luacheck lua/xbase && exit 0 || exit 1'
 
 watch:
-	cargo watch -x 'build -p xbase-sourcekit-helper -p xbase-client' -x 'run -p xbase' -w 'sourcekit' -w 'daemon' -w 'proto' -w 'client' -c
+	cargo watch --clear \
+	-x 'test -p xbase-client --features c-headers -- generate_headers' \
+	-x 'build -p xbase-sourcekit-helper -p xbase-client' \
+	-x 'run -p xbase' \
+	-w 'sourcekit' -w 'daemon' -w 'proto' -w 'client'
 
 clean:
 	rm -rf bin;
+	rm -rf build;
 	rm -rf lua/xbase_client.so
 
 install: clean
@@ -23,16 +28,21 @@ install: clean
 	cargo build --release
 	mv target/release/xbase                        ./bin/xbase
 	mv target/release/xbase-sourcekit-helper       ./bin/xbase-sourcekit-helper
-	mv target/release/libxbase_client.dylib        ./lua/xbase_client.so
+	mv target/release/libxbase_client.dylib        ./build/libxbase.so
+	$(MAKE) generate_headers
 	echo "DONE"
 
 install_debug: clean
-	mkdir bin
+	mkdir bin build
 	cargo build
 	ln -sf ../target/debug/xbase                       ./bin/xbase
 	ln -sf ../target/debug/xbase-sourcekit-helper      ./bin/xbase-sourcekit-helper
-	ln -sf ../target/debug/libxbase_client.dylib       ./lua/xbase_client.so
+	ln -sf ../target/debug/libxbase_client.dylib       ./build/libxbase.so
+	$(MAKE) generate_headers
 	echo "DONE"
 
 free_space:
 	cargo clean
+
+generate_headers:
+	cargo test -p xbase-client --features c-headers -- generate_headers

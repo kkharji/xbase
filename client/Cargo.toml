@@ -8,24 +8,28 @@ description = "XBase Editor editor library"
 crate-type = ["cdylib"]
 
 [dependencies]
+# FFI framework
+safer-ffi       = { version = "0.0.10", features = [  ] }
+
 # Libraries
+derive-deref-rs = "0.1.1"
+once_cell       = "1.12.0"
 tap             = "1.0.1"
-once_cell = "1.12.0"
+wax             = "0.5.0"
+os_pipe         = "1.0.1"
+
+# Serialization/Deserilization
+serde           = { version = "1.0.137", features = ["derive"] }
 serde_json      = "1.0.81"
 
-# RPC & Runtime
+# RPC and Runtime
 tokio           = { version = "1.19.2", features = ["net", "rt-multi-thread", "sync", "parking_lot"] }
 tarpc           = { version = "0.29.0" }
-xbase-proto     = { path = "../proto/", features = ["neovim"] }
-mlua            = { version = "0.8.0", features = ["luajit", "module", "vendored", "send", "serialize", "async", "macros"] }
-async-trait = "0.1.56"
-serde = { version = "1.0.137", features = ["derive"] }
-linemux = "0.2.3"
-process-stream = { version = "0.4.1", features = ["serde"] }
-async_once = "0.2.6"
-lazy_static = "1.4.0"
-os_pipe = "1.0.1"
-derive-deref-rs = "0.1.1"
-paste = "1.0.7"
-xcodeproj = "0.2.12"
-wax = "0.5.0"
+
+# XBase Protocol
+xbase-proto     = { path = "../proto/" }
+# Ony for PBXTargetPlatform type (todo: just pass strings)
+xcodeproj       = "0.2.12"
+
+[features]
+c-headers = [ "safer-ffi/headers" ]

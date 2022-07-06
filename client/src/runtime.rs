@@ -58,3 +58,32 @@ pub fn ensure_daemon() -> bool {
         true
     }
 }
+
+#[macro_export]
+macro_rules! request {
+    ($method:ident, $($arg:tt)*) => {
+        crate::runtime::rt().block_on(async move {
+            let rpc = crate::runtime::rpc().await;
+            let ctx = xbase_proto::context::current();
+            rpc.$method(ctx, $($arg)*).await
+        })
+    };
+}
+
+/// Generate headers
+#[::safer_ffi::cfg_headers]
+#[test]
+fn generate_headers() -> ::std::io::Result<()> {
+    let out_path = "../build/libxbase.h";
+    safer_ffi::headers::builder()
+        .to_file(out_path)?
+        .generate()?;
+    let gcc_output = std::process::Command::new("gcc")
+        .args(&["-xc", "-E", "-P", out_path])
+        .output()?;
+    if !gcc_output.status.success() {
+        panic!("Failed to gcc process ../build/libxbase.h");
+    }
+    std::fs::write(out_path, gcc_output.stdout)?;
+    Ok(())
+}

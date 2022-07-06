@@ -191,17 +191,3 @@ impl<T: std::fmt::Debug> From<tokio::sync::mpsc::error::SendError<T>> for Error 
         Self::SendError(format!("Channel closed, unable to send `{:?}`", v))
     }
 }
-
-#[cfg(feature = "neovim")]
-impl From<Error> for mlua::Error {
-    fn from(err: Error) -> Self {
-        Self::external(err)
-    }
-}
-
-#[cfg(feature = "neovim")]
-impl From<mlua::Error> for Error {
-    fn from(err: mlua::Error) -> Self {
-        Self::Unexpected(err.to_string())
-    }
-}

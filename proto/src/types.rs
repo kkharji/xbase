@@ -3,29 +3,12 @@ use std::fmt::Display;
 use strum::{Display as EnumDisplay, EnumString};
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
-#[cfg(feature = "neovim")]
-use mlua::prelude::*;
-
 /// Build Configuration to run
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
 pub enum BuildConfiguration {
     Debug,
     Release,
     Custom(String),
-}
-
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for BuildConfiguration {
-    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
-        use std::str::FromStr;
-        if let LuaValue::String(ref value) = value {
-            Self::from_str(value.to_str()?).to_lua_err()
-        } else {
-            Err(LuaError::external(
-                "Expected a string value for BuildConfiguration",
-            ))
-        }
-    }
 }
 
 /// Operation
@@ -38,19 +21,6 @@ pub enum Operation {
     Once,
 }
 
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for Operation {
-    fn from_lua(value: LuaValue<'a>, _lua: &'a Lua) -> LuaResult<Self> {
-        use std::str::FromStr;
-        if let LuaValue::String(value) = value {
-            let value = value.to_string_lossy();
-            Self::from_str(&*value).to_lua_err()
-        } else {
-            Ok(Operation::default())
-        }
-    }
-}
-
 /// Fields required to build a project
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BuildSettings {
@@ -60,23 +30,6 @@ pub struct BuildSettings {
     pub configuration: BuildConfiguration,
     /// Scheme to build with
     pub scheme: Option<String>,
-}
-
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for BuildSettings {
-    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
-        if let LuaValue::Table(table) = value {
-            Ok(Self {
-                target: table.get("target")?,
-                configuration: table.get("configuration")?,
-                scheme: table.get("scheme")?,
-            })
-        } else {
-            Err(LuaError::external(
-                "Expected a table value for BuildSettings",
-            ))
-        }
-    }
 }
 
 /// Fields required to build a project
@@ -109,38 +62,11 @@ pub enum BufferDirection {
     TabEdit,
 }
 
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for BufferDirection {
-    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
-        use std::str::FromStr;
-        if let LuaValue::String(value) = value {
-            let value = value.to_string_lossy();
-            Self::from_str(&*value).to_lua_err()
-        } else {
-            Ok(Self::Default)
-        }
-    }
-}
-
 /// Device Lookup information to run built project with
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DeviceLookup {
     pub name: Option<String>,
     pub id: Option<String>,
-}
-
-#[cfg(feature = "neovim")]
-impl<'a> FromLua<'a> for DeviceLookup {
-    fn from_lua(value: LuaValue<'a>, _: &'a Lua) -> LuaResult<Self> {
-        if let LuaValue::Table(table) = value {
-            Ok(Self {
-                name: table.get("name").ok(),
-                id: table.get("id").ok(),
-            })
-        } else {
-            Ok(Self::default())
-        }
-    }
 }
 
 impl Default for BufferDirection {
