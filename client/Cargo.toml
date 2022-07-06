@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # FFI framework
-safer-ffi       = { version = "0.0.10", features = [  ] }
+safer-ffi       = { version = "0.0.10", features = [ "derives" ] }
 
 # Libraries
 derive-deref-rs = "0.1.1"
@@ -27,7 +27,7 @@ tokio           = { version = "1.19.2", features = ["net", "rt-multi-thread", "s
 tarpc           = { version = "0.29.0" }
 
 # XBase Protocol
-xbase-proto     = { path = "../proto/" }
+xbase-proto     = { path = "../proto/", features = ["lib"] }
 # Ony for PBXTargetPlatform type (todo: just pass strings)
 xcodeproj       = "0.2.12"
 

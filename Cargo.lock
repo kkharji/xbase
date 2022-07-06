@@ -1432,6 +1432,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb9f9e6e233e5c4a35559a617bf40a4ec447db2e84c20b55a6f83167b7e57872"
 
 [[package]]
+name = "proc-macro-hack"
+version = "0.5.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbf0c48bc1d91375ae5c3cd81e3722dff1abcf81a30960240640d223f59fe0e5"
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1588,6 +1594,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49b3de9ec5dc0a3417da371aab17d729997c15010e7fd24ff707773a33bddb64"
 
 [[package]]
+name = "require_unsafe_in_body"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "296446f2214753e33792f632262451e8d037cd9697df15db2fd531bdce5a0138"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1623,6 +1640,8 @@ dependencies = [
  "inventory",
  "libc",
  "mini_paste",
+ "proc-macro-hack",
+ "require_unsafe_in_body",
  "safer_ffi-proc_macro",
 ]
 
@@ -1631,6 +1650,12 @@ name = "safer_ffi-proc_macro"
 version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc02dc034daa0944eb133b448f261ef7422ccae768e30f30ce5cdeb4ae4e506c"
+dependencies = [
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
 
 [[package]]
 name = "same-file"

@@ -30,4 +30,5 @@ xcodeproj = "0.2.12"
 
 [features]
 default = []
+lib = []
 server = [ "which", "notify", "simctl"]

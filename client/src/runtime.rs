@@ -1,12 +1,15 @@
 use once_cell::sync::Lazy;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::thread::JoinHandle;
 use std::{net::Shutdown, os::unix::net::UnixStream, process::Command};
 use tokio::{runtime::Runtime, sync::OnceCell};
 use xbase_proto::*;
 
-static ROOTS: Lazy<Mutex<HashSet<PathBuf>>> = Lazy::new(Default::default);
+/// ROOTS with their reader file descriptor and thread handling the writing
+static ROOTS: Lazy<Mutex<HashMap<PathBuf, (i32, JoinHandle<Result<()>>)>>> =
+    Lazy::new(Default::default);
 static CLIENT: OnceCell<XBaseClient> = OnceCell::const_new();
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("Tokio runtime"));
 static DAEMON_SOCKET_ADDRESS: &str = "/tmp/xbase.socket";
@@ -29,7 +32,7 @@ pub fn rt() -> &'static Runtime {
 }
 
 /// Get Registered roots
-pub fn roots() -> &'static Mutex<HashSet<PathBuf>> {
+pub fn roots() -> &'static Mutex<HashMap<PathBuf, (i32, JoinHandle<Result<()>>)>> {
     &*ROOTS
 }
 
@@ -69,6 +72,7 @@ macro_rules! request {
         })
     };
 }
+pub(crate) use request;
 
 /// Generate headers
 #[::safer_ffi::cfg_headers]

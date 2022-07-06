@@ -30,7 +30,7 @@ pub enum Error {
     DefinitionMutliFound,
     #[error("{0}")]
     Unexpected(String),
-    #[cfg(feature = "client")]
+    #[cfg(feature = "lib")]
     #[error("{0}")]
     RPC(#[from] tarpc::client::RpcError),
     #[error("{0}")]
@@ -74,7 +74,7 @@ impl From<&Error> for ErrorInner {
             Error::DefinitionLocating => res.kind = "DefinitionLocating".into(),
             Error::DefinitionMutliFound => res.kind = "DefinitionMutliFound".into(),
             Error::Unexpected(_) => res.kind = "General".into(),
-            #[cfg(feature = "client")]
+            #[cfg(feature = "lib")]
             Error::RPC(_) => res.kind = "RPC".into(),
             Error::JoinError(_) => res.kind = "JoinError".into(),
             Error::SendError(_) => res.kind = "SendError".into(),

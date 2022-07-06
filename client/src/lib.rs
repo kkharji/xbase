@@ -1,9 +1,14 @@
-#![allow(unused)]
+#![allow(unused, non_camel_case_types)]
 
+mod broadcast;
+mod register;
 mod runtime;
 
+use broadcast::Broadcast;
+use safer_ffi::layout::ReprC;
 use safer_ffi::prelude::*;
 use std::path::PathBuf;
+use tap::Pipe;
 use xbase_proto::*;
 
 #[ffi_export]

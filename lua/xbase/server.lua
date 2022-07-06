@@ -22,8 +22,23 @@ local library_path = (function()
 end)()
 
 local native = require("ffi").load(library_path)
-local output = native.xbase_hello()
 
-I(ffi.string(output))
+local root = "/lua/xbase/server.lua"
+local c_str = ffi.new("char[?]", #root + 1, root)
+-- ffi.copy(c_str, root)
+local output = native.xbase_register(c_str)
 
+I(output)
+
+--         local pipe = vim.loop.new_pipe()
+--         pipe:open(res.fd)
+--         pipe:read_start(function(err, chunk)
+--             assert(not err, err)
+--             if chunk then
+--                 vim.schedule(function()
+--                      let message = M.parse_brodcast_message(chunk)
+--                      $callback(chunk)
+--                  end)
+--             end
+--         end)
 return M
