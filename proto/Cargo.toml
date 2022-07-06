@@ -20,6 +20,7 @@ thiserror    = "1.0.31"
 which        = { version = "4.2.5", optional = true }
 notify       = { version = "4.0.17", optional = true }
 simctl       = { git = "https://github.com/xbase-lab/simctl", optional = true }
+serde_repr   = "0.1.8"
 
 tokio-serde  = { version = "0.8.0", features = ["bincode", "json"] }
 tokio-util   = { version = "0.6.9",  features = ["codec"] }

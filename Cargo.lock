@@ -2492,6 +2492,7 @@ dependencies = [
  "process-stream",
  "serde",
  "serde_json",
+ "serde_repr",
  "simctl",
  "strum",
  "tarpc",

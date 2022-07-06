@@ -1,11 +1,18 @@
 ---@type ffilib
 local ffi = require "ffi"
+local validate = vim.validate
 
 ---@class XBase
----@field xbase_hello function
 local M = {}
 
-local library_path = (function()
+local RegisterStatus = {
+  Registered = 0,
+  NotSupported = 1,
+  BroadcastSetupErrored = 2,
+  ServerErrored = 3,
+}
+
+local native = require("ffi").load((function()
   local source = debug.getinfo(1).source
   local build_path = ("%s../../build"):format(source:sub(2, #"/server.lua" * -1))
   local library_path = build_path .. "/libxbase.so"
@@ -19,26 +26,41 @@ local library_path = (function()
   ffi.cdef(table.concat(header_lines))
 
   return library_path
-end)()
+end)())
 
-local native = require("ffi").load(library_path)
+---Register given root and return true if the root is registered
+---@param root string
+---@return boolean
+function M.register(root)
+  local root_ptr = ffi.new("char[?]", #root + 1, root)
+  validate { root = { root, "string", false } }
 
-local root = "/lua/xbase/server.lua"
-local c_str = ffi.new("char[?]", #root + 1, root)
--- ffi.copy(c_str, root)
-local output = native.xbase_register(c_str)
+  require("xbase.log").setup()
+  -- TODO: schedule wrap?
 
-I(output)
+  ---@type xbase.register.response
+  local response = native.xbase_register(root_ptr)
+  local status = response.status
 
---         local pipe = vim.loop.new_pipe()
---         pipe:open(res.fd)
---         pipe:read_start(function(err, chunk)
---             assert(not err, err)
---             if chunk then
---                 vim.schedule(function()
---                      let message = M.parse_brodcast_message(chunk)
---                      $callback(chunk)
---                  end)
---             end
---         end)
+  if RegisterStatus.NotSupported == status then
+    return false
+  elseif RegisterStatus.BroadcastSetupErrored == status then
+    error "Registration failed, broadcast listener setup failed: Open Issue"
+  elseif RegisterStatus.ServerErrored == status then
+    error "Registration failed, Server Errored: Open Issue"
+  end
+
+  local parts = vim.split(root, "/")
+  local name = parts[#parts]:gsub("^%l", string.upper)
+
+  vim.notify(string.format("[{%s}] Connected ", name))
+
+  -- TODO: Should pipe be tracked and closed?
+
+  local pipe = vim.loop.new_pipe()
+  pipe:open(response.fd)
+  pipe:read_start(require "xbase.broadcast")
+  return true
+end
+
 return M

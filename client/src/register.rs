@@ -24,7 +24,7 @@ pub enum RegisterStatus {
     // Project root is not supported
     NotSupported,
     // Failed to setup broadcast writer
-    FailedToSetupBroadcastWriter,
+    BroadcastWriterSetupErrored,
     // Server returned an Error (TODO: the error must be known)
     ServerErrored,
 }
@@ -65,7 +65,7 @@ fn xbase_register(root: char_p::Ref<'_>) -> RegisterResponse {
         Ok(fd) => fd,
         Err(_) => {
             return RegisterResponse {
-                status: RegisterStatus::FailedToSetupBroadcastWriter,
+                status: RegisterStatus::BroadcastWriterSetupErrored,
                 fd: 0,
             }
         }

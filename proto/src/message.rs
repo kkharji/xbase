@@ -1,8 +1,10 @@
 use process_stream::ProcessItem;
 use serde::{Deserialize, Serialize};
+use serde_repr::*;
 
 /// Representation of Messages that clients needs to process
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum Message {
     /// Notify use with a message
     Notify { msg: String, level: MessageLevel },
@@ -12,86 +14,41 @@ pub enum Message {
     Execute(Task),
 }
 
-impl Message {
-    pub fn notify_error<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Error,
-        }
-    }
-
-    pub fn notify_warn<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Warn,
-        }
-    }
-
-    pub fn notify_trace<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Trace,
-        }
-    }
-
-    pub fn notify_debug<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Debug,
-        }
-    }
-
-    pub fn log_error<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Error,
-        }
-    }
-
-    pub fn log_info<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Error,
-        }
-    }
-
-    pub fn log_warn<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Warn,
-        }
-    }
-
-    pub fn log_trace<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Trace,
-        }
-    }
-
-    pub fn log_debug<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Debug,
-        }
-    }
-}
-
 /// Statusline state
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+#[serde(tag = "value")]
 pub enum StatuslineState {
-    /// Last task was successful
-    Success,
+    /// Clear statusline
+    Clear,
     /// Last task failed
     Failure,
     /// A Request is being processed.
     Processing,
-    /// Something is being watched.
-    Watching,
     /// that is currently running.
     Running,
-    /// Clear statusline
-    Clear,
+    /// Last task was successful
+    Success,
+    /// Something is being watched.
+    Watching,
+}
+
+/// Message Level
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum MessageLevel {
+    /// Trace Message
+    Trace,
+    /// Debug Message
+    Debug,
+    /// Info Message
+    Info,
+    /// Warn Message
+    Warn,
+    /// Error Message
+    Error,
+    /// Success Message
+    Success,
 }
 
 impl std::fmt::Display for StatuslineState {
@@ -109,71 +66,12 @@ impl std::fmt::Display for StatuslineState {
 }
 
 /// Tasks that the clients should execute
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(tag = "task")]
 pub enum Task {
-    UpdateStatusline(StatuslineState),
     OpenLogger,
     ReloadLspServer,
-}
-
-/// Message Kind
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[repr(u8)]
-pub enum MessageLevel {
-    /// Trace Message
-    Trace = 0,
-    /// Debug Message
-    Debug = 1,
-    /// Info Message
-    Info = 2,
-    /// Warn Message
-    Warn = 3,
-    /// Error Message
-    Error = 4,
-    /// Success Message
-    Success = 5,
-}
-
-impl MessageLevel {
-    /// Returns `true` if the message level is [`Trace`].
-    ///
-    /// [`Trace`]: MessageLevel::Trace
-    #[must_use]
-    pub fn is_trace(&self) -> bool {
-        matches!(self, Self::Trace)
-    }
-
-    /// Returns `true` if the message level is [`Debug`].
-    ///
-    /// [`Debug`]: MessageLevel::Debug
-    #[must_use]
-    pub fn is_debug(&self) -> bool {
-        matches!(self, Self::Debug)
-    }
-
-    /// Returns `true` if the message level is [`Info`].
-    ///
-    /// [`Info`]: MessageLevel::Info
-    #[must_use]
-    pub fn is_info(&self) -> bool {
-        matches!(self, Self::Info)
-    }
-
-    /// Returns `true` if the message level is [`Warn`].
-    ///
-    /// [`Warn`]: MessageLevel::Warn
-    #[must_use]
-    pub fn is_warn(&self) -> bool {
-        matches!(self, Self::Warn)
-    }
-
-    /// Returns `true` if the message level is [`Error`].
-    ///
-    /// [`Error`]: MessageLevel::Error
-    #[must_use]
-    pub fn is_error(&self) -> bool {
-        matches!(self, Self::Error)
-    }
+    UpdateStatusline(StatuslineState),
 }
 
 impl From<ProcessItem> for Message {
@@ -237,6 +135,71 @@ impl From<&str> for Message {
         Self::Notify {
             msg: value.to_string(),
             level: MessageLevel::Info,
+        }
+    }
+}
+
+impl Message {
+    pub fn notify_error<S: AsRef<str>>(value: S) -> Self {
+        Self::Notify {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Error,
+        }
+    }
+
+    pub fn notify_warn<S: AsRef<str>>(value: S) -> Self {
+        Self::Notify {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Warn,
+        }
+    }
+
+    pub fn notify_trace<S: AsRef<str>>(value: S) -> Self {
+        Self::Notify {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Trace,
+        }
+    }
+
+    pub fn notify_debug<S: AsRef<str>>(value: S) -> Self {
+        Self::Notify {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Debug,
+        }
+    }
+
+    pub fn log_error<S: AsRef<str>>(value: S) -> Self {
+        Self::Log {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Error,
+        }
+    }
+
+    pub fn log_info<S: AsRef<str>>(value: S) -> Self {
+        Self::Log {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Error,
+        }
+    }
+
+    pub fn log_warn<S: AsRef<str>>(value: S) -> Self {
+        Self::Log {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Warn,
+        }
+    }
+
+    pub fn log_trace<S: AsRef<str>>(value: S) -> Self {
+        Self::Log {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Trace,
+        }
+    }
+
+    pub fn log_debug<S: AsRef<str>>(value: S) -> Self {
+        Self::Log {
+            msg: value.as_ref().to_string(),
+            level: MessageLevel::Debug,
         }
     }
 }
