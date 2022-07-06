@@ -169,8 +169,8 @@ require("xbase.util").feline_provider() -- append to feline setup function
 ```lua
 -- NOTE: Defaults
 {
-  --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
-  log_level = "info",
+  --- Log level. Set to ERROR to ignore everything
+  log_level = vim.log.levels.DEBUG,
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },

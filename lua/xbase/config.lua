@@ -6,8 +6,8 @@ config.values = _XBASECONFIG
 
 ---@class xbaseOptions
 local defaults = {
-  --- Log level. Set to error to ignore everything: { "trace", "debug", "info", "warn", "error" }
-  log_level = "info",
+  --- Log level. Set to ERROR to ignore everything
+  log_level = vim.log.levels.DEBUG,
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },
@@ -70,7 +70,7 @@ end
 ---@param key string
 ---@return boolean: true if it should be if key skipped
 local should_skip_type_checking = function(key)
-  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates", "log_level" } do
+  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates" } do
     for _, k in ipairs(vim.split(key, "%.")) do
       if k:find(v) then
         return true
@@ -94,12 +94,16 @@ local check_type = function(dv, mv, trace)
   --- hmm I'm not sure about this.
   if dv == nil and not skip then
     if trace == "default_log_buffer_direction" then
-      error(("default_log_buffer_direction no longer valid, use log_buffer.default_direction instead"):format(trace))
+      error "default_log_buffer_direction no longer valid, use log_buffer.default_direction instead"
     else
       error(("Invalid configuration key: `%s`"):format(trace))
     end
   elseif dtype ~= mtype and not skip then
-    return print(("Unexpcted configuration value for `%s`, expected %s, got %s"):format(trace, dtype, mtype))
+    if trace == "log_level" then
+      error "`xbase.log_level` no longer support string values, use `vim.log.levels.*` instead"
+    else
+      print(("Unexpected configuration value for `xbase.%s`, expected %s, got %s"):format(trace, dtype, mtype))
+    end
   end
 
   return dtype
@@ -122,22 +126,6 @@ consume_opts = function(startkey, d, m)
   end
 end
 
-config.set_log_level = function(new)
-  if type(new) == "string" then
-    config.values.log_level = vim.log.levels[string.upper(new)]
-    _XBASECONFIG.log_level = vim.log.levels[string.upper(new)]
-  elseif type(new) == "number" then
-    config.values.log_level = new
-    _XBASECONFIG.log_level = new
-  elseif type(config.values.log_level) == "string" then
-    local value = vim.log.levels[string.upper(config.values.log_level)]
-    config.values.log_level = value
-    _XBASECONFIG.log_level = value
-  elseif not (type(config.values.log_level) == "number") or config.values.log_level == nil then
-    config.values.log_level = 3
-    _XBASECONFIG.log_level = 3
-  end
-end
 --- Set or extend defaults configuration
 ---@param opts table?
 config.set = function(opts)
@@ -158,8 +146,6 @@ config.set = function(opts)
       config.values = _XBASECONFIG
     end
   end
-
-  config.set_log_level(_XBASECONFIG.log_level)
 end
 
 config.set()

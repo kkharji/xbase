@@ -63,9 +63,7 @@ function M.toggle(vsplit, force)
 end
 
 function M.log(msg, level)
-  local config = require "xbase.config"
-  config.set_log_level()
-  local config = config.values
+  local config = require("xbase.config").values
 
   if #msg == 0 or config.log_level > level then
     return
