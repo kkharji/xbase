@@ -53,7 +53,7 @@ function M.register(root)
   local parts = vim.split(root, "/")
   local name = parts[#parts]:gsub("^%l", string.upper)
 
-  vim.notify(string.format("[{%s}] Connected ", name))
+  vim.notify(string.format("[%s] Connected ", name))
 
   -- TODO: Should pipe be tracked and closed?
 

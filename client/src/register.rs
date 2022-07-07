@@ -1,23 +1,22 @@
 use crate::broadcast::Broadcast;
 use crate::runtime;
-use safer_ffi::layout::ReprC;
-use safer_ffi::prelude::*;
+use std::ffi::CStr;
+use std::ops::Deref;
+// use safer_ffi::layout::ReprC;
+// use safer_ffi::prelude::*;
 use std::path::PathBuf;
 use tap::Pipe;
 use xbase_proto::*;
 
-#[ffi_export]
-#[derive_ReprC]
+/// Project root registeration response
 #[repr(C)]
 pub struct RegisterResponse {
     status: RegisterStatus,
     fd: i32,
 }
 
-// #[allow(incorrect_idnt_case)]
-#[ffi_export]
-#[derive_ReprC]
 #[repr(u8)]
+/// Project root registeration Status
 pub enum RegisterStatus {
     // Project root is registered successfully
     Registered,
@@ -29,11 +28,23 @@ pub enum RegisterStatus {
     ServerErrored,
 }
 
-#[ffi_export]
-fn xbase_register(root: char_p::Ref<'_>) -> RegisterResponse {
-    let root = root.to_str().pipe(PathBuf::from);
+// #[ffi_export]
+#[no_mangle]
+/// Register given root in xbase-daemon.
+///
+/// - Takes `root` of project; checks whether it the project root is supported.
+/// - Ensures that xbase-daemon is running.
+/// - Sends register request to the daemon.
+/// - Subscribes client to project root logging broadcast socket.
+///   NOTE: if the client is already subscribed, the function will return the cached raw_fd
+/// - Returns `RegisterResponse` with status and file description to read broadcast messages.
+pub extern "C" fn xbase_register(root: *const libc::c_char) -> RegisterResponse {
+    let root = unsafe { CStr::from_ptr(root) }
+        .to_string_lossy()
+        .deref()
+        .pipe(PathBuf::from);
 
-    // TODO: Skip for previously registered path
+    // NOTE: Should skip for previously registered path?
     if !(root.join("project.yml").exists()
         || root.join("Project.swift").exists()
         || root.join("Package.swift").exists()

@@ -12,7 +12,6 @@ lint:
 
 watch:
 	cargo watch --clear \
-	-x 'test -p xbase-client --features c-headers -- generate_headers' \
 	-x 'build -p xbase-sourcekit-helper -p xbase-client' \
 	-x 'run -p xbase' \
 	-w 'sourcekit' -w 'daemon' -w 'proto' -w 'client'
@@ -43,6 +42,3 @@ install_debug: clean
 
 free_space:
 	cargo clean
-
-generate_headers:
-	cargo test -p xbase-client --features c-headers -- generate_headers

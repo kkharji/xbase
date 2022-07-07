@@ -74,20 +74,20 @@ macro_rules! request {
 }
 pub(crate) use request;
 
-/// Generate headers
-#[::safer_ffi::cfg_headers]
-#[test]
-fn generate_headers() -> ::std::io::Result<()> {
-    let out_path = "../build/libxbase.h";
-    safer_ffi::headers::builder()
-        .to_file(out_path)?
-        .generate()?;
-    let gcc_output = std::process::Command::new("gcc")
-        .args(&["-xc", "-E", "-P", out_path])
-        .output()?;
-    if !gcc_output.status.success() {
-        panic!("Failed to gcc process ../build/libxbase.h");
-    }
-    std::fs::write(out_path, gcc_output.stdout)?;
-    Ok(())
-}
+// /// Generate headers
+// #[::safer_ffi::cfg_headers]
+// #[test]
+// fn generate_headers() -> ::std::io::Result<()> {
+//     let out_path = "../build/libxbase.h";
+//     safer_ffi::headers::builder()
+//         .to_file(out_path)?
+//         .generate()?;
+//     let gcc_output = std::process::Command::new("gcc")
+//         .args(&["-xc", "-E", "-P", out_path])
+//         .output()?;
+//     if !gcc_output.status.success() {
+//         panic!("Failed to gcc process ../build/libxbase.h");
+//     }
+//     std::fs::write("../build/libxbase_processed.h", gcc_output.stdout)?;
+//     Ok(())
+// }

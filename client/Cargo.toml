@@ -8,9 +8,6 @@ description = "XBase Editor editor library"
 crate-type = ["cdylib"]
 
 [dependencies]
-# FFI framework
-safer-ffi       = { version = "0.0.10", features = [ "derives" ] }
-
 # Libraries
 derive-deref-rs = "0.1.1"
 once_cell       = "1.12.0"
@@ -30,6 +27,8 @@ tarpc           = { version = "0.29.0" }
 xbase-proto     = { path = "../proto/", features = ["lib"] }
 # Ony for PBXTargetPlatform type (todo: just pass strings)
 xcodeproj       = "0.2.12"
+# C types
+libc = "0.2.126"
 
-[features]
-c-headers = [ "safer-ffi/headers" ]
+[build-dependencies]
+cbindgen = "0.24.3"
