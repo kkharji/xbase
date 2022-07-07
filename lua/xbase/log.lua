@@ -1,4 +1,3 @@
-local util = require "xbase.util"
 local M = { bufnr = nil }
 
 function M.setup()
@@ -17,7 +16,7 @@ function M.setup()
     end,
   })
 
-  util.bind(cfg.mappings, M.bufnr)
+  require("xbase.util").bind(cfg.mappings, M.bufnr)
   vim.keymap.set("n", "q", "close", { buffer = M.bufnr })
 
   return M.bufnr

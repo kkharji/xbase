@@ -6,20 +6,19 @@ local finder = require("telescope.finders").new_table
 local picker = require("telescope.pickers").new
 local sorter = require("telescope.config").values.generic_sorter
 local maker = require("telescope.pickers.entry_display").create
-local xbase = require "xbase"
+local server = require "xbase.server"
 local themes = require "telescope.themes"
 local util = require "xbase.util"
 
 local mappings = function(_, _)
-  action_set.select:replace(function(bufnr, direction)
+  action_set.select:replace(function(bufnr, _)
     a.close(bufnr)
     local entry = s.get_selected_entry()
-    entry.direction = direction
 
     if entry.command == "Build" then
-      xbase.build(entry)
+      server.build(entry)
     elseif entry.command == "Run" then
-      xbase.run(entry)
+      server.run(entry)
     end
   end)
 
@@ -56,9 +55,9 @@ end
 
 local get_selections = function(picker)
   local commands = picker == "Watch" and { "Build", "Run" } or { picker }
-  local targets = xbase.targets()
+  local targets = server.targets()
   local include_devices = picker == "Run" or picker == "Watch"
-  local watchlist = picker == "Watch" and xbase.watching() or {}
+  local watchlist = picker == "Watch" and server.watching() or {}
 
   if targets == nil then
     error "No targets found"
@@ -78,7 +77,7 @@ local get_selections = function(picker)
   for _, command in ipairs(commands) do
     for target, target_info in pairs(targets) do
       for _, configuration in ipairs(configurations) do
-        local devices = xbase.runners(target_info.platform)
+        local devices = server.runners(target_info.platform)
         if include_devices and command == "Run" and #devices ~= 0 then
           for _, device in ipairs(devices) do
             insert_entry(results, picker, command, target, configuration, watchlist, device)
