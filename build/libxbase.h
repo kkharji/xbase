@@ -9,23 +9,35 @@
 
 
 /**
- * Project root registeration Status
+ * Project root registration Status
  */
-enum RegisterStatus {
+enum XBaseRegisterStatus {
+  /**
+   * Project root is registered successfully
+   */
   Registered,
+  /**
+   * Project root is not supported
+   */
   NotSupported,
+  /**
+   * Failed to setup broadcast writer
+   */
   BroadcastWriterSetupErrored,
+  /**
+   * Server returned an Error
+   */
   ServerErrored,
 };
-typedef uint8_t RegisterStatus;
+typedef uint8_t XBaseRegisterStatus;
 
 /**
- * Project root registeration response
+ * Project root registration response
  */
-typedef struct RegisterResponse {
-  RegisterStatus status;
+typedef struct XBaseRegisterResponse {
+  XBaseRegisterStatus status;
   int32_t fd;
-} RegisterResponse;
+} XBaseRegisterResponse;
 
 /**
  * Register given root in xbase-daemon.
@@ -37,4 +49,4 @@ typedef struct RegisterResponse {
  *   NOTE: if the client is already subscribed, the function will return the cached raw_fd
  * - Returns `RegisterResponse` with status and file description to read broadcast messages.
  */
-struct RegisterResponse xbase_register(const char *root);
+struct XBaseRegisterResponse xbase_register(const char *root);

@@ -8,23 +8,24 @@ use std::path::PathBuf;
 use tap::Pipe;
 use xbase_proto::*;
 
-/// Project root registeration response
+/// Project root registration response
 #[repr(C)]
 pub struct RegisterResponse {
     status: RegisterStatus,
     fd: i32,
 }
-
+// TODO: Provide an interface for xbase_proto errors
+// see https://rust-unofficial.github.io/patterns/idioms/ffi/errors.html
 #[repr(u8)]
-/// Project root registeration Status
+/// Project root registration Status
 pub enum RegisterStatus {
-    // Project root is registered successfully
+    /// Project root is registered successfully
     Registered,
-    // Project root is not supported
+    /// Project root is not supported
     NotSupported,
-    // Failed to setup broadcast writer
+    /// Failed to setup broadcast writer
     BroadcastWriterSetupErrored,
-    // Server returned an Error (TODO: the error must be known)
+    /// Server returned an Error
     ServerErrored,
 }
 

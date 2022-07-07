@@ -41,16 +41,6 @@ pub struct TargetInfo {
     pub watching: bool,
 }
 
-#[cfg(feature = "neovim")]
-impl<'a> ToLua<'a> for TargetInfo {
-    fn to_lua(self, lua: &'a Lua) -> LuaResult<LuaValue<'a>> {
-        let table = lua.create_table()?;
-        table.set("platform", self.platform.to_string())?;
-        table.set("watching", self.watching)?;
-        Ok(LuaValue::Table(table))
-    }
-}
-
 /// Log Buffer open direction
 #[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
 #[strum(ascii_case_insensitive)]

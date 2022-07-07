@@ -46,7 +46,7 @@ include = []
 exclude = []
 item_types = []
 renaming_overrides_prefixing = false
-# prefix = "CAPI_"
+prefix = "XBase"
 
 [export.rename]
 
