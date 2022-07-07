@@ -8,8 +8,6 @@ use std::{fmt::Display, path::PathBuf};
 pub struct BuildRequest {
     pub root: PathBuf,
     pub settings: BuildSettings,
-    #[serde(deserialize_with = "value_or_default")]
-    pub direction: BufferDirection,
     pub ops: Operation,
 }
 
@@ -20,8 +18,6 @@ pub struct RunRequest {
     pub settings: BuildSettings,
     #[serde(deserialize_with = "value_or_default")]
     pub device: DeviceLookup,
-    #[serde(deserialize_with = "value_or_default")]
-    pub direction: BufferDirection,
     #[serde(deserialize_with = "value_or_default")]
     pub ops: Operation,
 }

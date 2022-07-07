@@ -12,13 +12,15 @@ pub enum BuildConfiguration {
 }
 
 /// Operation
-///
-/// Should request be executed once, stoped (if watched) or start new watch service?
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
+#[repr(u8)]
 pub enum Operation {
-    Watch,
-    Stop,
+    /// Execute the requested operation once
     Once,
+    /// Start a watch service the requested operation
+    WatchStart,
+    /// Start existing service the requested operation
+    WatchStop,
 }
 
 /// Fields required to build a project
@@ -34,6 +36,7 @@ pub struct BuildSettings {
 
 /// Fields required to build a project
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[repr(C)]
 pub struct TargetInfo {
     /// Configuration to build with, default Debug
     pub platform: PBXTargetPlatform,
@@ -41,28 +44,12 @@ pub struct TargetInfo {
     pub watching: bool,
 }
 
-/// Log Buffer open direction
-#[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
-#[strum(ascii_case_insensitive)]
-#[serde(untagged)]
-pub enum BufferDirection {
-    Default,
-    Vertical,
-    Horizontal,
-    TabEdit,
-}
-
 /// Device Lookup information to run built project with
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[repr(C)]
 pub struct DeviceLookup {
     pub name: Option<String>,
     pub id: Option<String>,
-}
-
-impl Default for BufferDirection {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 
 impl Default for Operation {
@@ -92,12 +79,12 @@ impl BuildSettings {
 }
 
 impl Operation {
-    /// Returns `true` if the request kind is [`Watch`].
+    /// Returns `true` if the request kind is [`WatchStart`].
     ///
-    /// [`Watch`]: RequestKind::Watch
+    /// [`WatchStart`]: RequestKind::WatchStart
     #[must_use]
     pub fn is_watch(&self) -> bool {
-        matches!(self, Self::Watch)
+        matches!(self, Self::WatchStart)
     }
 
     /// Returns `true` if the request kind is [`WatchStop`].
@@ -105,7 +92,7 @@ impl Operation {
     /// [`WatchStop`]: RequestKind::WatchStop
     #[must_use]
     pub fn is_stop(&self) -> bool {
-        matches!(self, Self::Stop)
+        matches!(self, Self::WatchStop)
     }
 
     /// Returns `true` if the request kind is [`Once`].
@@ -114,17 +101,5 @@ impl Operation {
     #[must_use]
     pub fn is_once(&self) -> bool {
         matches!(self, Self::Once)
-    }
-}
-
-impl BufferDirection {
-    pub fn to_nvim_command(&self, bufnr: i64) -> String {
-        match self {
-            // TOOD: support build log float as default
-            BufferDirection::Default => format!("sbuffer {bufnr}"),
-            BufferDirection::Vertical => format!("vert sbuffer {bufnr}"),
-            BufferDirection::Horizontal => format!("sbuffer {bufnr}"),
-            BufferDirection::TabEdit => format!("tabe {bufnr}"),
-        }
     }
 }
