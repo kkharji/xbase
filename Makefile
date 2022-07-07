@@ -28,7 +28,6 @@ install: clean
 	mv target/release/xbase                        ./bin/xbase
 	mv target/release/xbase-sourcekit-helper       ./bin/xbase-sourcekit-helper
 	mv target/release/libxbase_client.dylib        ./build/libxbase.so
-	$(MAKE) generate_headers
 	echo "DONE"
 
 install_debug: clean
@@ -37,7 +36,6 @@ install_debug: clean
 	ln -sf ../target/debug/xbase                       ./bin/xbase
 	ln -sf ../target/debug/xbase-sourcekit-helper      ./bin/xbase-sourcekit-helper
 	ln -sf ../target/debug/libxbase_client.dylib       ./build/libxbase.so
-	$(MAKE) generate_headers
 	echo "DONE"
 
 free_space:
