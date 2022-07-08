@@ -1977,6 +1977,10 @@ dependencies = [
  "serde",
  "serde_json",
  "tap",
+ "tracing",
+ "tracing-appender",
+ "tracing-attributes",
+ "tracing-subscriber",
  "xclog",
 ]
 
