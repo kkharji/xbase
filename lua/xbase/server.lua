@@ -74,6 +74,8 @@ function M.register(root)
     local broadcaster = socket:connect(broadcast_address)
     broadcaster:read_start(require "xbase.broadcast")
 
+    M.roots[#M.roots + 1] = root
+
     -- Fill state with available runners
     if not require("xbase.state").runners then
       M.request({ method = "get_runners" }, function(runners)
@@ -108,7 +110,7 @@ end
 function M.drop(root)
   M.request {
     method = "drop",
-    roots = not root and M.roots or { root },
+    roots = root == nil and M.roots or { root },
   }
 end
 

@@ -38,6 +38,10 @@ local function execute(msg)
 end
 
 return function(chunk)
+  if chunk == nil then
+    return
+  end
+
   vim.schedule(function()
     local messages = get_messages(chunk)
 
