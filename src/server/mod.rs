@@ -26,20 +26,22 @@ pub enum Request {
     Drop(DropRequest),
     /// Get targets information for a registers project with a given root
     GetTargets(GetTargetsRequest),
-    /// Get runners for given platform
+    /// Get available runners
     GetRunners(GetRunnersRequest),
 }
 
 /// Server Response
 #[derive(Default, Debug, Serialize)]
 pub struct Response {
+    #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<Error>,
 }
 
 impl Request {
     pub async fn handle(self) -> Response {
-        match self {
+        let response = match self {
             // TODO: return a raw_fd
             Request::Register(req) => req.handle().await.pipe(Response::new),
             Request::Build(req) => req.handle().await.pipe(Response::new),
@@ -47,7 +49,9 @@ impl Request {
             Request::Drop(req) => req.handle().await.pipe(Response::new),
             Request::GetTargets(req) => req.handle().await.pipe(Response::new),
             Request::GetRunners(req) => req.handle().await.pipe(Response::new),
-        }
+        };
+        tracing::info!("{response:#?}");
+        response
     }
 }
 
