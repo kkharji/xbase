@@ -36,6 +36,11 @@ function M.is_watching(config, command, device, watchlist)
   return false
 end
 
+function M.project_name(root)
+  local parts = vim.split(root, "/")
+  return parts[#parts]:gsub("^%l", string.upper)
+end
+
 function M.try_map(key, fun, bufnr)
   if type(key) == "string" then
     vim.keymap.set("n", key, fun, { buffer = bufnr and bufnr or true })
