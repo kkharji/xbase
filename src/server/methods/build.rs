@@ -11,7 +11,7 @@ use tokio::sync::{Mutex, OwnedMutexGuard};
 pub struct BuildRequest {
     pub root: PathBuf,
     pub settings: BuildSettings,
-    pub ops: Operation,
+    pub operation: Operation,
 }
 
 impl fmt::Display for BuildRequest {
@@ -29,7 +29,7 @@ impl RequestHandler<()> for BuildRequest {
 
         tracing::trace!("{:#?}", self);
 
-        if self.ops.is_once() {
+        if self.operation.is_once() {
             let mut project = self.root.try_get_project().await?;
 
             self.trigger(&mut project, &Event::default(), &broadcast, Weak::new())
@@ -39,7 +39,7 @@ impl RequestHandler<()> for BuildRequest {
 
         let mut watcher = self.root.try_get_watcher().await?;
 
-        if self.ops.is_watch() {
+        if self.operation.is_watch() {
             broadcast.success(format!("[{target}] Watching "));
             broadcast.update_statusline(StatuslineState::Watching);
             watcher.add(self)?;
@@ -63,7 +63,7 @@ impl Watchable for BuildRequest {
         _watcher: Weak<Mutex<WatchService>>,
     ) -> Result<()> {
         broadcast.update_statusline(StatuslineState::Processing);
-        let is_once = self.ops.is_once();
+        let is_once = self.operation.is_once();
         let config = &self.settings;
         let target = &self.settings.target;
 

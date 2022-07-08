@@ -15,7 +15,7 @@ pub struct RunRequest {
     #[serde(deserialize_with = "util::de::value_or_default")]
     pub device: DeviceLookup,
     #[serde(deserialize_with = "util::de::value_or_default")]
-    pub ops: Operation,
+    pub operation: Operation,
 }
 
 impl fmt::Display for RunRequest {
@@ -43,7 +43,7 @@ impl RequestHandler<()> for RunRequest {
         let watcher = self.root.try_get_mutex_watcher().await?;
         let weak_watcher = Arc::downgrade(&watcher);
 
-        if self.ops.is_once() {
+        if self.operation.is_once() {
             // TODO(run): might want to keep track of ran services
             // RunService::new(&mut project, self, &broadcast, weak_watcher).await?;
             self.into_service(&broadcast, weak_watcher, &mut project)
@@ -54,7 +54,7 @@ impl RequestHandler<()> for RunRequest {
 
         let mut watcher = watcher.lock().await;
 
-        if self.ops.is_watch() {
+        if self.operation.is_watch() {
             broadcast.update_statusline(StatuslineState::Watching);
             if watcher.contains_key(key) {
                 broadcast.warn(format!("Already watching with {key}!!"));
@@ -86,7 +86,7 @@ impl RunRequest {
             self.root,
             self.settings,
             self.device,
-            self.ops,
+            self.operation,
             broadcast,
             watcher,
             project,
