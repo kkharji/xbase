@@ -24,10 +24,10 @@ pub enum Request {
     Run(RunRequest),
     /// Drop projects at a given roots
     Drop(DropRequest),
-    /// Get targets information for a registers project with a given root
-    GetTargets(GetTargetsRequest),
     /// Get available runners
     GetRunners(GetRunnersRequest),
+    /// Get project info that might change between calls, like targets or watchlist
+    GetProjectInfo(GetProjectInfoRequest),
 }
 
 /// Server Response
@@ -47,8 +47,8 @@ impl Request {
             Request::Build(req) => req.handle().await.pipe(Response::new),
             Request::Run(req) => req.handle().await.pipe(Response::new),
             Request::Drop(req) => req.handle().await.pipe(Response::new),
-            Request::GetTargets(req) => req.handle().await.pipe(Response::new),
             Request::GetRunners(req) => req.handle().await.pipe(Response::new),
+            Request::GetProjectInfo(req) => req.handle().await.pipe(Response::new),
         };
         tracing::info!("{response:#?}");
         response
