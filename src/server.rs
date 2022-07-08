@@ -41,27 +41,21 @@ pub struct Response {
 
 impl Request {
     pub async fn handle(self) -> Response {
-        let response = match self {
-            // TODO: return a raw_fd
-            Request::Register(req) => req.handle().await.pipe(Response::new),
-            Request::Build(req) => req.handle().await.pipe(Response::new),
-            Request::Run(req) => req.handle().await.pipe(Response::new),
-            Request::Drop(req) => req.handle().await.pipe(Response::new),
-            Request::GetRunners(req) => req.handle().await.pipe(Response::new),
-            Request::GetProjectInfo(req) => req.handle().await.pipe(Response::new),
-        };
-        tracing::info!("{response:#?}");
-        response
-    }
-}
-
-impl Response {
-    pub fn new<T: Serialize>(v: Result<T>) -> Self {
-        let mut response = Self::default();
-        match v {
-            Ok(data) => response.data = serde_json::to_value(data).unwrap().into(),
-            Err(error) => response.error = error.into(),
-        };
-        response
+        fn as_response<T: Serialize>(v: Result<T>) -> Response {
+            let mut response = Response::default();
+            match v {
+                Ok(data) => response.data = serde_json::to_value(data).unwrap().into(),
+                Err(error) => response.error = error.into(),
+            };
+            response
+        }
+        match self {
+            Request::Register(req) => req.handle().await.pipe(as_response),
+            Request::Build(req) => req.handle().await.pipe(as_response),
+            Request::Run(req) => req.handle().await.pipe(as_response),
+            Request::Drop(req) => req.handle().await.pipe(as_response),
+            Request::GetRunners(req) => req.handle().await.pipe(as_response),
+            Request::GetProjectInfo(req) => req.handle().await.pipe(as_response),
+        }
     }
 }

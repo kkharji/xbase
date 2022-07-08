@@ -45,7 +45,7 @@ end
 ---Check whether the vim instance should be registered to xbase server.
 ---@param root string: current working directory
 ---@return boolean
-M.should_register = function(root)
+function M.should_register(root)
   if uv.fs_stat(root .. "/project.yml") then
     return true
   elseif uv.fs_stat(root .. "/Project.swift") then
@@ -85,18 +85,6 @@ function M.register(root)
   end)
 end
 
----Send ubild request
-function M.build(args)
-  args.method = "build"
-  M.request(args)
-end
-
----Send run request
-function M.run(args)
-  args.method = "run"
-  M.request(args)
-end
-
 ---Get Project information
 function M.get_project_info(root, on_response)
   M.request({
@@ -108,10 +96,17 @@ end
 ---Drop a given root or drop all tracked roots if root is nil
 ---@param root string?
 function M.drop(root)
-  M.request {
+  local roots = {}
+  if root ~= nil then
+    roots[1] = root
+  else
+    roots = M.roots
+  end
+  M.socket:write {
     method = "drop",
-    roots = root == nil and M.roots or { root },
+    roots = roots,
   }
+  -- M.socket:close()
 end
 
 return M

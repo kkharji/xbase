@@ -14,14 +14,11 @@ local state = require "xbase.state"
 local mappings = function(_, _)
   action_set.select:replace(function(bufnr, _)
     a.close(bufnr)
-    local entry = s.get_selected_entry()
+    local req = s.get_selected_entry()
 
-    entry.display = nil
-    if entry.command == "Build" then
-      server.build(entry)
-    elseif entry.command == "Run" then
-      server.run(entry)
-    end
+    req.method = string.lower(req.command)
+    req.display = nil
+    server.request(req)
   end)
 
   return true
@@ -33,7 +30,7 @@ local insert_entry = function(acc, picker, command, target, configuration, watch
     settings = { target = target, configuration = configuration },
   }
 
-  if command == "Run" then
+  if command == "run" then
     item.device = device
   end
 
