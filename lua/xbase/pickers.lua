@@ -11,6 +11,12 @@ local themes = require "telescope.themes"
 local util = require "xbase.util"
 local state = require "xbase.state"
 
+local C = {
+  Run = "Run",
+  Build = "Build",
+  Watch = "Watch",
+}
+
 local mappings = function(_, _)
   action_set.select:replace(function(bufnr, _)
     a.close(bufnr)
@@ -30,11 +36,11 @@ local insert_entry = function(acc, picker, command, target, configuration, watch
     settings = { target = target, configuration = configuration },
   }
 
-  if command == "run" then
+  if command == C.Run then
     item.device = device
   end
 
-  if picker == "Watch" then
+  if picker == C.Watch then
     if util.is_watching(item.settings, command, item.device, watchlist) then
       item.operation = "Stop"
       item.kind = command
@@ -53,9 +59,9 @@ local insert_entry = function(acc, picker, command, target, configuration, watch
 end
 
 local get_selections = function(project_info, picker)
-  local commands = picker == "Watch" and { "Build", "Run" } or { picker }
+  local commands = picker == C.Watch and { C.Build, C.Run } or { picker }
   local targets = project_info.targets
-  local include_devices = picker == "Run" or picker == "Watch"
+  local include_devices = picker == C.Run or picker == C.Watch
   local watchlist = picker == "Watch" and project_info.watchlist or {}
 
   if targets == nil then
@@ -77,7 +83,7 @@ local get_selections = function(project_info, picker)
     for target, target_info in pairs(targets) do
       for _, configuration in ipairs(configurations) do
         local devices = state.runners[target_info.platform]
-        if include_devices and command == "Run" and not (devices == nil or #devices == 0) then
+        if include_devices and command == C.Run and not (devices == nil or #devices == 0) then
           for _, device in ipairs(devices) do
             insert_entry(results, picker, command, target, configuration, watchlist, device)
           end
@@ -170,15 +176,15 @@ local find = function(name, opts)
 end
 
 M.watch = function(opts)
-  find("Watch", opts)
+  find(C.Watch, opts)
 end
 
 M.build = function(opts)
-  find("Build", opts)
+  find(C.Build, opts)
 end
 
 M.run = function(opts)
-  find("Run", opts)
+  find(C.Run, opts)
 end
 
 M.actions = function(opts)
@@ -192,9 +198,9 @@ M.actions = function(opts)
       prompt_title = "Pick Xbase Action Category",
       finder = finder {
         results = {
-          { value = "Watch" },
-          { value = "Build" },
-          { value = "Run" },
+          { value = C.Build },
+          { value = C.Watch },
+          { value = C.Run },
         },
         entry_maker = function(entry)
           entry.ordinal = entry.value
@@ -221,11 +227,11 @@ M.actions = function(opts)
             return
           end
 
-          if selected.value == "Watch" then
+          if selected.value == C.Watch then
             M.watch(opts)
-          elseif selected.value == "Build" then
+          elseif selected.value == C.Build then
             M.build(opts)
-          elseif selected.value == "Run" then
+          elseif selected.value == C.Run then
             M.run(opts)
           end
         end)
