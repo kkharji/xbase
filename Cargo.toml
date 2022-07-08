@@ -1,14 +1,62 @@
+[package]
+name = "xbase"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+
+# Logging
+tracing               = { version = "0.1.32" }
+tracing-attributes    = { version = "0.1.21" }
+tracing-appender      = { version = "0.2.1"  }
+tracing-subscriber    = { version = "0.3.9",  features = ["env-filter"]  }
+
+# Error Handling
+anyhow                = { version = "^1.0.58" }
+thiserror             = { version = "1.0.31" }
+
+# Serialization Feature
+serde                 = { version = "1.0",    features = ["derive"] }
+serde_json            = { version = "1.0.79" }
+serde_repr            = { version = "0.1.8" }
+strum                 = { version = "0.24.0",  features = ["derive"] }
+
+# Async Runtime Feature
+tokio                 = { version = "1.19.2", features = ["full"] }
+tokio-util            = { version = "0.7.3", features = ["codec"] }
+tokio-serde           = { version = "0.8.0", features = ["json"] }
+futures               = { version = "0.3.21" }
+async-trait           = { version = "0.1.52" }
+async-stream          = { version = "0.3.3" }
+parity-tokio-ipc      = { version = "0.9.0" }
+process-stream        = { version = "0.4.*", features = ["serde"] }
+once_cell             = { version = "1.12.0"  }
+
+# Filesystem watcher
+notify                = { version = "5.0.0-pre.13" }
+dirs                  = { version = "4.0" }
+wax                   = { version = "0.5.0" }
+
+# Other
+tap                   = { version = "1.0.1" }
+xclog                 = { version  = "0.3.*",  features = ["with_tracing"] }
+simctl                = { git = "https://github.com/xbase-lab/simctl" }
+derive-deref-rs       = { version = "0.1.1"}
+shell-words           = { version  = "1.1.0" }
+xcodeproj             = { version = "0.2.*" }
+
+# Unix Api
+libc                  = { version = "0.2.126" }
+libproc               = { version = "0.12.0"  }
+paste                 = { version = "1.0.7"   }
+which                 = { version = "4.2.5"   }
+os_pipe               = { version = "1.0.1"   }
+
 [workspace]
-members = [
-  # Shared protocol
-  "proto",
-  # sourcekit build server helper
-  "sourcekit",
-  # Main xbase daemon
-  "daemon",
-  # library to communicate with the daemon
-  "client",
-]
+members = [ "crates/*" ]
+
+[dev-dependencies]
+tracing-test = "0.2.2"
 
 [profile.dev]
 debug = 0
