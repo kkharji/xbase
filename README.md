@@ -23,10 +23,6 @@ An XCode replacement-ish *development environment* that aims to be your reliable
 
 Furthermore, [XBase] has built-in support for a variety of XCode project generators, which allow you to avoid launching XCode or manually editing '*.xcodeproj' anytime you add or remove files. We strongly advise you to use one ... at least till [XBase] supports adding/removing files and folders, along with other requirements. ([💆 Generators](#-generators))
 
-- Watch [XBase] repo to remain up to date on fresh improvements and exciting new features.
-- Checkout [Milestones](https://github.com/tami5/xbase/milestones) for planned future features and releases.
-- Visit [CONTRIBUTING.md] to have your setup to start contributing and support the project.
-
 Please be aware that [XBase] is still **WIP**, so don't hesitate to report bugs, ask questions or suggest new exciting features.
 
 
@@ -98,15 +94,13 @@ issue
 ## 🦾 Installation
 
 To install [XBase] on your system you need run `make install`. This will run `cargo build
---release` on all the required binaries in addition to a lua library. The binaries will be
-moved to `path/to/repo/bin` and the lua library will be moved to
-`path/to/repo/lua/xbase_editor_lib.so`.
+--release` and resulting binrary to `~/.local/share/xbase/`.
 
 
 #### With [packer]
 ```lua
 use {
-  'tami5/xbase',
+  'xbase-lab/xbase',
     run = 'make install', -- make free_space (not recommended, longer build time)
     requires = {
       "nvim-lua/plenary.nvim",
@@ -124,7 +118,7 @@ use {
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'neovim/nvim-lspconfig'
-Plug 'tami5/xbase', { 'do': 'make install' }
+Plug 'xbase-lab/xbase', { 'do': 'make install' }
 lua require'xbase'.setup()
 ```
 
@@ -133,7 +127,7 @@ lua require'xbase'.setup()
 call dein#add('nvim-lua/plenary.nvim')
 call dein#add('nvim-telescope/telescope.nvim')
 call dein#add('neovim/nvim-lspconfig')
-call dein#add('tami5/xbase', { 'build': 'make install' })
+call dein#add('xbase-lab/xbase', { 'build': 'make install' })
 lua require'xbase'.setup()
 ```
 
@@ -226,9 +220,9 @@ to check logs. The following is how you can have a stream of logs in your termin
 
 ```bash
 # Daemon logs
-tail -f /tmp/xbase-daemon.log
+tail -f /tmp/xbase.log
 # Build Server logs
-tail -f /tmp/xbase-server.log
+tail -f /tmp/xbase-build-server.log
 ```
 
 In case, you need to manually stop servers:
@@ -248,8 +242,8 @@ statusline get updated.
 
 [xcodegen]: https://github.com/yonaskolb/XcodeGen
 [sourcekit-lsp]: https://github.com/apple/sourcekit-lsp
-[XBase]: https://github.com/tami5/xbase
-[xcodebuild]: https://github.com/tami5/xcodebuild
+[XBase]: https://github.com/xbase-lab/xbase
+[xcodebuild]: https://github.com/xbase-lab/xcodebuild
 [feline]: https://github.com/feline-nvim/feline.nvim
 [XVim2]: https://github.com/XVimProject/XVim2
 [rust]: https://www.rust-lang.org
@@ -262,7 +256,7 @@ statusline get updated.
 [plenary.nvim]: https://github.com/nvim-lua/plenary.nvim
 [neovim]: https://github.com/neovim/neovim
 [tuist]: https://github.com/tuist/tuist
-[CONTRIBUTING.md]: ./CONTRIBUTING.md
+[dev.md]: ./dev.md
 [lspconfig]: https://github.com/neovim/nvim-lspconfig
 [sourcekit-setup]: https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#sourcekit
 [apple]: https://github.com/apple

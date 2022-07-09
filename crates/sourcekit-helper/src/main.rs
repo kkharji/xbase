@@ -248,7 +248,7 @@ fn handle_message(conn: &Conn, msg: Message) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    tracing_setup::setup("/tmp/", "xbase-server.log", Level::DEBUG, false)?;
+    tracing_setup::setup("/tmp/", "xbase-build-server.log", Level::DEBUG, false)?;
 
     let (conn, io_threads) = Connection::stdio();
     tracing::info!("Started");
