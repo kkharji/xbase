@@ -20,7 +20,7 @@ use extensions::*;
 use helpers::*;
 
 static SERVER_NAME: &str = "Xbase";
-static SERVER_VERSION: &str = "0.2";
+static SERVER_VERSION: &str = "0.3";
 static STATE: OnceCell<Mutex<State>> = OnceCell::new();
 
 type Conn = Connection;
@@ -80,6 +80,7 @@ fn initialize(params: &InitializeBuild) -> Result<InitializeBuild> {
 fn get_compile_args<'a>(path: impl AsRef<Path>) -> Result<XCCompileArgs> {
     let mut state = state().lock().unwrap();
     let path = path.as_ref();
+    let file_name = path.file_name().and_then(|v| v.to_str()).unwrap();
 
     if state.last_modified != std::fs::metadata(&state.compile_filepath)?.modified()? {
         state.compile_db = XCCompilationDatabase::try_from_filepath(&state.compile_filepath)?;
@@ -87,10 +88,10 @@ fn get_compile_args<'a>(path: impl AsRef<Path>) -> Result<XCCompileArgs> {
     }
 
     if state.file_args.contains_key(path) {
-        tracing::debug!("Using Cached file args ...");
+        tracing::debug!("[{file_name}] Using Cached file args");
         state.file_args.get(path)
     } else {
-        tracing::debug!("Querying compile_db ...");
+        tracing::debug!("[{file_name}] Querying compile_db");
         let file_args = state
             .compile_db
             .iter()

@@ -1,7 +1,11 @@
 $(VERBOSE).SILENT:
 .PHONY: test
 default: test
-RELEASE_ROOT:target/release
+
+DEBUG_ROOT=target/release
+RELEASE_ROOT=target/release
+XBASE_LOCAL_ROOT=~/.local/share/xbase
+ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 test:
 	cargo test --workspace
@@ -11,27 +15,24 @@ lint:
 	nix-shell -p lua51Packages.luacheck --command 'luacheck lua/xbase && exit 0 || exit 1'
 
 watch:
-	cargo watch -x 'build' -x 'run xbase' -w 'crates' -w 'src' -c
+	cargo watch -x 'build -p xbase-sourcekit-helper' -x 'run xbase' -w 'crates' -w 'src' -c
 
 clean:
-	rm -rf bin;
-	rm -rf lua/xbase_client.so
+	rm -rf $(XBASE_LOCAL_ROOT) bin
 
 install: clean
 	killall xbase xbase-sourcekit-helper || true
-	mkdir bin
-	cargo build --release
-	mv target/release/xbase                        ./bin/xbase
-	mv target/release/xbase-sourcekit-helper       ./bin/xbase-sourcekit-helper
-	mv target/release/libxbase_client.dylib        ./lua/xbase_client.so
+	mkdir $(XBASE_LOCAL_ROOT)
+	cargo build -p xbase -p xbase-sourcekit-helper --release
+	mv target/release/xbase                        $(XBASE_LOCAL_ROOT)/xbase
+	mv target/release/xbase-sourcekit-helper       $(XBASE_LOCAL_ROOT)/xbase-sourcekit-helper
 	echo "DONE"
 
 install_debug: clean
-	mkdir bin
-	cargo build
-	ln -sf ../target/debug/xbase                       ./bin/xbase
-	ln -sf ../target/debug/xbase-sourcekit-helper      ./bin/xbase-sourcekit-helper
-	ln -sf ../target/debug/libxbase_client.dylib       ./lua/xbase_client.so
+	mkdir $(XBASE_LOCAL_ROOT)
+	cargo build -p xbase -p xbase-sourcekit-helper
+	ln -sf $(ROOT_DIR)/target/debug/xbase                       $(XBASE_LOCAL_ROOT)/xbase
+	ln -sf $(ROOT_DIR)/target/debug/xbase-sourcekit-helper      $(XBASE_LOCAL_ROOT)/xbase-sourcekit-helper
 	echo "DONE"
 
 free_space:

@@ -229,28 +229,36 @@ pub trait Project:
 
         /// Server Config
         static BUILD_SERVER_CONFIG: Lazy<Vec<u8>> = Lazy::new(|| {
-            let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .unwrap()
-                .to_path_buf();
-            if cfg!(debug_assertions) {
-                root.extend(&["target", "debug", "xbase-sourcekit-helper"]);
-            } else {
-                root.extend(&["bin", "xbase-sourcekit-helper"]);
-            }
-            let json = serde_json::json!({
+            let mut sourcekit_helper_bin = dirs::home_dir().unwrap();
+            sourcekit_helper_bin.extend([".local", "share", "xbase", "xbase-sourcekit-helper"]);
+            serde_json::json!({
                 "name": "XBase",
-                "argv": [root],
-                "version": "0.2",
+                "argv": [sourcekit_helper_bin],
+                "version": "0.3",
                 "bspVersion": "0.2",
                 "languages": ["swift", "objective-c", "objective-cpp", "c", "cpp"]
-            });
-            json.to_string().into_bytes()
+            })
+            .to_string()
+            .into_bytes()
         });
 
         if !is_swift_project {
             let build_server_path = root.join("buildServer.json");
-            if !build_server_path.exists() {
+            let build_server_file_exists = build_server_path.exists();
+
+            let outdated = if build_server_file_exists {
+                let content = tokio::fs::read(&build_server_path).await?;
+                serde_json::from_slice::<serde_json::Value>(&content)
+                    .unwrap()
+                    .get("version")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v != "0.3")
+                    .unwrap_or_default()
+            } else {
+                false
+            };
+
+            if !build_server_path.exists() || outdated {
                 // NOTE: Use broadcast
                 tracing::info!("Creating {:?}", build_server_path);
                 let mut build_server_file = File::create(build_server_path).await?;
