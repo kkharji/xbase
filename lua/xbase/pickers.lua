@@ -21,9 +21,11 @@ local mappings = function(_, _)
   action_set.select:replace(function(bufnr, _)
     a.close(bufnr)
     local req = s.get_selected_entry()
+    req.display = nil
 
     req.method = string.lower(req.command)
-    req.display = nil
+    req.args = req
+
     server.request(req)
   end)
 

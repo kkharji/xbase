@@ -5,7 +5,7 @@ use typescript_definitions::TypeScriptify;
 
 /// Representation of Messages that clients needs to process
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeScriptify)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "args")]
 pub enum Message {
     /// Notify use with a message
     Notify { msg: String, level: MessageLevel },
