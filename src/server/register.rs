@@ -6,7 +6,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-#[derive(Debug, Serialize, Deserialize)]
+/// Register a project root
+#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct RegisterRequest {
     root: PathBuf,
 }

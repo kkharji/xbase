@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
+use typescript_definitions::TypeScriptify;
 
-#[derive(Deserialize, Serialize)]
-pub struct ErrorInner {
+/// Server Error due to failure while processing a `Request
+#[derive(Deserialize, Serialize, TypeScriptify)]
+pub struct ServerError {
     kind: String,
-    message: String,
+    msg: String,
 }
 
 #[derive(ThisError, Debug)]
@@ -38,28 +40,28 @@ pub enum Error {
     MessageParse(String),
 }
 
-impl From<ErrorInner> for Error {
-    fn from(v: ErrorInner) -> Self {
+impl From<ServerError> for Error {
+    fn from(v: ServerError) -> Self {
         match v.kind.as_str() {
-            "Setup" => Self::Setup(v.message),
-            "Build" => Self::Build(v.message),
-            "Run" => Self::Run(v.message),
+            "Setup" => Self::Setup(v.msg),
+            "Build" => Self::Build(v.msg),
+            "Run" => Self::Run(v.msg),
             "Generate" => Self::Generate,
-            "DefinitionParsing" => Self::DefinitionParsing(v.message),
+            "DefinitionParsing" => Self::DefinitionParsing(v.msg),
             "DefinitionLocating" => Self::DefinitionLocating,
             "DefinitionMutliFound" => Self::DefinitionMutliFound,
-            "SendError" => Self::SendError(v.message),
-            "MessageParse" => Self::MessageParse(v.message),
-            _ => Self::Unexpected(v.message),
+            "SendError" => Self::SendError(v.msg),
+            "MessageParse" => Self::MessageParse(v.msg),
+            _ => Self::Unexpected(v.msg),
         }
     }
 }
 
-impl From<&Error> for ErrorInner {
+impl From<&Error> for ServerError {
     fn from(err: &Error) -> Self {
-        let mut res = ErrorInner {
+        let mut res = ServerError {
             kind: Default::default(),
-            message: err.to_string(),
+            msg: err.to_string(),
         };
         match err {
             Error::Setup(_) => res.kind = "Setup".into(),
@@ -85,7 +87,7 @@ impl Serialize for Error {
     where
         S: serde::Serializer,
     {
-        ErrorInner::from(self).serialize(serializer)
+        ServerError::from(self).serialize(serializer)
     }
 }
 
@@ -94,7 +96,7 @@ impl<'de> Deserialize<'de> for Error {
     where
         D: serde::Deserializer<'de>,
     {
-        let error_inner = ErrorInner::deserialize(deserializer)?;
+        let error_inner = ServerError::deserialize(deserializer)?;
         Ok(error_inner.into())
     }
 }

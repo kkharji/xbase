@@ -2,8 +2,8 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use tap::Pipe;
 
-/// All the requests that xbase can handle
-#[derive(Debug, Serialize, Deserialize)]
+/// Requests clinets can make
+#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
 #[serde(tag = "method", rename_all = "snake_case")]
 pub enum Request {
     /// Register project root and get broadcaster reader file description
@@ -15,7 +15,7 @@ pub enum Request {
     /// Drop projects at a given roots
     Drop(DropRequest),
     /// Get available runners
-    GetRunners(GetRunnersRequest),
+    GetRunners,
     /// Get project info that might change between calls, like targets or watchlist
     GetProjectInfo(GetProjectInfoRequest),
 }
@@ -27,7 +27,7 @@ impl Request {
             Request::Build(req) => req.handle().await.pipe(Response::new),
             Request::Run(req) => req.handle().await.pipe(Response::new),
             Request::Drop(req) => req.handle().await.pipe(Response::new),
-            Request::GetRunners(req) => req.handle().await.pipe(Response::new),
+            Request::GetRunners => super::runners::handle().await.pipe(Response::new),
             Request::GetProjectInfo(req) => req.handle().await.pipe(Response::new),
         }
     }

@@ -1,11 +1,13 @@
 use crate::{error::Error, types::Result};
 use serde::Serialize;
+use serde_json::Value;
+use typescript_definitions::TypeScriptify;
 
 /// Server Response
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, TypeScriptify)]
 pub struct Response {
     #[serde(skip_serializing_if = "Option::is_none")]
-    data: Option<serde_json::Value>,
+    data: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<Error>,
 }

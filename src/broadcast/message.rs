@@ -1,9 +1,10 @@
 use process_stream::ProcessItem;
 use serde::{Deserialize, Serialize};
 use serde_repr::*;
+use typescript_definitions::TypeScriptify;
 
 /// Representation of Messages that clients needs to process
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeScriptify)]
 #[serde(tag = "type")]
 pub enum Message {
     /// Notify use with a message
@@ -15,8 +16,7 @@ pub enum Message {
 }
 
 /// Statusline state
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[serde(rename_all = "snake_case")]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify)]
 pub enum StatuslineState {
     /// Clear statusline
     Clear,
@@ -33,7 +33,9 @@ pub enum StatuslineState {
 }
 
 /// Message Level
-#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify,
+)]
 #[repr(u8)]
 pub enum MessageLevel {
     /// Trace Message
@@ -65,7 +67,7 @@ impl std::fmt::Display for StatuslineState {
 }
 
 /// Tasks that the clients should execute
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify)]
 #[serde(tag = "task")]
 pub enum Task {
     OpenLogger,

@@ -8,7 +8,8 @@ mod run;
 mod runners;
 pub mod stream;
 
-use {
+use typescript_definitions::TypeScriptify;
+pub use {
     build::*, drop::*, project_info::*, register::*, request::*, response::*, run::*, runners::*,
 };
 

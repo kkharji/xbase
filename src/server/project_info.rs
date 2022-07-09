@@ -5,12 +5,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize)]
+/// Request to Get `ProjectInfo`
+#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct GetProjectInfoRequest {
     root: PathBuf,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TypeScriptify)]
 pub struct ProjectInfo {
     /// Get watched configurations for given root
     watchlist: Vec<String>,
