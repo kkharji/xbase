@@ -8,55 +8,73 @@ mod types;
 mod util;
 mod watcher;
 
-use futures::{FutureExt, SinkExt, TryStreamExt};
-use once_cell::sync::Lazy;
-use tap::Pipe;
-use tokio::net::UnixListener;
-use tracing::Level;
-use util::pid;
-use xcodeproj::pbxproj::PBXTargetPlatform;
-use {
-    broadcast::*, error::*, project::*, runner::*, server::*, state::*, types::*, util::*,
-    watcher::*,
-};
+use {broadcast::*, error::*, project::*, runner::*, state::*, types::*, util::*, watcher::*};
+
+/// Future that await and processes for os signals.
+async fn handle_os_signals() -> Result<()> {
+    use futures::stream::StreamExt;
+    use signal_hook::consts::signal::*;
+    use signal_hook_tokio::Signals;
+
+    let sep = util::fmt::separator();
+    let mut signals = Signals::new(&[SIGHUP, SIGTERM, SIGINT, SIGQUIT])?;
+
+    while let Some(signal) = signals.next().await {
+        match signal {
+            SIGHUP => {}
+            SIGINT => {
+                tracing::warn!("\n{sep}\nServer Stopped: Interruption Signal (Ctrl + C)\n{sep}");
+                break;
+            }
+            SIGQUIT => {
+                tracing::warn!("{sep}\nServer Stopped: Quit Signal (Ctrl + D)\n{sep}");
+                break;
+            }
+
+            SIGTERM => {
+                tracing::warn!("\n{sep}\nServer Stopped: Termination Signal\n{sep}");
+                break;
+            }
+            _ => unreachable!(),
+        }
+    }
+    Ok(())
+}
 
 #[tokio::main]
+// TODO: store futures somewhere, to gracefully close connection to clients
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    use fs::cleanup_daemon_runtime;
+    use tokio::fs::write;
+    use tokio::net::UnixListener;
+    use tokio::{pin, select};
+    use tracing::info;
+    use tracing_setup::setup as tracing_setup;
+
+    let os_signal_handler = tokio::spawn(handle_os_signals());
     let sock_addr = "/tmp/xbase.socket";
     let pid_path = "/tmp/xbase.pid";
+    let sep = util::fmt::separator();
+    let listener = {
+        tracing_setup("/tmp", "xbase-daemon.log", tracing::Level::DEBUG, true)?;
+        cleanup_daemon_runtime(pid_path, sock_addr).await?;
+        write(pid_path, std::process::id().to_string()).await?;
+        UnixListener::bind(sock_addr).unwrap()
+    };
 
-    tracing_setup::setup("/tmp", "xbase-daemon.log", Level::DEBUG, true)?;
-    fs::ensure_one_instance(pid_path, sock_addr).await?;
-
-    let listener = UnixListener::bind(sock_addr).unwrap();
-
-    tracing::info!("Server Started!");
+    pin!(os_signal_handler);
+    info!("\n{sep}\nServer Started\n{sep}");
 
     loop {
-        if let Ok((mut stream, _)) = listener.accept().await {
-            tracing::debug!("Received new connection");
-            tokio::spawn(async move {
-                let (mut reader, mut writer) = server::stream::split(&mut stream);
-                loop {
-                    match reader.try_next().await {
-                        Ok(Some(request)) => {
-                            request
-                                .handle()
-                                .then(|res| writer.send(res))
-                                .await
-                                .map_err(|err| tracing::error!("Fail to send response: {err}"))
-                                .ok();
-                        }
-                        Ok(None) => {
-                            tracing::info!("Closing a connection to a client");
-                            break;
-                        }
-                        Err(err) => tracing::error!("Fail to read request: {err:#?}"),
-                    };
-                }
-            });
-        } else {
-            tracing::error!("Fail to accept a connection")
+        select! {
+            Ok((stream, _)) = listener.accept() => tokio::spawn(server::handle(stream)),
+            _ = &mut os_signal_handler => break,
         };
     }
+
+    drop(listener);
+
+    cleanup_daemon_runtime(pid_path, sock_addr).await?;
+
+    Ok(())
 }

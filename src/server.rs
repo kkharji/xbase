@@ -1,10 +1,11 @@
 mod methods;
-pub mod stream;
+mod stream;
 
 use crate::{error::Error, types::Result};
 use methods::*;
 use serde::{Deserialize, Serialize};
 use tap::Pipe;
+use tokio::net::UnixStream;
 
 /// Trait that must be implemented by All Request members
 #[async_trait::async_trait]
@@ -58,4 +59,27 @@ impl Request {
             Request::GetProjectInfo(req) => req.handle().await.pipe(as_response),
         }
     }
+}
+
+/// Future that await and process client requests.
+pub async fn handle(mut stream: UnixStream) {
+    use futures::{FutureExt, SinkExt, TryStreamExt};
+
+    tracing::info!("Handling a new client");
+    let (mut reader, mut writer) = stream::split(&mut stream);
+    loop {
+        match reader.try_next().await {
+            Ok(Some(request)) => {
+                request
+                    .handle()
+                    .then(|res| writer.send(res))
+                    .await
+                    .map_err(|err| tracing::error!("Fail to send response: {err}"))
+                    .ok();
+            }
+            Err(err) => tracing::error!("Fail to read request: {err:#?}"),
+            Ok(None) => break,
+        }
+    }
+    tracing::info!("Disconnecting a client");
 }

@@ -1,9 +1,10 @@
 use std::{ffi::OsStr, fmt::Display, string::String};
 
+#[allow(dead_code)]
 /// Kill process using kill command
 pub async fn kill(pid_str: &String) -> anyhow::Result<bool> {
     Ok(tokio::process::Command::new("kill")
-        .arg("-9")
+        .arg("-15")
         .arg(pid_str)
         .output()
         .await?

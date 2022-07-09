@@ -16,7 +16,7 @@ pub fn get_dirname_dir_root(path: impl AsRef<Path>) -> Option<String> {
 }
 
 /// Ensure single socket server and process running
-pub async fn ensure_one_instance(pid_path: &'static str, sock_addr: &'static str) -> Result<()> {
+pub async fn cleanup_daemon_runtime(pid_path: &'static str, sock_addr: &'static str) -> Result<()> {
     if fs::metadata(sock_addr).await.ok().is_some() {
         fs::remove_file(sock_addr).await.ok();
         if fs::metadata(pid_path).await.ok().is_some() {
@@ -24,12 +24,9 @@ pub async fn ensure_one_instance(pid_path: &'static str, sock_addr: &'static str
                 .await?
                 .pipe_ref(super::pid::kill)
                 .await?;
+            fs::remove_file(pid_path).await.ok();
         }
-        fs::remove_file(pid_path).await.ok();
     }
-
-    fs::write(pid_path, std::process::id().to_string()).await?;
-
     Ok(())
 }
 

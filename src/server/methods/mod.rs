@@ -1,3 +1,4 @@
+use super::RequestHandler;
 mod build;
 mod drop;
 mod project_info;

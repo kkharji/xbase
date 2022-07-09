@@ -6,6 +6,7 @@ mod xcodegen;
 use crate::util::PathExt;
 use crate::*;
 use anyhow::Context;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

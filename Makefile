@@ -29,6 +29,7 @@ install: clean
 	echo "DONE"
 
 install_debug: clean
+	killall xbase xbase-sourcekit-helper || true
 	mkdir $(XBASE_LOCAL_ROOT)
 	cargo build -p xbase -p xbase-sourcekit-helper
 	ln -sf $(ROOT_DIR)/target/debug/xbase                       $(XBASE_LOCAL_ROOT)/xbase
