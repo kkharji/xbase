@@ -16,18 +16,18 @@ local MessageType = {
 }
 
 local handlers = {
-  [MessageType.Log] = function(item)
-    if #item.msg > 0 then
-      logger.log(item.msg, item.level)
+  [MessageType.Log] = function(args)
+    if #args.msg > 0 then
+      logger.log(args.msg, args.level)
     end
   end,
-  [MessageType.Notify] = function(item)
-    notify(item.msg, item.level)
+  [MessageType.Notify] = function(args)
+    notify(args.msg, args.level)
   end,
-  [MessageType.Execute] = function(item)
-    local task = item.task
+  [MessageType.Execute] = function(args)
+    local task = args.task
     if Task.UpdateStatusline == task then
-      vim.g.xbase_watch_build_status = item.value
+      vim.g.xbase_watch_build_status = args.value
     elseif Task.OpenLogger == task then
       logger.toggle(nil, false)
     elseif Task.ReloadLspServer == task then
@@ -44,7 +44,7 @@ function M.start(address)
     for _, chunk in ipairs(vim.split(chunk, "\n")) do
       local item = vim.json.decode(chunk)
       vim.schedule(function()
-        handlers[item.type](item)
+        handlers[item.type](item.args)
       end)
     end
   end)

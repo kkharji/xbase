@@ -89,8 +89,14 @@ function M.register(root)
   validate { root = { root, "string", false } }
 
   require("xbase.logger").setup()
+  local req = {
+    method = "register",
+    args = {
+      root = root,
+    },
+  }
 
-  M.request({ method = "register", root = root }, function(broadcast_address)
+  M.request(req, function(broadcast_address)
     notify.info(("[%s] Connected "):format(util.project_name(root)))
 
     broadcast.start(broadcast_address)
@@ -110,7 +116,9 @@ end
 function M.get_project_info(root, on_response)
   M.request({
     method = "get_project_info",
-    root = root,
+    args = {
+      root = root,
+    },
   }, on_response)
 end
 
@@ -119,7 +127,9 @@ end
 function M.drop(roots)
   M.request {
     method = "drop",
-    roots = type(roots) == "string" and { roots } or roots,
+    args = {
+      roots = type(roots) == "string" and { roots } or roots,
+    },
   }
 end
 

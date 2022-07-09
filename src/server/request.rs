@@ -4,7 +4,7 @@ use tap::Pipe;
 
 /// Requests clinets can make
 #[derive(Debug, Serialize, Deserialize, TypeScriptify)]
-#[serde(tag = "method", rename_all = "snake_case")]
+#[serde(tag = "method", content = "args", rename_all = "snake_case")]
 pub enum Request {
     /// Register project root and get broadcaster reader file description
     Register(RegisterRequest),
