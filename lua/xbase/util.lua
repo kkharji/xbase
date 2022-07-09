@@ -36,6 +36,11 @@ function M.is_watching(config, command, device, watchlist)
   return false
 end
 
+function M.project_name(root)
+  local parts = vim.split(root, "/")
+  return parts[#parts]:gsub("^%l", string.upper)
+end
+
 function M.try_map(key, fun, bufnr)
   if type(key) == "string" then
     vim.keymap.set("n", key, fun, { buffer = bufnr and bufnr or true })
@@ -49,11 +54,11 @@ function M.bind(m, bufnr)
   M.try_map(m.watch_picker, pickers.watch, bufnr)
   M.try_map(m.all_picker, pickers.actions, bufnr)
   M.try_map(m.toggle_split_log_buffer, function()
-    require("xbase.log").toggle(false, true)
+    require("xbase.logger").toggle(false, true)
   end, bufnr)
 
   M.try_map(m.toggle_vsplit_log_buffer, function()
-    require("xbase.log").toggle(true, true)
+    require("xbase.logger").toggle(true, true)
   end, bufnr)
 end
 

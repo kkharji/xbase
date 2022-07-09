@@ -6,7 +6,7 @@ header = """
 # template for the changelog body
 # https://tera.netlify.app/docs/#introduction
 body = """
-{%- set repo = "https://github.com/tami5/xbase" -%}\
+{%- set repo = "https://github.com/xbase-lab/xbase" -%}\
 
 {% if version %}\
     ## 🎉 [{{ version }}]({{ repo }}/tree/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
