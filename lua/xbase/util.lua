@@ -70,19 +70,19 @@ function M.feline_provider()
       local config = config.statusline
       local status = vim.g.xbase_watch_build_status
 
-      if status == "processing" then
+      if status == "Processing" then
         icon.str = config.running.icon
         icon.hl = { fg = config.running.color }
-      elseif status == "running" then
+      elseif status == "Running" then
         icon.str = config.device_running.icon
         icon.hl = { fg = config.device_running.color }
-      elseif status == "success" then
+      elseif status == "Success" then
         icon.str = config.success.icon
         icon.hl = { fg = config.success.color }
-      elseif status == "failure" then
+      elseif status == "Failure" then
         icon.str = config.failure.icon
         icon.hl = { fg = config.failure.color }
-      elseif status == "watching" then
+      elseif status == "Watching" then
         icon.str = config.watching.icon
         icon.hl = { fg = config.watching.color }
       else

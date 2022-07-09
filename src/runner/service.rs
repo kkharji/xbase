@@ -19,7 +19,7 @@ impl RunService {
         key: String,
         root: PathBuf,
         settings: BuildSettings,
-        device: DeviceLookup,
+        device: Option<DeviceLookup>,
         operation: Operation,
         broadcast: &Arc<Broadcast>,
         watcher: Weak<Mutex<WatchService>>,

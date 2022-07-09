@@ -2,6 +2,8 @@
 name = "xbase"
 version = "0.2.0"
 edition = "2021"
+default-run = "xbase"
+
 
 [dependencies]
 
@@ -53,6 +55,9 @@ which                 = { version = "4.2.5"   }
 os_pipe               = { version = "1.0.1"   }
 signal-hook           = { version = "0.3.14"  }
 signal-hook-tokio     = { version = "0.3.1", features = ["futures-v0_3"] }
+
+# types generators
+typescript-definitions = { git = "https://github.com/onelson/typescript-definitions", branch = "no-debug-attrs"}
 
 [workspace]
 members = [ "crates/*" ]

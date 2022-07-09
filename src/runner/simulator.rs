@@ -144,11 +144,7 @@ impl Default for Devices {
 
 impl Devices {
     /// Get Device from Device lookup
-    pub fn from_lookup(&self, lookup: DeviceLookup) -> Option<Device> {
-        if let Some(ref udid) = lookup.id {
-            self.get(udid).cloned()
-        } else {
-            None
-        }
+    pub fn from_lookup(&self, lookup: Option<DeviceLookup>) -> Option<Device> {
+        lookup.and_then(|d| self.get(&d.id)).cloned()
     }
 }

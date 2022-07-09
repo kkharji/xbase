@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[derive(Debug, Serialize, Deserialize)]
+/// Drop a given set of roots to be dropped (i.e. unregistered)
+#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct DropRequest {
     roots: Vec<PathBuf>,
 }

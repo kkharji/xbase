@@ -9,12 +9,12 @@ use tap::Pipe;
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
 /// Request to Run a particular project.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct RunRequest {
     pub root: PathBuf,
     pub settings: BuildSettings,
-    #[serde(deserialize_with = "util::de::value_or_default")]
-    pub device: DeviceLookup,
+    #[serde(default)]
+    pub device: Option<DeviceLookup>,
     #[serde(deserialize_with = "util::de::value_or_default")]
     pub operation: Operation,
 }
@@ -22,8 +22,8 @@ pub struct RunRequest {
 impl fmt::Display for RunRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let root = self.root.display();
-        let device = if let Some(name) = self.device.name.as_ref() {
-            name.to_string()
+        let device = if let Some(device) = self.device.as_ref() {
+            device.name.clone()
         } else {
             "Bin".into()
         };

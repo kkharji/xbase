@@ -1,2 +1,12 @@
 target
-bin
+vscode/.cache
+vscode/.DS_Store
+vscode/*.log
+vscode/*.tgz
+vscode/*.vsix
+vscode/coverage
+vscode/dist
+vscode/lib-cov
+vscode/logs
+vscode/node_modules
+vscode/temp

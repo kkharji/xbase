@@ -1,4 +1,3 @@
-mod bin;
 mod device;
 mod handler;
 mod service;
@@ -7,15 +6,44 @@ mod simulator;
 use crate::*;
 use async_trait::async_trait;
 use process_stream::Process;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::OwnedMutexGuard;
+use xclog::XCBuildSettings;
 
 pub use service::RunService;
-pub use {bin::*, device::*, service::*, simulator::*};
+pub use {device::*, service::*, simulator::*};
 
 #[async_trait]
 pub trait Runner {
     async fn run<'a>(&self, broadcast: &Broadcast) -> Result<Process>;
+}
+
+pub struct BinRunner {
+    path: PathBuf,
+}
+
+impl BinRunner {
+    pub fn from_build_info(info: &XCBuildSettings) -> Self {
+        let path = info.path_to_output_binary().unwrap_or_default();
+        Self { path }
+    }
+
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
+        let path = path.as_ref().into();
+        Self { path }
+    }
+}
+
+#[async_trait::async_trait]
+impl Runner for BinRunner {
+    async fn run<'a>(&self, _logger: &Broadcast) -> Result<Process> {
+        if !self.path.exists() {
+            return Err(Error::Run(format!("{:?} doesn't exist!", self.path)));
+        }
+
+        Ok(Process::new(&self.path))
+    }
 }
 
 pub async fn get_runner<'a>(

@@ -2,51 +2,42 @@ use crate::error::*;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use strum::{Display as EnumDisplay, EnumString};
+use typescript_definitions::TypeScriptify;
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
-/// Build Configuration to run
-#[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
-pub enum BuildConfiguration {
-    Debug,
-    Release,
-    Custom(String),
-}
-
-/// Operation
-///
-/// Should request be executed once, stoped (if watched) or start new watch service?
-#[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString)]
+/// Type of operation for building/ruuning a target/scheme
+#[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString, TypeScriptify)]
 pub enum Operation {
     Watch,
     Stop,
     Once,
 }
 
-/// Fields required to build/run a project
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// Build Settings used in building/running a target/scheme
+#[derive(Clone, Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct BuildSettings {
     /// Target to build
     pub target: String,
     /// Configuration to build with, default Debug
-    pub configuration: BuildConfiguration,
+    pub configuration: String,
     /// Scheme to build with
     pub scheme: Option<String>,
 }
 
 /// Target specfic information
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct TargetInfo {
     /// Configuration to build with, default Debug
     pub platform: PBXTargetPlatform,
 }
 
 /// Device Lookup information to run built project with
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct DeviceLookup {
-    pub name: Option<String>,
-    pub id: Option<String>,
+    pub name: String,
+    pub id: String,
 }
 
 impl Default for Operation {
@@ -66,6 +57,7 @@ impl Display for BuildSettings {
         Ok(())
     }
 }
+
 impl BuildSettings {
     pub fn to_args(&self) -> Vec<String> {
         self.to_string()
