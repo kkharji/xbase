@@ -46,18 +46,18 @@ impl Broadcast {
         }
 
         let address = base.join(name);
+        let name = address.file_name().unwrap().to_str().unwrap();
 
         if address.exists() {
-            tracing::warn!(
-                "address {address:?} should have been removed automatically, removing .."
-            );
+            tracing::warn!("[{address:?}] Exists, removing ...");
             tokio::fs::remove_file(&address).await.ok();
         };
 
         let abort: Arc<Notify> = Default::default();
         let listeners: Arc<Mutex<Vec<UnixStream>>> = Default::default();
 
-        let server = Self::start_server(&address, abort.clone(), listeners.clone())?;
+        tracing::info!("[{name}] Initialized");
+        let server = Self::start_server(address.clone(), abort.clone(), listeners.clone())?;
         let handle = Self::start_messages_handler(rx, abort.clone(), listeners.clone())?;
 
         Ok(Self {
@@ -111,24 +111,26 @@ impl Broadcast {
 
     /// Start Broadcast server and start accepting clients
     fn start_server(
-        address: &PathBuf,
+        address: PathBuf,
         abort: Arc<Notify>,
         listeners: Arc<Mutex<Vec<UnixStream>>>,
     ) -> Result<JoinHandle<()>> {
         let listener = UnixListener::bind(&address)?;
         tokio::spawn(async move {
+            let name = address.file_name().unwrap().to_str().unwrap();
             loop {
                 let listeners = listeners.clone();
                 tokio::select! {
                     _ = abort.notified() => {
-                        tracing::info!("Closing server");
+                        tracing::info!("[{name}] Closed");
+                        tokio::fs::remove_file(&address).await.ok();
                         break
                     },
                     Ok((stream, _)) = listener.accept() => {
 
                         let mut listeners = listeners.lock().await;
                         listeners.push(stream);
-                        tracing::info!("Connected");
+                        tracing::info!("[{name}] Registered new client");
                     }
                 }
             }
@@ -146,7 +148,7 @@ impl Broadcast {
         tokio::spawn(async move {
             loop {
                 tokio::select! {
-                    _ = abort.notified() => { tracing::info!("Stopping logging"); break; },
+                    _ = abort.notified() => { break; },
                     result = rx.recv() => match result {
                         None => break,
                         Some(output) => {

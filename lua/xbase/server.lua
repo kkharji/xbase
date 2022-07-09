@@ -21,25 +21,24 @@ function M.request(req, on_response)
     M.socket = socket:connect()
   end
 
-  M.socket:write(req)
-
   -- TODO: what todo when we get nil?
   M.socket:read_start(function(chunk)
     if chunk ~= nil then
-      local res = vim.json.decode(chunk)
-      if res.error then
-        notify.error("%s %s", res.error.kind, res.error.msg)
-        return
-      end
-
-      if on_response then
-        vim.schedule(function()
+      vim.schedule(function()
+        local res = vim.json.decode(chunk)
+        if res.error then
+          notify.error(string.format("%s %s", res.error.kind, res.error.msg))
+          return
+        end
+        if on_response then
           on_response(res.data)
-        end)
-      end
+        end
+      end)
     end
     M.socket:read_stop()
   end)
+
+  M.socket:write(req)
 end
 
 ---Check whether the vim instance should be registered to xbase server.
@@ -94,19 +93,12 @@ function M.get_project_info(root, on_response)
 end
 
 ---Drop a given root or drop all tracked roots if root is nil
----@param root string?
-function M.drop(root)
-  local roots = {}
-  if root ~= nil then
-    roots[1] = root
-  else
-    roots = M.roots
-  end
-  M.socket:write {
+---@param roots string|string[]
+function M.drop(roots)
+  M.request {
     method = "drop",
-    roots = roots,
+    roots = type(roots) == "string" and { roots } or roots,
   }
-  -- M.socket:close()
 end
 
 return M

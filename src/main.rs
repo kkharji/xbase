@@ -51,7 +51,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                             tracing::info!("Closing a connection to a client");
                             break;
                         }
-                        Err(err) => tracing::error!("Fail to read request: {err}"),
+                        Err(err) => tracing::error!("Fail to read request: {err:#?}"),
                     };
                 }
             });

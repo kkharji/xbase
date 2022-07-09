@@ -15,7 +15,8 @@ impl RequestHandler<PathBuf> for RegisterRequest {
     /// Handle RegisterRequest
     async fn handle(self) -> Result<PathBuf> {
         let RegisterRequest { root } = self;
-        tracing::info!("Register {}", root.as_path().name().unwrap());
+        let name = root.as_path().name().unwrap();
+        tracing::info!("[{name}] Registering");
 
         let (broadcast, logger_path) = if let Ok(broadcast) = root.try_get_broadcast().await {
             (broadcast.clone(), broadcast.address().clone())
@@ -34,6 +35,7 @@ impl RequestHandler<PathBuf> for RegisterRequest {
                 project.inc_clients();
                 // NOTE: this doesn't make sense!
                 project.ensure_server_support(None, &broadcast).await?;
+                tracing::info!("[{name}] Using existing instance");
                 return Ok(());
             }
             let project = project(&root, &broadcast).await?;
@@ -50,7 +52,7 @@ impl RequestHandler<PathBuf> for RegisterRequest {
             )
             .await?;
 
-            tracing::info!("[{}] Project added", name);
+            tracing::info!("[{name}] Registered");
 
             projects.insert(root.clone(), project.clone());
             watchers()

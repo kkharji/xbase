@@ -42,7 +42,7 @@ impl RequestHandler<()> for DropRequest {
                 broadcasters.remove(&root).map(|l| {
                     l.abort();
                 });
-                tracing::info!("dropped {}", root.as_path().name().unwrap());
+                tracing::info!("[{}] Dropped", root.as_path().name().unwrap());
             }
         }
 

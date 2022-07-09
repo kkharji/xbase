@@ -37,7 +37,9 @@ function M:read_start(cb)
       if err then
         error(err)
       end
-      cb(chunk)
+      vim.schedule(function()
+        cb(chunk)
+      end)
     end)
   )
 end
