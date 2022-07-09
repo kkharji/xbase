@@ -1,4 +1,5 @@
 use std::io;
+use std::path::Path;
 use tracing::dispatcher::SetGlobalDefaultError;
 use tracing::subscriber::set_global_default;
 use tracing::Level;
@@ -9,11 +10,14 @@ use tracing_subscriber::{registry, EnvFilter};
 
 /// Setup tracing
 pub fn setup(
-    root: &str,
-    filename: &str,
+    path: impl AsRef<Path>,
     default_level: Level,
     with_stdout: bool,
 ) -> Result<(), SetGlobalDefaultError> {
+    let path = path.as_ref();
+    let root = path.parent().unwrap();
+    let filename = path.file_name().unwrap().to_str().unwrap();
+
     let default_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::from_default_env().add_directive(default_level.into()));
 

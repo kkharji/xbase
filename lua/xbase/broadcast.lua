@@ -25,10 +25,8 @@ local handlers = {
     notify(item.msg, item.level)
   end,
   [MessageType.Execute] = function(item)
-    I(item)
     local task = item.task
     if Task.UpdateStatusline == task then
-      I(item)
       vim.g.xbase_watch_build_status = item.value
     elseif Task.OpenLogger == task then
       logger.toggle(nil, false)
@@ -45,7 +43,6 @@ function M.start(address)
     local chunk = vim.trim(chunk)
     for _, chunk in ipairs(vim.split(chunk, "\n")) do
       local item = vim.json.decode(chunk)
-      I(item)
       vim.schedule(function()
         handlers[item.type](item)
       end)

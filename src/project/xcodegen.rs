@@ -125,13 +125,7 @@ impl ProjectGenerate for XCodeGenProject {
                 let info = self.targets.get_mut(&key).unwrap();
                 info.platform = platform;
             } else {
-                self.targets.insert(
-                    key,
-                    TargetInfo {
-                        platform,
-                        watching: false,
-                    },
-                );
+                self.targets.insert(key, TargetInfo { platform });
             }
         }
 
@@ -167,15 +161,7 @@ impl Project for XCodeGenProject {
                 .xcodeproj
                 .targets_platform()
                 .into_iter()
-                .map(|(k, platform)| {
-                    (
-                        k,
-                        TargetInfo {
-                            platform,
-                            watching: false,
-                        },
-                    )
-                })
+                .map(|(k, platform)| (k, TargetInfo { platform }))
                 .collect();
         } else {
             project.generate(broadcast).await?;

@@ -155,13 +155,7 @@ impl ProjectGenerate for TuistProject {
                 let info = self.targets.get_mut(&key).unwrap();
                 info.platform = platform;
             } else {
-                self.targets.insert(
-                    key,
-                    TargetInfo {
-                        platform,
-                        watching: false,
-                    },
-                );
+                self.targets.insert(key, TargetInfo { platform });
             }
         }
 
@@ -275,15 +269,7 @@ impl Project for TuistProject {
             .xcodeproj
             .targets_platform()
             .into_iter()
-            .map(|(k, platform)| {
-                (
-                    k,
-                    TargetInfo {
-                        platform,
-                        watching: false,
-                    },
-                )
-            })
+            .map(|(k, platform)| (k, TargetInfo { platform }))
             .collect();
 
         tracing::info!("[{}] targets: {:?}", project.name(), project.targets());

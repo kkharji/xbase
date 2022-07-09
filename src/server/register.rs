@@ -64,7 +64,7 @@ impl RequestHandler<PathBuf> for RegisterRequest {
                 .await
                 .ensure_server_support(None, &broadcast)
                 .await?;
-            OK(())
+            Ok::<_, Error>(())
         });
 
         Ok(logger_path)

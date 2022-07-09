@@ -1,8 +1,7 @@
 use std::{ffi::OsStr, fmt::Display, string::String};
 
-#[allow(dead_code)]
 /// Kill process using kill command
-pub async fn kill(pid_str: &String) -> anyhow::Result<bool> {
+pub async fn kill_process_by_pid(pid_str: &String) -> anyhow::Result<bool> {
     Ok(tokio::process::Command::new("kill")
         .arg("-15")
         .arg(pid_str)
@@ -12,9 +11,9 @@ pub async fn kill(pid_str: &String) -> anyhow::Result<bool> {
         .success())
 }
 
-/// Check if process exists
+/// Check if a process exists with a given pid
 #[allow(dead_code)]
-pub fn exists(pid: &i32, cb: impl FnOnce()) -> bool {
+pub fn is_valid_pid(pid: &i32, cb: impl FnOnce()) -> bool {
     if libproc::libproc::proc_pid::name(*pid).is_err() {
         cb();
         false
@@ -29,7 +28,7 @@ pub fn exists(pid: &i32, cb: impl FnOnce()) -> bool {
 /// otherwise process with given name is not, an  Error::Lookup will be returned.
 ///
 /// WARNNING: The first match will be returned, and duplicates will be ignored
-pub fn get_by_name<S>(name: S) -> crate::Result<i32>
+pub fn get_pid_by_name<S>(name: S) -> crate::Result<i32>
 where
     S: AsRef<OsStr> + Display,
     String: PartialEq<S>,
@@ -51,8 +50,8 @@ where
 
 #[test]
 fn test_get_by_name() {
-    let existing_process = get_by_name("DockHelper");
-    let not_process = get_by_name("afsd8439f");
+    let existing_process = get_pid_by_name("DockHelper");
+    let not_process = get_pid_by_name("afsd8439f");
 
     assert!(existing_process.is_ok());
     assert!(not_process.is_err());

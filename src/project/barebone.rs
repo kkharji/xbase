@@ -126,15 +126,7 @@ impl Project for BareboneProject {
             .xcodeproj
             .targets_platform()
             .into_iter()
-            .map(|(k, platform)| {
-                (
-                    k,
-                    TargetInfo {
-                        platform,
-                        watching: false,
-                    },
-                )
-            })
+            .map(|(k, platform)| (k, TargetInfo { platform }))
             .collect();
 
         tracing::info!("targets: {:?}", project.targets());

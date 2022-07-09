@@ -22,7 +22,7 @@ pub async fn cleanup_daemon_runtime(pid_path: &'static str, sock_addr: &'static 
         if fs::metadata(pid_path).await.ok().is_some() {
             fs::read_to_string(pid_path)
                 .await?
-                .pipe_ref(super::pid::kill)
+                .pipe_ref(super::pid::kill_process_by_pid)
                 .await?;
             fs::remove_file(pid_path).await.ok();
         }

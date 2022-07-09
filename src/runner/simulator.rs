@@ -33,7 +33,7 @@ impl SimulatorRunner {
     }
 
     pub async fn boot<'a>(&self, broadcast: &Broadcast) -> Result<()> {
-        match pid::get_by_name("Simulator") {
+        match pid::get_pid_by_name("Simulator") {
             Err(Error::Lookup(_, _)) => {
                 let msg = format!("[Simulator] Launching");
                 broadcast.log_info(msg);

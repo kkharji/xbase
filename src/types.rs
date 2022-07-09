@@ -24,7 +24,7 @@ pub enum Operation {
     Once,
 }
 
-/// Fields required to build a project
+/// Fields required to build/run a project
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BuildSettings {
     /// Target to build
@@ -35,24 +35,11 @@ pub struct BuildSettings {
     pub scheme: Option<String>,
 }
 
-/// Fields required to build a project
+/// Target specfic information
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TargetInfo {
     /// Configuration to build with, default Debug
     pub platform: PBXTargetPlatform,
-    /// Scheme to build with
-    pub watching: bool,
-}
-
-/// Log Buffer open direction
-#[derive(Clone, Debug, strum::EnumString, Serialize, Deserialize)]
-#[strum(ascii_case_insensitive)]
-#[serde(untagged)]
-pub enum BufferDirection {
-    Default,
-    Vertical,
-    Horizontal,
-    TabEdit,
 }
 
 /// Device Lookup information to run built project with
@@ -114,42 +101,3 @@ impl Operation {
         matches!(self, Self::Once)
     }
 }
-/// Short hand to get Result with given Error based by anyhow's
-#[allow(non_snake_case)]
-pub fn OK<T>(t: T) -> Result<T> {
-    Result::Ok(t)
-}
-
-//pub trait XBase {
-//    ///
-//    /// Register client and project root.
-//    ///
-//    /// If the project is already registered then it will not be re-registered and instead
-//    /// broadcast address socket will be returned.
-//    ///
-//    async fn register(root: PathBuf) -> Result<PathBuf>;
-//    ///
-//    /// Build Project and get path to where to build log will be located
-//    ///
-//    async fn build(req: BuildRequest) -> Result<()>;
-//    ///
-//    /// Run Project and get path to where to Runtime log will be located
-//    ///
-//    async fn run(req: RunRequest) -> Result<()>;
-//    ///
-//    /// Drop project at a given root
-//    ///
-//    async fn drop(roots: HashSet<PathBuf>) -> Result<()>;
-//    ///
-//    /// Return targets for client projects
-//    ///
-//    async fn targets(root: PathBuf) -> Result<HashMap<String, TargetInfo>>;
-//    ///
-//    /// Return device names and id for given target
-//    ///
-//    async fn runners(platform: PBXTargetPlatform) -> Result<Vec<HashMap<String, String>>>;
-//    ///
-//    /// Return all watched keys
-//    ///
-//    async fn watching(root: PathBuf) -> Result<Vec<String>>;
-//}

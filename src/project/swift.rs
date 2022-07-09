@@ -233,7 +233,6 @@ impl SwiftProject {
                         name,
                         TargetInfo {
                             platform: PBXTargetPlatform::MacOS,
-                            watching: false,
                         },
                     ))
                 } else {
