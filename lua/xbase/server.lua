@@ -2,6 +2,7 @@ local util = require "xbase.util"
 local socket = require "xbase.socket"
 local validate = vim.validate
 local notify = require "xbase.notify"
+local server_address = "/tmp/xbase.socket"
 local uv = vim.loop
 
 ---@class XBase
@@ -12,33 +13,56 @@ local M = {
   roots = {},
 }
 
+---Spawn xbase daemon in detached mode and executes cb on first stdout
+---@param cb function
+function M.spawn_daemon(cb)
+  notify.info "Starting new dameon instance"
+  local bin = vim.env.HOME .. "/.local/share/xbase/xbase"
+  local stdout = uv.new_pipe()
+  local _, _ = uv.spawn(bin, {
+    stdio = { nil, stdout, nil },
+    detached = true,
+  })
+  stdout:read_start(vim.schedule_wrap(function(_, _)
+    M.socket = socket:connect(server_address)
+    stdout:read_stop()
+    cb()
+  end))
+end
+
+--- Ensure we have a connect socket and a running background daemon
+function M.ensure_connection(cb)
+  if M.socket == nil then
+    if uv.fs_stat(server_address) == nil then
+      return M.spawn_daemon(cb)
+    else
+      M.socket = socket:connect(server_address)
+    end
+  end
+  cb()
+end
+
 ---Send Request to socket, and on response call on_response with data if no error
 ---@param req table
 ---@param on_response? function(response:table)
 function M.request(req, on_response)
-  -- TODO: ensure daemon is running!
-  if not M.socket then
-    M.socket = socket:connect()
-  end
-
-  -- TODO: what todo when we get nil?
-  M.socket:read_start(function(chunk)
-    if chunk ~= nil then
+  M.ensure_connection(function()
+    M.socket:read_start(function(chunk)
       vim.schedule(function()
         local res = vim.json.decode(chunk)
         if res.error then
           notify.error(string.format("%s %s", res.error.kind, res.error.msg))
           return
-        end
-        if on_response then
-          on_response(res.data)
+        else
+          if on_response then
+            on_response(res.data)
+          end
         end
       end)
-    end
-    M.socket:read_stop()
+      M.socket:read_stop()
+    end)
+    M.socket:write(req)
   end)
-
-  M.socket:write(req)
 end
 
 ---Check whether the vim instance should be registered to xbase server.
@@ -68,8 +92,6 @@ function M.register(root)
   M.request({ method = "register", root = root }, function(broadcast_address)
     notify.info(("[%s] Connected "):format(util.project_name(root)))
 
-    -- TODO: Should pipe be tracked and closed?
-    -- TODO: ensure a connection is indeed made
     local broadcaster = socket:connect(broadcast_address)
     broadcaster:read_start(require "xbase.broadcast")
 
