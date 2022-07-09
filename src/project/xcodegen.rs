@@ -51,14 +51,14 @@ impl ProjectCompile for XCodeGenProject {
         use xclog::XCCompilationDatabase as CC;
 
         let root = self.root();
+        let name = self.root().name().unwrap();
         let cache_root = self.build_cache_root()?;
         let mut arguments = self.compile_arguments();
 
         self.on_compile_start(broadcast)?;
 
         arguments.push(format!("SYMROOT={cache_root}"));
-
-        tracing::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
+        broadcast.log_debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
 
         let xclogger = XCLogger::new(&root, &arguments)?;
         let compile_commands = xclogger.compile_commands.clone();

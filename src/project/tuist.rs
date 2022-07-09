@@ -76,7 +76,7 @@ impl ProjectCompile for TuistProject {
                 "Manifests".into(),
             ]);
 
-            tracing::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
+            broadcast.log_debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
 
             let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();
@@ -96,7 +96,7 @@ impl ProjectCompile for TuistProject {
                 format!("{name}"),
             ]);
 
-            tracing::debug!("\n\nxcodebuild {}\n", arguments.join(" "));
+            broadcast.log_debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
 
             let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();

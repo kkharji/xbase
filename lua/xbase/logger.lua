@@ -75,7 +75,7 @@ function M.log(msg, level)
     local line_count = vim.api.nvim_buf_line_count(M.bufnr)
     local line_first = vim.api.nvim_buf_get_lines(M.bufnr, 0, 1, false)[1]
     local row = (line_count == 1 and #line_first == 0) and 0 or -1
-    vim.api.nvim_buf_set_lines(M.bufnr, row, -1, false, { msg })
+    vim.api.nvim_buf_set_lines(M.bufnr, row, -1, false, vim.split(msg, "\n"))
     --- FIXME: Sometimes getting Error log.lua:89: Cursor position outside buffer Ignoring ..
     pcall(M.update_cursor_position, line_count)
   end

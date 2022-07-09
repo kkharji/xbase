@@ -88,7 +88,7 @@ end
 function M.register(root)
   validate { root = { root, "string", false } }
 
-  require("xbase.log").setup()
+  require("xbase.logger").setup()
 
   M.request({ method = "register", root = root }, function(broadcast_address)
     notify.info(("[%s] Connected "):format(util.project_name(root)))

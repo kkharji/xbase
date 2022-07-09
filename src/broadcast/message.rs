@@ -15,9 +15,8 @@ pub enum Message {
 }
 
 /// Statusline state
-#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(u8)]
-#[serde(tag = "value")]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
 pub enum StatuslineState {
     /// Clear statusline
     Clear,
@@ -71,7 +70,7 @@ impl std::fmt::Display for StatuslineState {
 pub enum Task {
     OpenLogger,
     ReloadLspServer,
-    UpdateStatusline(StatuslineState),
+    UpdateStatusline { value: StatuslineState },
 }
 
 impl From<ProcessItem> for Message {

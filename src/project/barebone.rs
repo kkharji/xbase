@@ -70,7 +70,7 @@ impl ProjectCompile for BareboneProject {
             args.extend_from_slice(&["-project".into(), format!("{name}.xcodeproj")]);
         }
 
-        tracing::info!("xcodebuild {}", args.join(" "));
+        broadcast.log_debug(format!("[{name}] xcodebuild {}", args.join(" ")));
         let xclogger = XCLogger::new(&root, &args)?;
         let xccommands = xclogger.compile_commands.clone();
         let mut recv = broadcast.consume(Box::new(xclogger))?;

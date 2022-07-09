@@ -1,4 +1,4 @@
-mod helpers;
+mod logger;
 mod message;
 
 pub use self::message::*;
@@ -92,16 +92,14 @@ impl Broadcast {
                         break;
                     },
                     result = stream.next() => match result {
-                        None => break,
                         Some(output) => {
                             if let Some(succ) = output.is_success() {
                                 send_status.send(succ).await.ok();
-                            }
-                            tracing::debug!("{output:?}");
-                            if let Err(e) = tx.send(output.into()) {
+                            } else if let Err(e) = tx.send(output.into()) {
                                 tracing::error!("Fail to send to channel {e}");
                             };
                         }
+                        None => break,
                     }
 
                 };
@@ -153,13 +151,21 @@ impl Broadcast {
                     result = rx.recv() => match result {
                         None => break,
                         Some(output) => {
-                            let mut listeners =  listeners.lock().await;
-                            if let Ok(value) = serde_json::to_string(&output) {
-                                for listener in listeners.iter_mut() {
-                                    listener.write_all(format!("{value}\n").as_bytes()).await.ok();
-                                    listener.flush().await.ok();
-                                };
-                            };
+                            let listeners =  listeners.clone();
+                            tokio::spawn(async move {
+                                let mut listeners = listeners.lock().await;
+                                match serde_json::to_string(&output) {
+                                    Ok(mut value) => {
+                                        tracing::debug!("Sent: {value}");
+                                        value.push('\n');
+                                        for listener in listeners.iter_mut() {
+                                            listener.write_all(value.as_bytes()).await.ok();
+                                            listener.flush().await.ok();
+                                        };
+                                    },
+                                    Err(err) => tracing::warn!("SendError: `{output:?}` = `{err}`"),
+                                }
+                            });
 
                         }
                     }

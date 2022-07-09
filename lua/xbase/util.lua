@@ -54,11 +54,11 @@ function M.bind(m, bufnr)
   M.try_map(m.watch_picker, pickers.watch, bufnr)
   M.try_map(m.all_picker, pickers.actions, bufnr)
   M.try_map(m.toggle_split_log_buffer, function()
-    require("xbase.log").toggle(false, true)
+    require("xbase.logger").toggle(false, true)
   end, bufnr)
 
   M.try_map(m.toggle_vsplit_log_buffer, function()
-    require("xbase.log").toggle(true, true)
+    require("xbase.logger").toggle(true, true)
   end, bufnr)
 end
 

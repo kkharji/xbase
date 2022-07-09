@@ -29,7 +29,6 @@ impl super::Broadcast {
 
     pub fn success<S: AsRef<str>>(&self, msg: S) {
         let msg = msg.as_ref();
-        tracing::info!("{msg}");
         self.tx
             .send(Message::Notify {
                 msg: msg.into(),
@@ -94,19 +93,16 @@ impl super::Broadcast {
     }
 
     pub fn update_statusline(&self, state: StatuslineState) {
-        tracing::debug!("Sent New StatuslineState");
         self.tx
-            .send(Message::Execute(Task::UpdateStatusline(state)))
+            .send(Message::Execute(Task::UpdateStatusline { value: state }))
             .ok();
     }
 
     pub fn open_logger(&self) {
         self.tx.send(Message::Execute(Task::OpenLogger)).ok();
-        tracing::debug!("Sent OpenLogger");
     }
 
     pub fn reload_lsp_server(&self) {
         self.tx.send(Message::Execute(Task::ReloadLspServer)).ok();
-        tracing::debug!("Sent ReloadLspServer");
     }
 }

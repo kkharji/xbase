@@ -37,7 +37,7 @@ pub async fn get_runner<'a>(
     if !recv.recv().await.unwrap_or_default() {
         let msg = format!("[{target}] Failed to build for running ");
         broadcast.error(&msg);
-        broadcast.log_error(format!("xcodebuild {}", args.join(" ")));
+        broadcast.log_error(format!("[{target}] xcodebuild {}", args.join(" ")));
         broadcast.open_logger();
         return Err(crate::Error::Run(msg));
     }
