@@ -54,11 +54,9 @@ jobs:
       run: |
         version="${{ steps.tag.outputs.TAG }}"
         version="${version//v/}"
-        sed -i'' "s/^version.*$/version = \"$version\"/g" daemon/Cargo.toml
-        sed -i'' "s/^version.*$/version = \"$version\"/g" sourcekit/Cargo.toml
-        sed -i'' "s/^version.*$/version = \"$version\"/g" lualib/Cargo.toml
+        sed -i'' "s/^version.*$/version = \"$version\"/g" Cargo.toml
         cargo update --workspace
-        git add CHANGELOG.md lualib/Cargo.toml sourcekit/Cargo.toml daemon/Cargo.toml Cargo.lock
+        git add CHANGELOG.md Cargo.toml Cargo.lock
         git config --global user.name 'release[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
