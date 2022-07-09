@@ -38,17 +38,17 @@ pub enum StatuslineState {
 #[repr(u8)]
 pub enum MessageLevel {
     /// Trace Message
-    Trace,
+    Trace = 0,
     /// Debug Message
-    Debug,
+    Debug = 1,
     /// Info Message
-    Info,
+    Info = 2,
     /// Warn Message
-    Warn,
+    Warn = 3,
     /// Error Message
-    Error,
+    Error = 4,
     /// Success Message
-    Success,
+    Success = 5,
 }
 
 impl std::fmt::Display for StatuslineState {
@@ -178,7 +178,7 @@ impl Message {
     pub fn log_info<S: AsRef<str>>(value: S) -> Self {
         Self::Log {
             msg: value.as_ref().to_string(),
-            level: MessageLevel::Error,
+            level: MessageLevel::Info,
         }
     }
 

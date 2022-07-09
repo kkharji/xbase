@@ -97,6 +97,7 @@ impl Broadcast {
                             if let Some(succ) = output.is_success() {
                                 send_status.send(succ).await.ok();
                             }
+                            tracing::debug!("{output:?}");
                             if let Err(e) = tx.send(output.into()) {
                                 tracing::error!("Fail to send to channel {e}");
                             };

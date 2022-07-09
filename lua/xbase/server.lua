@@ -2,6 +2,7 @@ local util = require "xbase.util"
 local socket = require "xbase.socket"
 local validate = vim.validate
 local notify = require "xbase.notify"
+local broadcast = require "xbase.broadcast"
 local server_address = "/tmp/xbase.socket"
 local uv = vim.loop
 
@@ -92,8 +93,7 @@ function M.register(root)
   M.request({ method = "register", root = root }, function(broadcast_address)
     notify.info(("[%s] Connected "):format(util.project_name(root)))
 
-    local broadcaster = socket:connect(broadcast_address)
-    broadcaster:read_start(require "xbase.broadcast")
+    broadcast.start(broadcast_address)
 
     M.roots[#M.roots + 1] = root
 

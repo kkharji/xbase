@@ -21,53 +21,55 @@ impl super::Broadcast {
     }
 
     pub fn log_step<S: AsRef<str>>(&self, msg: S) {
-        let sep = ".".repeat(73);
+        let msg = msg.as_ref();
+        tracing::info!("{msg}");
         self.tx.send(Message::log_info(msg)).ok();
-        self.tx.send(Message::log_info(&sep)).ok();
-    }
-
-    pub fn log_separator(&self) {
-        let sep = ".".repeat(73);
-        tracing::info!("{sep}");
-        self.tx.send(Message::log_info(&sep)).ok();
+        self.tx.send(Message::log_info(".".repeat(73))).ok();
     }
 
     pub fn success<S: AsRef<str>>(&self, msg: S) {
-        tracing::info!("{}", msg.as_ref());
+        let msg = msg.as_ref();
+        tracing::info!("{msg}");
         self.tx
             .send(Message::Notify {
-                msg: msg.as_ref().into(),
+                msg: msg.into(),
                 level: MessageLevel::Success,
             })
             .ok();
     }
 
     pub fn info<S: AsRef<str>>(&self, msg: S) {
-        tracing::info!("{}", msg.as_ref());
-        self.tx.send(msg.as_ref().into()).ok();
+        let msg = msg.as_ref();
+        self.tx.send(msg.into()).ok();
     }
 
     pub fn error<S: AsRef<str>>(&self, msg: S) {
-        tracing::error!("{}", msg.as_ref());
+        let msg = msg.as_ref();
+        tracing::error!("{msg}");
         self.tx.send(Message::notify_error(msg)).ok();
     }
 
     pub fn warn<S: AsRef<str>>(&self, msg: S) {
-        tracing::warn!("{}", msg.as_ref());
+        let msg = msg.as_ref();
+        tracing::warn!("{msg}");
         self.tx.send(Message::notify_warn(msg)).ok();
     }
 
     pub fn trace<S: AsRef<str>>(&self, msg: S) {
-        tracing::trace!("{}", msg.as_ref());
+        let msg = msg.as_ref();
+        tracing::trace!("{msg}");
         self.tx.send(Message::notify_trace(msg)).ok();
     }
 
     pub fn debug<S: AsRef<str>>(&self, msg: S) {
-        tracing::debug!("{}", msg.as_ref());
+        let msg = msg.as_ref();
+        tracing::debug!("{msg}");
         self.tx.send(Message::notify_debug(msg)).ok();
     }
 
     pub fn log_info<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::info!("{msg}");
         self.tx.send(Message::log_info(msg)).ok();
     }
 
@@ -92,6 +94,7 @@ impl super::Broadcast {
     }
 
     pub fn update_statusline(&self, state: StatuslineState) {
+        tracing::debug!("Sent New StatuslineState");
         self.tx
             .send(Message::Execute(Task::UpdateStatusline(state)))
             .ok();
@@ -99,9 +102,11 @@ impl super::Broadcast {
 
     pub fn open_logger(&self) {
         self.tx.send(Message::Execute(Task::OpenLogger)).ok();
+        tracing::debug!("Sent OpenLogger");
     }
 
     pub fn reload_lsp_server(&self) {
         self.tx.send(Message::Execute(Task::ReloadLspServer)).ok();
+        tracing::debug!("Sent ReloadLspServer");
     }
 }

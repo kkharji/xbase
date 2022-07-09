@@ -62,22 +62,23 @@ function M.toggle(vsplit, force)
   end
 end
 
+---Checks whether the level is sufficient for logging.
+---@param level number log level
+---@returns (bool) true if would log, false if not
+function M.should_log(level)
+  -- return true
+  return level >= require("xbase.config").values.log_level
+end
+
 function M.log(msg, level)
-  local config = require("xbase.config").values
-
-  if #msg == 0 or config.log_level > level then
-    return
+  if M.should_log(level) then
+    local line_count = vim.api.nvim_buf_line_count(M.bufnr)
+    local line_first = vim.api.nvim_buf_get_lines(M.bufnr, 0, 1, false)[1]
+    local row = (line_count == 1 and #line_first == 0) and 0 or -1
+    vim.api.nvim_buf_set_lines(M.bufnr, row, -1, false, { msg })
+    --- FIXME: Sometimes getting Error log.lua:89: Cursor position outside buffer Ignoring ..
+    pcall(M.update_cursor_position, line_count)
   end
-
-  local line_count = vim.api.nvim_buf_line_count(M.bufnr)
-  local line_first = vim.api.nvim_buf_get_lines(M.bufnr, 0, 1, false)[1]
-  local row = (line_count == 1 and #line_first == 0) and 0 or -1
-
-  vim.api.nvim_buf_set_lines(M.bufnr, row, -1, false, { msg })
-
-  --- FIXME: Sometimes getting Error log.lua:89: Cursor position outside buffer
-  -- Ignoring ..
-  pcall(M.update_cursor_position, line_count)
 end
 
 function M.update_cursor_position(line_count)

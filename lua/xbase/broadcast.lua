@@ -1,24 +1,7 @@
 local logger = require "xbase.log"
 local notify = require "xbase.notify"
-
-local MessageType = {
-  Log = "Log",
-  Notify = "Notify",
-  Execute = "Execute",
-}
-
-local get_messages = function(chunk)
-  local chunk = vim.trim(chunk)
-  if chunk:find "\n" == nil then
-    return { vim.json.decode(chunk) }
-  end
-
-  local messages = {}
-  for _, value in ipairs(vim.split(chunk, "\n")) do
-    messages[#messages + 1] = vim.json.decode(value)
-  end
-  return messages
-end
+local socket = require "xbase.socket"
+local M = {}
 
 local Task = {
   OpenLogger = "OpenLogger",
@@ -26,38 +9,47 @@ local Task = {
   UpdateStatusline = "UpdateStatusline",
 }
 
-local function execute(msg)
-  local task = msg.task
-  if Task.UpdateStatusline == task then
-    vim.g.xbase_watch_build_status = msg.value
-  elseif Task.OpenLogger then
-    logger.toggle(nil, false)
-  elseif Task.ReloadLspServer then
-    vim.cmd "LspRestart"
-  end
-end
+local MessageType = {
+  Log = "Log",
+  Notify = "Notify",
+  Execute = "Execute",
+}
 
-return function(chunk)
-  if chunk == nil then
-    return
-  end
+local handlers = {
+  [MessageType.Log] = function(item)
+    if #item.msg > 0 then
+      logger.log(item.msg, item.level)
+    end
+  end,
+  [MessageType.Notify] = function(item)
+    notify(item.msg, item.level)
+  end,
+  [MessageType.Execute] = function(item)
+    local task = item.task
+    if Task.UpdateStatusline == task then
+      vim.g.xbase_watch_build_status = item.value
+    elseif Task.OpenLogger == task then
+      logger.toggle(nil, false)
+    elseif Task.ReloadLspServer == task then
+      vim.cmd "LspRestart"
+    end
+  end,
+}
 
-  vim.schedule(function()
-    local messages = get_messages(chunk)
+function M.start(address)
+  local socket = socket:connect(address)
 
-    for _, item in ipairs(messages) do
-      local type, msg, level = item.type, item.msg, item.level
-      if MessageType.Log == type then
-        return logger.log(msg, level)
-      end
-
-      if MessageType.Notify == type then
-        return notify(msg, level)
-      end
-
-      if MessageType.Execute == type then
-        return execute(msg)
-      end
+  socket:read_start(function(chunk)
+    local chunk = vim.trim(chunk)
+    for _, chunk in ipairs(vim.split(chunk, "\n")) do
+      local item = vim.json.decode(chunk)
+      vim.schedule(function()
+        handlers[item.type](item)
+      end)
     end
   end)
+
+  return socket
 end
+
+return M
