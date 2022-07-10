@@ -230,11 +230,12 @@ pub trait Project:
 
         /// Server Config
         static BUILD_SERVER_CONFIG: Lazy<Vec<u8>> = Lazy::new(|| {
-            let mut sourcekit_helper_bin = dirs::home_dir().unwrap();
-            sourcekit_helper_bin.extend([".local", "share", "xbase", "xbase-sourcekit-helper"]);
+            let path: PathBuf = BIN_ROOT
+                .replace("$HOME", &std::env::var("HOME").unwrap())
+                .into();
             serde_json::json!({
                 "name": "XBase",
-                "argv": [sourcekit_helper_bin],
+                "argv": [path.join("xbase-sourcekit-helper")],
                 "version": "0.3",
                 "bspVersion": "0.2",
                 "languages": ["swift", "objective-c", "objective-cpp", "c", "cpp"]

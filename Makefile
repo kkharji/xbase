@@ -15,7 +15,7 @@ lint:
 	nix-shell -p lua51Packages.luacheck --command 'luacheck lua/xbase && exit 0 || exit 1'
 
 watch:
-	cargo watch -x 'build -p xbase-sourcekit-helper' -x 'run --bin=ts-gen' -x 'run xbase' -w 'crates' -w 'src' -c
+	cargo watch -x 'build -p xbase-sourcekit-helper' -x 'run --bin=gen_bindings' -x 'run xbase' -w 'crates' -w 'src' -c
 
 clean:
 	rm -rf $(XBASE_LOCAL_ROOT) bin
