@@ -1,10 +1,12 @@
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, process::Command};
+use tap::Pipe;
 use typescript_definitions::TypeScriptifyTrait;
 use xbase::*;
 
 fn main() {
-    let mut ts_out = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    ts_out.extend(&["vscode", "src", "types.ts"]);
+    let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let vscode_root = project_root.join("vscode");
+    let ts_out = vscode_root.join("src").join("types.ts");
 
     let content = if ts_out.exists() {
         fs::read_to_string(&ts_out).expect("types.ts does not exist?")
@@ -48,7 +50,7 @@ fn main() {
     output += &broadcast::Task::type_script_ify();
     output += &broadcast::StatuslineState::type_script_ify();
 
-    output = output.replace(": Value", ": object");
+    output = output.replace(": Value", ": unknown");
     output = output.replace(": Error", ": ServerError");
     output = output.replace(": PBXTargetPlatform", ": string");
     output = output.replace("};", "}\n\n");
@@ -59,5 +61,19 @@ fn main() {
     for _ in 0..5 {
         output = output.replace("\r\n\r\n", "    \n");
     }
-    fs::write(ts_out, output).expect("failed to write typescript types");
+
+    fs::write(&ts_out, output).expect("failed to write typescript types");
+    let format_status = vscode_root
+        .join("node_modules")
+        .join(".bin")
+        .join("eslint")
+        .pipe(Command::new)
+        .current_dir(vscode_root)
+        .arg(ts_out)
+        .arg("--fix")
+        .output()
+        .expect("failed to run eslint on ts_out")
+        .status;
+
+    assert!(format_status.success(), "eslint failed");
 }
