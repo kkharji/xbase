@@ -13,3 +13,4 @@ pub use {broadcast::*, error::*, project::*, runner::*, state::*, types::*, util
 pub static SOCK_ADDR: &str = "/tmp/xbase.socket";
 pub static PID_PATH: &str = "/tmp/xbase.pid";
 pub static LOG_PATH: &str = "/tmp/xbase.log";
+pub static BIN_ROOT: &str = "$HOME/.local/share/xbase";

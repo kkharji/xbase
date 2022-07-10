@@ -2,9 +2,9 @@
   "publisher": "xbase-lab",
   "name": "xbase",
   "displayName": "XBase",
-  "description": "An XCode replacement-ish development environment that aims to be your reliable XCode alternative to develop exciting new apple software products 🚀",
   "version": "0.2.0",
   "packageManager": "pnpm@7.0.1",
+  "description": "An XCode replacement-ish development environment that aims to be your reliable XCode alternative to develop exciting new apple software products 🚀",
   "license": "MIT",
   "homepage": "https://github.com/xbase-lab/[name]#readme",
   "repository": {
@@ -59,6 +59,7 @@
     "@antfu/eslint-config": "^0.25.1",
     "@antfu/ni": "^0.16.2",
     "@babel/types": "^7.18.4",
+    "@sniptt/monads": "^0.5.10",
     "@types/node": "^17.0.41",
     "@types/vscode": "^1.68.0",
     "@typescript-eslint/eslint-plugin": "^5.30.5",
@@ -72,7 +73,6 @@
     "typescript": "^4.7.3",
     "vite": "^2.9.11",
     "vitest": "^0.14.1",
-    "vsce": "^2.9.1",
-    "@sniptt/monads": "^0.5.10"
+    "vsce": "^2.9.1"
   }
 }

@@ -3,7 +3,7 @@ local socket = require "xbase.socket"
 local validate = vim.validate
 local notify = require "xbase.notify"
 local broadcast = require "xbase.broadcast"
-local server_address = "/tmp/xbase.socket"
+local constants = require "xbase.constants"
 local uv = vim.loop
 
 ---@class XBase
@@ -18,14 +18,14 @@ local M = {
 ---@param cb function
 function M.spawn_daemon(cb)
   notify.info "Starting new dameon instance"
-  local bin = vim.env.HOME .. "/.local/share/xbase/xbase"
+  local bin = constants.BIN_ROOT .. "/xbase"
   local stdout = uv.new_pipe()
   local _, _ = uv.spawn(bin, {
     stdio = { nil, stdout, nil },
     detached = true,
   })
   stdout:read_start(vim.schedule_wrap(function(_, _)
-    M.socket = socket:connect(server_address)
+    M.socket = socket:connect(constants.SOCK_ADDR)
     stdout:read_stop()
     cb()
   end))
@@ -34,10 +34,10 @@ end
 --- Ensure we have a connect socket and a running background daemon
 function M.ensure_connection(cb)
   if M.socket == nil then
-    if uv.fs_stat(server_address) == nil then
+    if uv.fs_stat(constants.SOCK_ADDR) == nil then
       return M.spawn_daemon(cb)
     else
-      M.socket = socket:connect(server_address)
+      M.socket = socket:connect(constants.SOCK_ADDR)
     end
   end
   cb()
