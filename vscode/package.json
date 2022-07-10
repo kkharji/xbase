@@ -1,0 +1,78 @@
+{
+  "publisher": "xbase-lab",
+  "name": "xbase",
+  "displayName": "XBase",
+  "description": "An XCode replacement-ish development environment that aims to be your reliable XCode alternative to develop exciting new apple software products 🚀",
+  "version": "0.2.0",
+  "packageManager": "pnpm@7.0.1",
+  "license": "MIT",
+  "homepage": "https://github.com/xbase-lab/[name]#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xbase-lab/[name]"
+  },
+  "bugs": {
+    "url": "https://github.com/xbase-lab/[name]/issues"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/index.js",
+  "icon": "res/icon.png",
+  "files": [
+    "vscode/dist"
+  ],
+  "engines": {
+    "vscode": "^1.68.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "xbase.run",
+        "title": "XBase: Run target/scheme"
+      },
+      {
+        "command": "xbase.build",
+        "title": "XBase: Build target/scheme"
+      },
+      {
+        "command": "xbase.watch",
+        "title": "XBase: Start Build/run watch service"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "nr build --watch",
+    "lint": "eslint .",
+    "vscode:prepublish": "nr build",
+    "publish": "vsce publish --no-dependencies",
+    "pack": "vsce package --no-dependencies",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "release": "bumpp --commit --push --tag && nr publish"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^0.25.1",
+    "@antfu/ni": "^0.16.2",
+    "@babel/types": "^7.18.4",
+    "@types/node": "^17.0.41",
+    "@types/vscode": "^1.68.0",
+    "@typescript-eslint/eslint-plugin": "^5.30.5",
+    "@typescript-eslint/parser": "^5.30.5",
+    "bumpp": "^7.1.1",
+    "eslint": "^8.17.0",
+    "esno": "^0.16.3",
+    "pnpm": "^7.1.9",
+    "rimraf": "^3.0.2",
+    "tsup": "^6.1.0",
+    "typescript": "^4.7.3",
+    "vite": "^2.9.11",
+    "vitest": "^0.14.1",
+    "vsce": "^2.9.1",
+    "@sniptt/monads": "^0.5.10"
+  }
+}
