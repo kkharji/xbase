@@ -26,7 +26,10 @@
     "vscode": "^1.68.0"
   },
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "workspaceContains:Package.swift",
+    "workspaceContains:Project.swift",
+    "workspaceContains:project.yaml"
   ],
   "contributes": {
     "commands": [
