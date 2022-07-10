@@ -63,9 +63,14 @@ function M.toggle(vsplit, force)
 end
 
 ---Checks whether the level is sufficient for logging.
----@param level number log level
+---@param level string log level
 ---@returns (bool) true if would log, false if not
 function M.should_log(level)
+  local level = vim.log.levels[level:upper()]
+  -- GOT Success
+  if not level then
+    return true
+  end
   -- return true
   return level >= require("xbase.config").values.log_level
 end

@@ -33,23 +33,20 @@ pub enum StatuslineState {
 }
 
 /// Message Level
-#[derive(
-    Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify,
-)]
-#[repr(u8)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify)]
 pub enum MessageLevel {
     /// Trace Message
-    Trace = 0,
+    Trace,
     /// Debug Message
-    Debug = 1,
+    Debug,
     /// Info Message
-    Info = 2,
+    Info,
     /// Warn Message
-    Warn = 3,
+    Warn,
     /// Error Message
-    Error = 4,
+    Error,
     /// Success Message
-    Success = 5,
+    Success,
 }
 
 impl std::fmt::Display for StatuslineState {
