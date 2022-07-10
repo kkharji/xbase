@@ -2,11 +2,13 @@ import net from 'net'
 import type { Option } from '@sniptt/monads/build'
 import { Err, None, Ok, Some } from '@sniptt/monads/build'
 import type { Request, Response, Result } from './types'
+import XBaseBroadcast from './broadcast'
 
 export default class XBaseServer {
   roots: string[] = []
+  broadcasts: XBaseBroadcast[] = []
 
-  private constructor(private socket: net.Socket) { }
+  private constructor(public socket: net.Socket) { }
 
   public static async connect(): Promise<Result<XBaseServer>> {
     return new Promise((resolve) => {
@@ -50,13 +52,27 @@ export default class XBaseServer {
   }
 
   // Register a given root
-  async register(root: string): Promise<Result<string>> {
+  async register(root: string): Promise<Result<null>> {
     const response = await this.request({ method: 'register', args: { root } })
-    return response.andThen((v) => {
+    const broadcast_address = response.andThen((v) => {
       if (v.isNone())
         return Err(Error('Registeration request returned none!'))
       else
         return Ok(v.unwrap())
     }).map(v => v as string)
+
+    if (broadcast_address.isErr())
+      return Err(broadcast_address.unwrapErr())
+
+    const broadcast_connect = await XBaseBroadcast.connect(broadcast_address.unwrap())
+
+    if (broadcast_connect.isErr()) {
+      const error = broadcast_connect.unwrapErr()
+      return Err(Error(`Failed to connect to broadcast server ${error}`))
+    }
+
+    this.broadcasts.push(broadcast_connect.unwrap())
+
+    return Ok(null)
   }
 }

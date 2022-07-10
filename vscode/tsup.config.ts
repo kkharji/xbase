@@ -5,6 +5,7 @@ export default defineConfig({
     'src/index.ts',
     'src/types.ts',
     'src/server.ts',
+    'src/broadcast.ts',
   ],
   format: ['cjs'],
   shims: false,

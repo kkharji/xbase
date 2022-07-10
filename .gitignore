@@ -10,3 +10,5 @@ vscode/lib-cov
 vscode/logs
 vscode/node_modules
 vscode/temp
+.pnpm-debug.log
+.env
