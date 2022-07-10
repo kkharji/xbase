@@ -51,6 +51,7 @@
     "build": "tsup",
     "dev": "nr build --watch",
     "lint": "eslint .",
+    "format": "prettier --check src test",
     "vscode:prepublish": "nr build",
     "publish": "vsce publish --no-dependencies",
     "pack": "vsce package --no-dependencies",
@@ -59,7 +60,6 @@
     "release": "bumpp --commit --push --tag && nr publish"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^0.25.1",
     "@antfu/ni": "^0.16.2",
     "@babel/types": "^7.18.4",
     "@sniptt/monads": "^0.5.10",
@@ -69,8 +69,10 @@
     "@typescript-eslint/parser": "^5.30.5",
     "bumpp": "^7.1.1",
     "eslint": "^8.17.0",
+    "eslint-config-prettier": "^8.3.0",
     "esno": "^0.16.3",
     "pnpm": "^7.1.9",
+    "prettier": "2.5.1",
     "rimraf": "^3.0.2",
     "tsup": "^6.1.0",
     "typescript": "^4.7.3",
