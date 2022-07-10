@@ -53,13 +53,6 @@ fn gen_ts_types_file(path: PathBuf) {
     output = output.replace(": PBXTargetPlatform", ": string");
     output = output.replace("};", "}\n\n");
 
-    while output.contains("  ") {
-        output = output.replace("  ", " ");
-    }
-    for _ in 0..5 {
-        output = output.replace("\r\n\r\n", "    \n");
-    }
-
     fs::write(&path, output).expect("failed to write typescript types");
 }
 

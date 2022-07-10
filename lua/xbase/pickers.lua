@@ -20,13 +20,16 @@ local C = {
 local mappings = function(_, _)
   action_set.select:replace(function(bufnr, _)
     a.close(bufnr)
-    local req = s.get_selected_entry()
-    req.display = nil
-
-    req.method = string.lower(req.command)
-    req.args = req
-
-    server.request(req)
+    local entry = s.get_selected_entry()
+    server.request {
+      method = string.lower(entry.command),
+      args = {
+        root = entry.root,
+        settings = entry.settings,
+        operation = entry.operation,
+        device = entry.device,
+      },
+    }
   end)
 
   return true
