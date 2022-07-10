@@ -3,21 +3,22 @@ import type { Option } from "@sniptt/monads/build";
 import { Err, None, Ok, Some } from "@sniptt/monads/build";
 import type { Request, Response, Result } from "./types";
 import XBaseBroadcast from "./broadcast";
+import XBaseOutputChannel from "./ui/output";
 
 export default class XBaseServer {
   roots: string[] = [];
   broadcasts: XBaseBroadcast[] = [];
 
-  private constructor(public socket: net.Socket) { }
+  private constructor(public socket: net.Socket, private output: XBaseOutputChannel) { }
 
-  public static async connect(): Promise<Result<XBaseServer>> {
+  public static async connect(channel: XBaseOutputChannel): Promise<Result<XBaseServer>> {
     return new Promise((resolve) => {
       const socket = net.createConnection("/tmp/xbase.socket");
       socket.on("error", (err) => {
         // TODO: Spawn xbase socket
         resolve(Err(Error(`Failed to connect to xbase socket: ${err}`)));
       });
-      socket.on("connect", () => resolve(Ok(new XBaseServer(socket))));
+      socket.on("connect", () => resolve(Ok(new XBaseServer(socket, channel))));
     });
   }
 
@@ -55,16 +56,13 @@ export default class XBaseServer {
   async register(root: string): Promise<Result<null>> {
     const response = await this.request({ method: "register", args: { root } });
     const broadcast_address = response.andThen((v) => {
-      if (v.isNone())
-        {return Err(Error("Registeration request returned none!"));}
-      else
-        {return Ok(v.unwrap());}
+      if (v.isNone()) { return Err(Error("Registeration request returned none!")); }
+      else { return Ok(v.unwrap()); }
     }).map(v => v as string);
 
-    if (broadcast_address.isErr())
-      {return Err(broadcast_address.unwrapErr());}
+    if (broadcast_address.isErr()) { return Err(broadcast_address.unwrapErr()); }
 
-    const broadcast_connect = await XBaseBroadcast.connect(broadcast_address.unwrap());
+    const broadcast_connect = await XBaseBroadcast.connect(broadcast_address.unwrap(), this.output);
 
     if (broadcast_connect.isErr()) {
       const error = broadcast_connect.unwrapErr();

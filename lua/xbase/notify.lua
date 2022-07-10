@@ -21,7 +21,7 @@ M = setmetatable(M, {
     end
   end,
   __call = function(_, msg, level)
-    return notify(msg, level)
+    return notify(msg, vim.log.levels[level:upper()] or 5)
   end,
 })
 

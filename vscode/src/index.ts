@@ -2,12 +2,14 @@ import type { ExtensionContext } from "vscode";
 import { commands, window, workspace } from "vscode";
 import * as util from "./util";
 import XBaseServer from "./server";
+import XBaseOutputChannel from "./ui/output";
 
 let server: XBaseServer;
 
 export async function activate(_context: ExtensionContext) {
   console.debug("Activating XBase");
-  const connect = await XBaseServer.connect();
+  const channel = new XBaseOutputChannel();
+  const connect = await XBaseServer.connect(channel);
 
   let root: string;
 
