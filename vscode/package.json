@@ -35,15 +35,15 @@
     "commands": [
       {
         "command": "xbase.run",
-        "title": "XBase: Run target/scheme"
+        "title": "XBase: Run"
       },
       {
         "command": "xbase.build",
-        "title": "XBase: Build target/scheme"
+        "title": "XBase: Build"
       },
       {
         "command": "xbase.watch",
-        "title": "XBase: Start Build/run watch service"
+        "title": "XBase: Watch"
       }
     ]
   },

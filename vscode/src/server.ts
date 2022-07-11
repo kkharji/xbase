@@ -23,7 +23,7 @@ export default class XBaseServer {
   }
 
   // Send a new request
-  private request(req: Request): Promise<Result<Option<unknown>>> {
+  public async request(req: Request): Promise<Result<Option<unknown>>> {
     const { socket } = this;
     const data = JSON.stringify(req);
 
@@ -33,7 +33,6 @@ export default class XBaseServer {
           return resolve(Err(error));
         }
         else {
-          console.debug(`Sent ${data}`);
           socket.once("data", (buffer) => {
             const { error, data } = JSON.parse(`${buffer}`) as Response;
             if (error !== null && error !== undefined) {
@@ -56,11 +55,11 @@ export default class XBaseServer {
   async register(root: string): Promise<Result<null>> {
     const response = await this.request({ method: "register", args: { root } });
     const broadcast_address = response.andThen((v) => {
-      if (v.isNone()) { return Err(Error("Registeration request returned none!")); }
-      else { return Ok(v.unwrap()); }
+      if (v.isNone())  return Err(Error("Registeration request returned none!")); 
+      else  return Ok(v.unwrap()); 
     }).map(v => v as string);
 
-    if (broadcast_address.isErr()) { return Err(broadcast_address.unwrapErr()); }
+    if (broadcast_address.isErr())  return Err(broadcast_address.unwrapErr()); 
 
     const broadcast_connect = await XBaseBroadcast.connect(broadcast_address.unwrap(), this.output);
 

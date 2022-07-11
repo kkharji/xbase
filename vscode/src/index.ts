@@ -1,17 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { ExtensionContext } from "vscode";
-import { commands, window, workspace } from "vscode";
+import { window, workspace } from "vscode";
 import * as util from "./util";
 import XBaseServer from "./server";
 import XBaseOutputChannel from "./ui/output";
+import XBaseCommands from "./commands";
+import XBaseState from "./state";
 
 let server: XBaseServer;
 
 export async function activate(_context: ExtensionContext) {
-  console.debug("Activating XBase");
-  const channel = new XBaseOutputChannel();
-  const connect = await XBaseServer.connect(channel);
+  console.info("Activating XBase");
 
   let root: string;
+  const channel = new XBaseOutputChannel();
+  const connect = await XBaseServer.connect(channel);
 
   if (workspace.workspaceFolders && (workspace.workspaceFolders.length > 0)) {
     root = workspace.workspaceFolders[0].uri.fsPath;
@@ -29,29 +32,32 @@ export async function activate(_context: ExtensionContext) {
     console.error(`Fail to activate XBase: ${connect.unwrapErr()}`);
     return;
   }
-  else { server = connect.unwrap(); }
+  server = connect.unwrap();
 
   // TODO: Setup Editor Status
   const register = await server.register(root);
+
   if (register.isErr()) {
     console.error(`Fail to register workspaceFolder: ${register.unwrapErr()}`);
     return;
   }
-  else {
-    const name = util.nameFromPath(root);
-    window.showInformationMessage(`[${name}] Registered`);
+
+  const name = util.projectName(root);
+
+  window.showInformationMessage(`[${name}] Registered`);
+
+  const init_state = await XBaseState.init(server);
+
+  if (init_state.isErr()) {
+    const msg = `Failed to initialize state ${init_state.unwrapErr()}`;
+    window.showErrorMessage(msg);
+    console.error(msg);
   }
 
-  // TODO: Move commands to commands.ts
-  commands.registerCommand("xbase.run", () => {
-    window.showInformationMessage("Pick target/scheme to run ...");
-  });
-  commands.registerCommand("xbase.build", () => {
-    window.showInformationMessage("Pick target/scheme to build ...");
-  });
-  commands.registerCommand("xbase.watch", () => {
-    window.showInformationMessage("Pick ...");
-  });
+  const state = init_state.unwrap();
+
+  new XBaseCommands(server, state);
+
 }
 
 export function deactivate(_context: ExtensionContext) {

@@ -6,10 +6,24 @@ import XBaseOutputChannel from "./ui/output";
 
 export default class XBaseBroadcast {
 
-  private constructor(
-    public socket: net.Socket,
-    private output: XBaseOutputChannel
-  ) { }
+  private constructor(public socket: net.Socket, private output: XBaseOutputChannel) { }
+
+  public static async connect(address: string, logger: XBaseOutputChannel): Promise<Result<XBaseBroadcast>> {
+    return new Promise((resolve) => {
+      const socket = net.createConnection(address);
+      socket.on("error", (err) => {
+        resolve(Err(Error(`Failed to connect to XBase Broadcast: ${err}`)));
+      });
+      socket.on("connect", () => {
+        const broadcast = new XBaseBroadcast(socket, logger);
+        socket.on("data", (buffer) => {
+          const message = JSON.parse(`${buffer}`) as Message;
+          broadcast.handleMessage(message);
+        });
+        resolve(Ok(broadcast));
+      });
+    });
+  }
 
   private execute(task: Task) {
     switch (task.task) {
@@ -59,22 +73,5 @@ export default class XBaseBroadcast {
         break;
       }
     }
-  }
-
-  public static async connect(address: string, logger: XBaseOutputChannel): Promise<Result<XBaseBroadcast>> {
-    return new Promise((resolve) => {
-      const socket = net.createConnection(address);
-      socket.on("error", (err) => {
-        resolve(Err(Error(`Failed to connect to XBase Broadcast: ${err}`)));
-      });
-      socket.on("connect", () => {
-        const broadcast = new XBaseBroadcast(socket, logger);
-        socket.on("data", (buffer) => {
-          const message = JSON.parse(`${buffer}`) as Message;
-          broadcast.handleMessage(message);
-        });
-        resolve(Ok(broadcast));
-      });
-    });
   }
 }
