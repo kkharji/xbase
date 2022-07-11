@@ -2,38 +2,18 @@ local config = require("xbase.config").values
 
 local M = {}
 
-function M.is_watching(config, command, device, watchlist)
+function M.is_watching(settings, command, device, watchlist)
   local root = vim.loop.cwd()
-  local base_key = string.format("-configuration %s", config.configuration)
-  local key
+  local key = ("%s:%s"):format(root, command)
 
   if command == "Run" then
-    if device then
-      key = string.format("%s:%s:%s:%s", root, command, device.name, base_key)
-    else
-      key = string.format("%s:%s:%s:%s", root, command, "Bin", base_key)
-    end
-  else
-    key = string.format("%s:%s:%s", root, command, base_key)
+    key = key .. (device ~= nil and device.name or ":Bin")
   end
 
-  if config.sysroot then
-    key = key .. " -sysroot " .. config.sysroot
-  end
+  key = key .. "-configuration " .. settings.configuration
+  key = key .. " -target " .. settings.target
 
-  if config.scheme then
-    key = key .. " -scheme " .. config.scheme
-  end
-
-  key = key .. " -target " .. config.target
-
-  for _, watching_key in pairs(watchlist) do
-    if key == watching_key then
-      return true
-    end
-  end
-
-  return false
+  return vim.tbl_contains(watchlist, key)
 end
 
 function M.project_name(root)

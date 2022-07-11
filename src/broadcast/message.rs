@@ -1,6 +1,5 @@
 use process_stream::ProcessItem;
 use serde::{Deserialize, Serialize};
-use serde_repr::*;
 use typescript_definitions::TypeScriptify;
 
 /// Representation of Messages that clients needs to process

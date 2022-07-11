@@ -5,7 +5,10 @@ parserOptions:
   sourceType: module
 rules:
   no-console: off
-  curly: error
+  curly:
+    - error
+    - multi-or-nest
+    - consistent
   eqeqeq: warn
   no-throw-literal: warn
   semi: off
@@ -13,7 +16,7 @@ rules:
     - error
     - double
   "@typescript-eslint/no-non-null-assertion": off
-  "@typescript-eslint/semi": error
+  "@typescript-eslint/semi": warn
 extends:
   - eslint:recommended
   - plugin:@typescript-eslint/recommended
