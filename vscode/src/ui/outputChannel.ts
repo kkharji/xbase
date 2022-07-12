@@ -1,12 +1,16 @@
-import type { OutputChannel } from "vscode";
+import type vscode from "vscode";
 import { window } from "vscode";
 import { MessageLevel } from "../types";
 
-export default class XBaseOutputChannel {
-  private channel: OutputChannel;
+export default class OutputChannel implements vscodeDisposable {
+  private channel: vscode.OutputChannel;
 
   constructor() {
     this.channel = window.createOutputChannel("XBase");
+  }
+
+  dispose() {
+    this.channel.dispose();
   }
 
   /* show output */

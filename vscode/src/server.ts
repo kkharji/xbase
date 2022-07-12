@@ -1,75 +1,73 @@
 import net from "net";
-import type { Option } from "@sniptt/monads/build";
-import { Err, None, Ok, Some } from "@sniptt/monads/build";
-import type { Request, Response, Result } from "./types";
-import XBaseBroadcast from "./broadcast";
-import XBaseOutputChannel from "./ui/output";
+import type { ProjectInfo, Request, Response } from "./types";
+import { Disposable } from "vscode";
 
-export default class XBaseServer {
+export default class Server implements Disposable {
   roots: string[] = [];
-  broadcasts: XBaseBroadcast[] = [];
 
-  private constructor(public socket: net.Socket, private output: XBaseOutputChannel) { }
+  private constructor(public socket: net.Socket) { }
 
-  public static async connect(channel: XBaseOutputChannel): Promise<Result<XBaseServer>> {
-    return new Promise((resolve) => {
+  public static async connect(): Promise<Server> {
+    return new Promise((resolve, reject) => {
       const socket = net.createConnection("/tmp/xbase.socket");
+      // TODO: Spawn xbase socket
       socket.on("error", (err) => {
-        // TODO: Spawn xbase socket
-        resolve(Err(Error(`Failed to connect to xbase socket: ${err}`)));
+        reject(Error(`Failed to connect to xbase socket: ${err}`));
       });
-      socket.on("connect", () => resolve(Ok(new XBaseServer(socket, channel))));
+      socket.on("connect", () => resolve(new Server(socket)));
     });
   }
 
-  // Send a new request
-  public async request(req: Request): Promise<Result<Option<unknown>>> {
+  // Register a given root
+  async register(root: string): Promise<string> {
+    const value = await this.request({ method: "register", args: { root } })
+      .catch(error => {
+        throw Error(`Registeration failed: ${error}`);
+      });
+
+    if (typeof value === "string") return value;
+
+    throw Error(`Expected response to be a string, got ${value}`);
+  }
+
+  /**
+    * Send a new request to xbase server
+  */
+  public async request(req: Request): Promise<unknown> {
     const { socket } = this;
     const data = JSON.stringify(req);
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       socket.write(`${data}\n`, (error) => {
         if (error !== undefined) {
-          return resolve(Err(error));
-        }
-        else {
+          return reject(new Error);
+        } else {
           socket.once("data", (buffer) => {
             const { error, data } = JSON.parse(`${buffer}`) as Response;
-            if (error !== null && error !== undefined) {
-              const { kind, msg } = error;
-              resolve(Err(Error(`${kind}: ${msg}`)));
-            }
-            else if (data !== null) {
-              resolve(Ok(Some(data)));
-            }
-            else {
-              resolve(Ok(None));
-            }
+            if (error)
+              reject(new Error(`Server Errored: (${error.kind}): ${error.msg}`));
+            else
+              resolve(data);
           });
         }
       });
     });
   }
 
-  // Register a given root
-  async register(root: string): Promise<Result<null>> {
-    const response = await this.request({ method: "register", args: { root } });
-    const broadcast_address = response.andThen((v) => {
-      if (v.isNone())  return Err(Error("Registeration request returned none!")); 
-      else  return Ok(v.unwrap()); 
-    }).map(v => v as string);
+  /**
+    * Get Project Information for a given `root`
+  */
+  public async getProjectInfo(root: string): Promise<ProjectInfo> {
+    return this.request({ method: "get_project_info", args: { root } })
+      .then(result => {
+        if (result !== null || result !== undefined) return result as ProjectInfo;
+        throw Error("Expected server to return project Information, got nothing");
+      });
+  }
 
-    if (broadcast_address.isErr())  return Err(broadcast_address.unwrapErr()); 
-
-    const broadcast_connect = await XBaseBroadcast.connect(broadcast_address.unwrap(), this.output);
-
-    if (broadcast_connect.isErr()) {
-      const error = broadcast_connect.unwrapErr();
-      return Err(Error(`Failed to connect to broadcast server ${error}`));
-    }
-
-    this.broadcasts.push(broadcast_connect.unwrap());
-
-    return Ok(null);
+  dispose() {
+    this.socket.pause();
+    this.socket.end();
+    this.socket.destroy();
   }
 }
