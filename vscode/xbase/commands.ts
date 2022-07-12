@@ -89,7 +89,7 @@ async function serverExecute(command: string, ctx: WorkspaceContext) {
   try {
     const root = ctx.currentFolder?.uri.fsPath;
     if (root === undefined) {
-      window.showErrorMessage("Failed to execute `${command}`: No project root found");
+      window.showErrorMessage(`${command}: No project root found`);
       return;
     }
     const projectInfo = await ctx.server.getProjectInfo(root);

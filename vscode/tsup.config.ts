@@ -2,8 +2,7 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: [
-    "src/*.ts",
-    "src/ui/*.ts",
+    "xbase/init.ts",
   ],
   format: ["cjs"],
   shims: false,

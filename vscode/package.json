@@ -17,7 +17,7 @@
   "categories": [
     "Other"
   ],
-  "main": "./dist/index.js",
+  "main": "./dist/init.js",
   "icon": "res/icon.png",
   "files": [
     "vscode/dist"
@@ -51,7 +51,7 @@
     "build": "tsup",
     "dev": "nr build --watch",
     "lint": "eslint .",
-    "format": "prettier --check src test",
+    "format": "prettier --check xbase test",
     "vscode:prepublish": "nr build",
     "publish": "vsce publish --no-dependencies",
     "pack": "vsce package --no-dependencies",

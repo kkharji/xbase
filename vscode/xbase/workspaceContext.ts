@@ -66,11 +66,12 @@ export class WorkspaceContext implements Disposable {
     // If we don't have a current selected folder Start up language server by firing focus event
     // on either null folder or the first folder if there is only one
     if (this.currentFolder === undefined) {
-      if (this.folders.length === 1)
+      if (this.folders.length === 1) {
+        this.currentFolder = this.folders[0];
         await this.fireEvent(this.folders[0], FolderEvent.focus);
-      else
+      } else {
         await this.fireEvent(null, FolderEvent.focus);
-
+      }
     }
   }
 

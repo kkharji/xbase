@@ -19,7 +19,6 @@ export async function activate(context: ExtensionContext): Promise<Api> {
   workspaceContext.addWorkspaceFolders();
   workspaceContext.registerCommands();
 
-
   context.subscriptions.push(workspaceContext);
 
   return { workspaceContext };
