@@ -1,129 +1,122 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Ok, Err, } from "@sniptt/monads";
-import { commands, window, workspace } from "vscode";
-import XBaseServer from "./server";
-import XBaseState from "./state";
-import { BuildSettings, DeviceLookup, Operation, ProjectInfo, Request, Result } from "./types";
+import { commands, window } from "vscode";
+import type { BuildSettings, DeviceLookup, ProjectInfo, Request } from "./types";
+import { Operation } from "./types";
 import * as util from "./util";
+import { WorkspaceContext } from "./workspaceContext";
 
 interface PickerItem {
   label: string,
   method: string,
-  detail: string,
+  detail?: string,
   description: string,
   settings: BuildSettings,
   device?: DeviceLookup,
   operation: Operation,
 };
 
-export default class XBaseCommands {
-  constructor(private server: XBaseServer, private state: XBaseState) {
-    commands.registerCommand("xbase.build", () => this.serverExecute("Build"));
-    commands.registerCommand("xbase.run", () => this.serverExecute("Run"));
-    commands.registerCommand("xbase.watch", () => this.serverExecute("Watch"));
-  }
+function getPickerItems(
+  root: string,
+  command: string,
+  projectInfo: ProjectInfo,
+  ctx: WorkspaceContext,
+): PickerItem[] {
+  const pickerItems: PickerItem[] = [];
+  const isWatchCommand = (command === "Watch");
+  const cmds = isWatchCommand ? ["Build", "Run"] : [command];
+  const { targets, watchlist } = projectInfo;
+  // TODO: make cfgList part of targets
+  const cfgList = ["Debug", "Release"];
 
-  /**
-    * Get Project Information for a given `root`
-  */
-  private async getProjectInfo(root: string): Promise<ProjectInfo | undefined> {
-    return this.server.request({ method: "get_project_info", args: { root } })
-      .then(response => response.andThen(inner => inner.match({
-        some: value => Ok(value as ProjectInfo),
-        none: () => Err(Error(`No Project info for ${root}`)) as Result<ProjectInfo>
-      })))
-      .then(result => {
-        if (result.isOk()) return result.unwrap();
-        const msg = `Failed to get project inf: ${result.unwrapErr()}`;
-        console.error(msg);
-        window.showErrorMessage(msg);
-      });
-  }
+  const forEach = (fn: (cmd: string, cfg: string, target: string) => void
+  ) => cmds.forEach(
+    cmd => cfgList.forEach(
+      cfg => Object.keys(targets).forEach(
+        target => fn(cmd, cfg, target))));
 
-  /**
-    * Execute xbase command
-    * TODO: Refactor to get available configurations with projectInfo from server
-  */
-  public async serverExecute(command: string) {
-    const title = `XBase ${command}`;
-    const root = workspace.workspaceFolders![0].uri.fsPath;
-    const isWatchCommand = (command === "Watch");
-    const commands = isWatchCommand ? ["Build", "Run"] : [command];
-    const projectInfo = await this.getProjectInfo(root);
+  forEach((command, configuration, target) => {
+    const platform = targets[target].platform;
+    const runners = (command === "Run") ? ctx.runners[platform] : undefined;
+    const baseDetail = `${command} ${target} with ${configuration}`;
+    const description = `(${configuration})`;
+    const settings = { target, configuration, scheme: null };
+    const label = target;
+    const method = command.toLowerCase();
+    const baseItem = { label, description, method, settings, } as PickerItem;
 
-    if (projectInfo === undefined) return;
+    const isWatchingProject = (device?: DeviceLookup) => isWatchCommand
+      ? util.isWatching(root, command, settings, watchlist, device)
+      : undefined;
 
-    const pickerItems: PickerItem[] = [];
-    const cfgList = ["Debug", "Release"];
+    const getOperation = (isWatching?: boolean) => (isWatching !== undefined)
+      ? (isWatching ? Operation.Stop : Operation.Watch)
+      : Operation.Once;
 
-    forEach(commands, cfgList, Object.keys(projectInfo.targets))
-      ((command, configuration, target) => {
-        const runners = (command === "Run") ? this.state.runners[projectInfo.targets[target].platform] : undefined;
-        const baseDetail = `${command} ${target} with ${configuration}`;
-        const baseItem: PickerItem = {
-          label: target,
-          description: `(${configuration})`,
-          detail: "",
-          method: command.toLowerCase(),
-          settings: { target, configuration, scheme: null },
-          operation: Operation.Once,
-        };
-
-        const isWatching = (device?: DeviceLookup) => {
-          if (isWatchCommand)
-            return util.isWatching(root, command, baseItem.settings, projectInfo.watchlist, device);
-        };
-
-        const getDetail = (isWatching?: boolean, device?: DeviceLookup) => {
-          let detail = `${baseDetail}`;
-          if (device) detail += `on ${device.name}`;
-          if (isWatching !== undefined) {
-            const watchAction = isWatching ? "Stop" : "Watch";
-            detail = `${watchAction} ${detail}`;
-          }
-          return detail;
-        };
-
-        if (runners) {
-          runners.forEach(device => {
-            const isWatching_ = isWatching(device);
-            if (isWatching_ !== undefined)
-              baseItem.operation = isWatching_ ? Operation.Stop : Operation.Watch;
-            return pickerItems.push({
-              ...baseItem,
-              device: device,
-              label: `${target} on ${device.name}`,
-              detail: getDetail(isWatching_, device),
-              operation: isWatching_ ? Operation.Stop : Operation.Watch
-            });
-          });
-        }
-
-        const isWatching_ = isWatching();
-        if (isWatching_ !== undefined)
-          baseItem.operation = isWatching_ ? Operation.Stop : Operation.Watch;
-        baseItem.detail = getDetail(isWatching_);
-        return pickerItems.push(baseItem);
-
-      });
-
-    const entry = await window.showQuickPick(pickerItems, { title, matchOnDescription: true });
-    console.debug(entry);
-
-    if (entry) {
-      const { settings, operation, device } = entry;
-      await this.server.request({
-        method: entry.method,
-        args: { root, settings, operation, device, }
-      } as Request);
+    const getDetail = (isWatching?: boolean, device?: DeviceLookup) => {
+      let detail = `${baseDetail}`;
+      if (device)
+        detail += `on ${device.name}`;
+      if (isWatching !== undefined) {
+        const watchAction = isWatching ? "Stop" : "Watch";
+        detail = `${watchAction} ${detail}`;
+      }
+      return detail;
     };
 
-  }
+    if (runners) {
+      runners.forEach(device => {
+        const item = { ...baseItem };
+        const isWatching = isWatchingProject(device);
+        item.device = device;
+        item.label = `${target} on ${device.name}`;
+        item.detail = getDetail(isWatching, device);
+        item.operation = getOperation(isWatching);
+        return pickerItems.push(item);
+      });
+    }
+
+    const isWatching = isWatchingProject();
+    baseItem.detail = getDetail(isWatching);
+    baseItem.operation = getOperation(isWatching);
+
+    return pickerItems.push(baseItem);
+
+  });
+  return pickerItems;
 }
 
-const forEach = (commands: string[], cfgList: string[], targets: string[]) =>
-  (fn: (command: string, configuration: string, target: string) => void) =>
-    commands.forEach(command =>
-      cfgList.forEach(configuration =>
-        targets.forEach(target =>
-          fn(command, configuration, target))));
+async function serverExecute(command: string, ctx: WorkspaceContext) {
+  try {
+    const root = ctx.currentFolder?.uri.fsPath;
+    if (root === undefined) {
+      window.showErrorMessage("Failed to execute `${command}`: No project root found");
+      return;
+    }
+    const projectInfo = await ctx.server.getProjectInfo(root);
+    const entry = await window.showQuickPick(
+      getPickerItems(root, command, projectInfo, ctx),
+      {
+        title: `XBase ${command}`,
+        matchOnDescription: true
+      }
+    );
+
+    if (entry) {
+      const { settings, operation, device, method } = entry;
+      const args = { root, settings, operation, device };
+      await ctx.server.request({ method, args, } as Request);
+    };
+  } catch (error) {
+    window.showErrorMessage(`${command} Failed: ${error}`);
+  }
+
+}
+
+
+export function register(ctx: WorkspaceContext) {
+  ctx.subscriptions.push(
+    commands.registerCommand("xbase.build", () => serverExecute("Build", ctx)),
+    commands.registerCommand("xbase.run", () => serverExecute("Run", ctx)),
+    commands.registerCommand("xbase.watch", () => serverExecute("Watch", ctx)),
+  );
+}

@@ -1,26 +1,25 @@
 import net from "net";
-import { Err, Ok } from "@sniptt/monads/build";
-import { window } from "vscode";
-import type { Message, MessageLevel, Result, Task } from "./types";
-import XBaseOutputChannel from "./ui/output";
+import { Disposable, window } from "vscode";
+import type { Message, MessageLevel, Task } from "./types";
+import OutputChannel from "./ui/outputChannel";
 
-export default class XBaseBroadcast {
+export default class Broadcast implements Disposable {
 
-  private constructor(public socket: net.Socket, private output: XBaseOutputChannel) { }
+  private constructor(public socket: net.Socket, private output: OutputChannel) { }
 
-  public static async connect(address: string, logger: XBaseOutputChannel): Promise<Result<XBaseBroadcast>> {
-    return new Promise((resolve) => {
-      const socket = net.createConnection(address);
-      socket.on("error", (err) => {
-        resolve(Err(Error(`Failed to connect to XBase Broadcast: ${err}`)));
-      });
-      socket.on("connect", () => {
-        const broadcast = new XBaseBroadcast(socket, logger);
-        socket.on("data", (buffer) => {
+
+  public static async connect(address: string, logger: OutputChannel): Promise<Broadcast> {
+    return new Promise((resolve, reject) => {
+      const socket = net.createConnection(address, () => {
+        const broadcast = new Broadcast(socket, logger);
+        socket.on("data", buffer => {
           const message = JSON.parse(`${buffer}`) as Message;
           broadcast.handleMessage(message);
         });
-        resolve(Ok(broadcast));
+        resolve(broadcast);
+      });
+      socket.on("error", err => {
+        reject(Error(`Failed to connect to XBase Broadcast: ${err}`));
       });
     });
   }
@@ -73,5 +72,11 @@ export default class XBaseBroadcast {
         break;
       }
     }
+  }
+
+  dispose() {
+    this.socket.pause();
+    this.socket.end();
+    this.socket.destroy();
   }
 }
