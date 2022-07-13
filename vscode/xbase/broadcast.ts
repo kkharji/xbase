@@ -1,10 +1,10 @@
+import { filter, map, pipe, split, toAsync } from "iter-ops";
 import net from "net";
 import { Disposable, window } from "vscode";
-import type { Message, MessageLevel, Task } from "./types";
+import { Message, MessageLevel, Task } from "./types";
 import OutputChannel from "./ui/outputChannel";
 
 export default class Broadcast implements Disposable {
-
   private constructor(public socket: net.Socket, private output: OutputChannel) { }
 
 
@@ -12,9 +12,14 @@ export default class Broadcast implements Disposable {
     return new Promise((resolve, reject) => {
       const socket = net.createConnection(address, () => {
         const broadcast = new Broadcast(socket, logger);
-        socket.on("data", buffer => {
-          const message = JSON.parse(`${buffer}`) as Message;
-          broadcast.handleMessage(message);
+        socket.on("data", async buffer => {
+          for await (const message of pipe(
+            toAsync(buffer),
+            split(a => a === 10),
+            map(m => Buffer.from(m)),
+            filter(m => m.length > 1),
+            map(m => JSON.parse(m.toString()) as Message),
+          )) await broadcast.handleMessage(message);
         });
         resolve(broadcast);
       });
@@ -24,7 +29,7 @@ export default class Broadcast implements Disposable {
     });
   }
 
-  private execute(task: Task) {
+  private async execute(task: Task) {
     switch (task.task) {
       case "OpenLogger":
         this.output.show();
@@ -38,37 +43,38 @@ export default class Broadcast implements Disposable {
     }
   }
 
-  private notify(msg: string, level: MessageLevel) {
+  private async notify(msg: string, level: MessageLevel) {
     switch (level) {
       case "Info":
-        window.showInformationMessage(msg);
+        await window.showInformationMessage(msg);
         break;
       case "Warn":
-        window.showWarningMessage(msg);
+        await window.showWarningMessage(msg);
         break;
       case "Error":
-        window.showErrorMessage(msg);
+        await window.showErrorMessage(msg);
         break;
       case "Success":
-        window.showInformationMessage(msg);
+        await window.showInformationMessage(msg);
         break;
     }
   }
 
-  private handleMessage(message: Message) {
+  private async handleMessage(message: Message) {
     switch (message.type) {
       case "Notify": {
         const { msg, level } = message.args;
-        this.notify(msg, level);
+        await this.notify(msg, level);
         break;
       }
       case "Execute": {
-        this.execute(message.args);
+        await this.execute(message.args);
         break;
       }
       case "Log": {
         const { msg, level } = message.args;
-        this.output.append(msg, level);
+        if (level !== MessageLevel.Debug && level !== MessageLevel.Trace)
+          this.output.append(msg, level);
         break;
       }
     }
