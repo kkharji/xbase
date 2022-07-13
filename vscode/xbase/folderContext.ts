@@ -19,7 +19,7 @@ export default class FolderContext implements Disposable {
     uri: Uri, folder: WorkspaceFolder, ctx: WorkspaceContext
   ): Promise<FolderContext> {
     const name = projectName(uri.fsPath);
-    const statusItemText = `Registering ${name}`;
+    const statusItemText = `[${name}] Registering`;
     console.log(statusItemText);
 
     // ctx.statusItem.start(statusItemText);
@@ -28,9 +28,10 @@ export default class FolderContext implements Disposable {
       .catch(error => {
         throw Error(`[${name}] Failed to Initialize: ${error}`);
       });
-
+    const registered = `[${name}] Registered`;
     // ctx.statusItem.end(statusItemText);
-    window.showInformationMessage(`[${name}] Registered`);
+    window.showInformationMessage(registered);
+    console.log(registered);
 
     return new FolderContext(uri, folder, broadcast);
   }

@@ -2,7 +2,7 @@ import type vscode from "vscode";
 import { window } from "vscode";
 import { MessageLevel } from "../types";
 
-export default class OutputChannel implements vscodeDisposable {
+export default class OutputChannel implements vscode.Disposable {
   private channel: vscode.OutputChannel;
 
   constructor() {
@@ -15,30 +15,21 @@ export default class OutputChannel implements vscodeDisposable {
 
   /* show output */
   public show() {
-    this.channel.show();
+    this.channel.show(true);
   }
 
   // TODO: output source code warnings & errors to Problems
   append(msg: string, level: MessageLevel) {
     const line = `${this.timestamp}: ${msg}`;
 
+    // TODO: find out based on vscode current log level
     this.channel.appendLine(line);
     switch (level) {
-      case "Error":
-        console.error(line);
-        break;
-      case "Warn":
-        console.warn(line);
-        break;
-      case "Debug":
-        console.debug(line);
-        break;
-      case "Info":
-        console.info(line);
-        break;
-      case "Success":
-        console.info(line);
-        break;
+      case "Error": console.error(line); break;
+      case "Warn": console.warn(line); break;
+      case "Debug": console.debug(line); break;
+      case "Info": console.info(line); break;
+      case "Success": console.info(line); break;
     }
   }
 

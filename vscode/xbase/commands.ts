@@ -106,8 +106,9 @@ async function serverExecute(command: string, ctx: WorkspaceContext) {
       const args = { root, settings, operation, device };
       await ctx.server.request({ method, args, } as Request);
     };
-  } catch (error) {
-    window.showErrorMessage(`${command} Failed: ${error}`);
+  } catch (err) {
+    const error = err as Error;
+    window.showErrorMessage(`Running \`${command}\` Failed: ${error.message}`);
   }
 
 }

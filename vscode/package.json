@@ -74,6 +74,7 @@
     "vsce": "^2.9.1"
   },
   "dependencies": {
+    "iter-ops": "^1.6.2",
     "tiny-glob": "^0.2.9"
   }
 }

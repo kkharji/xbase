@@ -7,8 +7,8 @@ fn main() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let ts_root = root.join("vscode");
     let lua_root = root.join("lua").join("xbase");
-    let ts_types_path = ts_root.join("src").join("types.ts");
-    let ts_constants_path = ts_root.join("src").join("constants.ts");
+    let ts_types_path = ts_root.join("xbase").join("types.ts");
+    let ts_constants_path = ts_root.join("xbase").join("constants.ts");
     let lua_constants_path = lua_root.join("constants.lua");
 
     gen_ts_types_file(ts_types_path);
