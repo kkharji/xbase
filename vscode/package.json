@@ -44,6 +44,10 @@
       {
         "command": "xbase.watch",
         "title": "XBase: Watch"
+      },
+      {
+        "command": "xbase.toggleLogger",
+        "title": "XBase: Toggle Logger"
       }
     ]
   },
