@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 /// Register a project root
 #[derive(Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct RegisterRequest {
-    root: PathBuf,
+    pub root: PathBuf,
 }
 
 #[async_trait]

@@ -1,6 +1,4 @@
 use std::{fs, path::PathBuf, process::Command};
-use typescript_definitions::TypeScriptifyTrait;
-use xbase::*;
 
 fn main() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -25,18 +23,14 @@ macro_rules! struct_to_lines {
 }
 
 fn gen_ts_types_file(path: PathBuf) {
+    use typescript_definitions::TypeScriptifyTrait;
     let content = read_file_content(&path);
     let mut generated: Vec<String> = vec![];
-    use {broadcast::*, server::*, types::*};
-
-    generated.extend(
-        server::Request::type_script_ify()
-            .split("\n")
-            .map(ToString::to_string),
-    );
+    use xbase::{broadcast::*, server::*, types::*, *};
 
     generated.push("\n/* Server Requests */\n".into());
 
+    generated.extend(struct_to_lines!(Request));
     generated.extend(struct_to_lines!(BuildRequest));
     generated.extend(struct_to_lines!(RunRequest));
     generated.extend(struct_to_lines!(RegisterRequest));
@@ -73,7 +67,8 @@ fn gen_ts_types_file(path: PathBuf) {
 
         if line.contains("Value") {
             *line = line.replace(": Value", ": unknown");
-        } else if line.contains("Value") {
+        }
+        if line.contains("Error") {
             *line = line.replace(": Error", ": ServerError");
         } else if line.contains("PBXTargetPlatform") {
             *line = line.replace(": PBXTargetPlatform", ": string");
@@ -82,11 +77,12 @@ fn gen_ts_types_file(path: PathBuf) {
         *line = line.trim_end_matches(' ').to_string();
     }
 
-    fs::write(&path, content + "\n" + &generated.join("\n"))
+    std::fs::write(&path, content + "\n" + &generated.join("\n"))
         .expect("failed to write typescript types");
 }
 
 fn gen_ts_constant(path: PathBuf) {
+    use xbase::*;
     let mut output = read_file_content(&path);
 
     macro_rules! export {
@@ -101,10 +97,11 @@ fn gen_ts_constant(path: PathBuf) {
         "export const XBASE_BIN_ROOT = '{BIN_ROOT}'.replace('$HOME', process.env.HOME!)\n"
     );
 
-    fs::write(&path, output).expect("failed to write typescript types");
+    std::fs::write(&path, output).expect("failed to write typescript types");
 }
 
 fn gen_lua_constant(path: PathBuf) {
+    use xbase::*;
     let mut output = read_file_content(&path);
 
     macro_rules! export {
@@ -117,7 +114,7 @@ fn gen_lua_constant(path: PathBuf) {
     output += &format!("M.BIN_ROOT = string.gsub('{BIN_ROOT}', '$HOME', vim.env.HOME)\n",);
     output += "\n\nreturn M";
 
-    fs::write(&path, output).expect("failed to write typescript types");
+    std::fs::write(&path, output).expect("failed to write typescript types");
 }
 
 fn read_file_content(file: &PathBuf) -> String {

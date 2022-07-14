@@ -8,7 +8,7 @@ use std::sync::Arc;
 /// Drop a given set of roots to be dropped (i.e. unregistered)
 #[derive(Debug, Serialize, Deserialize, TypeScriptify)]
 pub struct DropRequest {
-    roots: Vec<PathBuf>,
+    pub roots: Vec<PathBuf>,
 }
 
 #[async_trait]
