@@ -2,10 +2,10 @@ local M = {}
 
 function M.is_watching(settings, command, device, watchlist)
   local root = vim.loop.cwd()
-  local key = ("%s:%s"):format(root, command)
+  local key = ("%s:%s:"):format(root, command)
 
   if command == "Run" then
-    key = key .. (device ~= nil and device.name or ":Bin")
+    key = key .. (device ~= nil and device.name or "Bin") .. ":"
   end
 
   key = key .. "-configuration " .. settings.configuration
