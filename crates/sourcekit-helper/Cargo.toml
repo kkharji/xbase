@@ -1,6 +1,6 @@
 [package]
 name = "xbase-sourcekit-helper"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "sourcekit helper that provide build-server sourcekit can use to provide autocompletion and file navigation"
 license = "MIT OR Apache-2.0"
