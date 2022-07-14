@@ -61,6 +61,9 @@ typescript-definitions = { git = "https://github.com/onelson/typescript-definiti
 
 [workspace]
 members = [ "crates/*" ]
+[features]
+default = []
+gen = []
 
 [dev-dependencies]
 tracing-test = "0.2.2"

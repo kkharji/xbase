@@ -1,5 +1,7 @@
+#[cfg(feature = "gen")]
 use std::{fs, path::PathBuf, process::Command};
 
+#[cfg(feature = "gen")]
 fn main() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let ts_root = root.join("vscode");
@@ -14,6 +16,10 @@ fn main() {
     eslint_format(ts_root)
 }
 
+#[cfg(not(feature = "gen"))]
+fn main() {}
+
+#[cfg(feature = "gen")]
 macro_rules! struct_to_lines {
     ($name:ident) => {
         $name::type_script_ify()
@@ -22,6 +28,7 @@ macro_rules! struct_to_lines {
     };
 }
 
+#[cfg(feature = "gen")]
 fn gen_ts_types_file(path: PathBuf) {
     use typescript_definitions::TypeScriptifyTrait;
     let content = read_file_content(&path);
@@ -81,6 +88,7 @@ fn gen_ts_types_file(path: PathBuf) {
         .expect("failed to write typescript types");
 }
 
+#[cfg(feature = "gen")]
 fn gen_ts_constant(path: PathBuf) {
     use xbase::*;
     let mut output = read_file_content(&path);
@@ -100,6 +108,7 @@ fn gen_ts_constant(path: PathBuf) {
     std::fs::write(&path, output).expect("failed to write typescript types");
 }
 
+#[cfg(feature = "gen")]
 fn gen_lua_constant(path: PathBuf) {
     use xbase::*;
     let mut output = read_file_content(&path);
@@ -117,6 +126,7 @@ fn gen_lua_constant(path: PathBuf) {
     std::fs::write(&path, output).expect("failed to write typescript types");
 }
 
+#[cfg(feature = "gen")]
 fn read_file_content(file: &PathBuf) -> String {
     let content = if file.exists() {
         fs::read_to_string(&file).unwrap()
@@ -132,6 +142,7 @@ fn read_file_content(file: &PathBuf) -> String {
     String::from(&lines[0..marker + 1].join("\n")) + "\n"
 }
 
+#[cfg(feature = "gen")]
 fn eslint_format(ts_root: PathBuf) {
     let format_status = Command::new(ts_root.join("node_modules").join(".bin").join("prettier"))
         .arg(ts_root.join("xbase").join("types.ts"))
