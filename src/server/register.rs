@@ -30,6 +30,7 @@ impl RequestHandler<PathBuf> for RegisterRequest {
 
         tokio::spawn(async move {
             let mut projects = projects().await;
+            tracing::trace!("projects: {projects:?}");
 
             if let Some(project) = projects.get(&root).map(Arc::clone) {
                 let mut project = project.lock_owned().await;
@@ -45,6 +46,7 @@ impl RequestHandler<PathBuf> for RegisterRequest {
             let ignore = project.watchignore().clone();
 
             let project = Arc::new(Mutex::new(project));
+            tracing::debug!("[{name}] Creating compile watcher");
             let handler = WatchService::new(
                 &root,
                 ignore,

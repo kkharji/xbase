@@ -94,6 +94,8 @@ impl ProjectGenerate for XCodeGenProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
+        let name = self.root().name().unwrap().to_owned();
+        tracing::debug!("[{name}] Generating xcodeproj");
         self.on_generate_start(broadcast)?;
 
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
@@ -103,6 +105,7 @@ impl ProjectGenerate for XCodeGenProject {
         let success = logs.pop().unwrap().is_success().unwrap_or_default();
 
         if !success {
+            tracing::error!("[{name}] Failed to generate xcodeproj");
             let logs = logs.into_iter().map(|p| p.to_string()).collect::<Vec<_>>();
 
             for log in logs {
@@ -112,7 +115,6 @@ impl ProjectGenerate for XCodeGenProject {
         self.on_generate_finish(success, broadcast)?;
 
         let xcodeproj_paths = self.get_xcodeproj_paths()?;
-        let name = self.name();
 
         if xcodeproj_paths.len() > 1 {
             let using = xcodeproj_paths[0].display();
@@ -120,6 +122,8 @@ impl ProjectGenerate for XCodeGenProject {
         }
 
         self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
+
+        tracing::debug!("[{name}] query for targets and their platfroms");
         for (key, platform) in self.xcodeproj.targets_platform().into_iter() {
             if self.targets.contains_key(&key) {
                 let info = self.targets.get_mut(&key).unwrap();
@@ -139,6 +143,7 @@ impl Project for XCodeGenProject {
         let mut watchignore = generate_watchignore(root).await;
         watchignore.extend(["**/*.xcodeproj/**".into(), "**/*.xcworkspace/**".into()]);
 
+        let name = root.name().unwrap();
         let mut project = Self {
             root: root.clone(),
             watchignore,
@@ -146,16 +151,18 @@ impl Project for XCodeGenProject {
             ..Self::default()
         };
 
+        tracing::debug!("[{name}] Searching for xcodeproj paths");
         let xcodeproj_paths = project.get_xcodeproj_paths()?;
 
         if xcodeproj_paths.len() > 1 {
             tracing::warn!(
-                "Found more then on xcodeproj, using {:?}",
+                "[{name}] Found more then on xcodeproj, using {:?}",
                 xcodeproj_paths[0]
             );
         }
 
         if !xcodeproj_paths.is_empty() {
+            tracing::debug!("[{name}] `.xcodeproj` found");
             project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
             project.targets = project
                 .xcodeproj
@@ -164,6 +171,7 @@ impl Project for XCodeGenProject {
                 .map(|(k, platform)| (k, TargetInfo { platform }))
                 .collect();
         } else {
+            tracing::debug!("[{name}] no `.xcodeproj` found, generating ...");
             project.generate(broadcast).await?;
         }
 

@@ -14,6 +14,7 @@ pub struct DropRequest {
 impl RequestHandler<()> for DropRequest {
     async fn handle(self) -> Result<()> {
         let DropRequest { roots } = self;
+        tracing::debug!("Requested to drop");
         let mut watchers = watchers().await;
         let mut broadcasters = broadcasters().await;
         let mut projects = projects().await;
@@ -31,13 +32,13 @@ impl RequestHandler<()> for DropRequest {
             // Remove project only when no more client using that data.
             if project.clients() == &0 {
                 let key = root.as_path().abbrv()?.display();
-                tracing::info!("[{key}] project removed");
+                tracing::trace!("[{key}] project removed");
                 projects.remove(&root);
 
                 if let Some(watcher) = watchers.get(&root) {
                     watcher.lock().await.handler.abort();
                     watchers.remove(&root);
-                    tracing::info!("[{key}] watcher removed");
+                    tracing::trace!("[{key}] watcher removed");
                 };
 
                 broadcasters.remove(&root).map(|l| {

@@ -156,7 +156,7 @@ impl Broadcast {
                                 let mut listeners = listeners.lock().await;
                                 match serde_json::to_string(&output) {
                                     Ok(mut value) => {
-                                        tracing::debug!("Sent: {value}");
+                                        tracing::trace!("Sent: {value}");
                                         value.push('\n');
                                         for listener in listeners.iter_mut() {
                                             listener.write_all(value.as_bytes()).await.ok();

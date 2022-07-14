@@ -227,6 +227,7 @@ pub trait Project:
         let root = self.root();
         let compile_path = root.join(".compile");
         let is_swift_project = root.join("Package.swift").exists();
+        tracing::debug!("[{}] ensuring server support", root.name().unwrap());
 
         /// Server Config
         static BUILD_SERVER_CONFIG: Lazy<Vec<u8>> = Lazy::new(|| {
@@ -288,13 +289,18 @@ pub type ProjectImplementer = Box<dyn Project + Send + Sync>;
 
 /// Create a project from given client
 pub async fn project(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<ProjectImplementer> {
+    let name = root.name().unwrap();
     Ok(if root.join("project.yml").exists() {
+        tracing::debug!("[{name}] is xcodegen project");
         Box::new(xcodegen::XCodeGenProject::new(root, broadcast).await?)
     } else if root.join("Project.swift").exists() {
+        tracing::debug!("[{name}] is tuist project");
         Box::new(tuist::TuistProject::new(root, broadcast).await?)
     } else if root.join("Package.swift").exists() {
+        tracing::debug!("[{name}] is swift package");
         Box::new(swift::SwiftProject::new(root, broadcast).await?)
     } else {
+        tracing::debug!("[{name}] is barebone package");
         Box::new(barebone::BareboneProject::new(root, broadcast).await?)
     })
 }
