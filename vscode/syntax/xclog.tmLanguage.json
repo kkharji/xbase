@@ -1,0 +1,49 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "XClog",
+	"patterns": [
+		{
+			"match": "(Executing|Compiling|Generating|Processing|Emitting|Copying|Validating|Signing|Linking|RegisterLaunchServices|Installing|Booting|Launching|Writing|Touching|Building|Connecting)",
+			"name": "entity.name.function"
+		},
+		{
+			"match": "(Executed|Compiled|Generated|Processed|Emitted|Copied|Validated|Signed|Linked|Installed|Booted|Launched)",
+			"name": "constant.language"
+		},
+		{
+			"match": "\\[((?!.*(Error|error|warn|Warn|WARN|ERROR|Warning)).*)\\]",
+			"captures": {
+				"0": {
+					"name": "text.html"
+				},
+				"1": {
+					"name": "string.other.link"
+				}
+			}
+		},
+		{
+			"match": "\\[(Error|ERROR|error)\\]",
+			"captures": {
+				"0": {
+					"name": "text.html"
+				},
+				"1": {
+					"name": "invalid.illegal"
+				}
+			}
+		},
+		{
+			"match": "\\[(Warn|warn|WARN|Warning)\\]",
+			"captures": {
+				"0": {
+					"name": "text.html"
+				},
+				"1": {
+					"name": "markup.deleted"
+				}
+			}
+		}
+	],
+	"repository": {},
+	"scopeName": "source.xclog"
+}

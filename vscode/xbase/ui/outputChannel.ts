@@ -7,7 +7,7 @@ export default class OutputChannel implements vscode.Disposable {
   private shown = false;
 
   constructor() {
-    this.channel = window.createOutputChannel("XBase");
+    this.channel = window.createOutputChannel("XBase", "xclog");
   }
 
   dispose() {
@@ -30,9 +30,7 @@ export default class OutputChannel implements vscode.Disposable {
   }
 
   // TODO: output source code warnings & errors to Problems
-  append(msg: string, level: ContentLevel) {
-    const line = `${this.timestamp}: ${msg}`;
-
+  append(line: string, level: ContentLevel) {
     // TODO: find out based on vscode current log level
     this.channel.appendLine(line);
     switch (level) {
@@ -41,15 +39,5 @@ export default class OutputChannel implements vscode.Disposable {
       case "Debug": console.debug(line); break;
       case "Info": console.info(line); break;
     }
-  }
-
-  private get timestamp(): string {
-    const date = new Date();
-    return date.toLocaleString("en-US", {
-      hourCycle: "h23",
-      hour: "2-digit",
-      minute: "numeric",
-      second: "numeric",
-    });
   }
 }

@@ -29,7 +29,7 @@ local defaults = {
     --- Whether toggling the buffer should auto focus to it?
     focus = true,
     --- Split Log buffer height
-    height = 20,
+    height = 15,
     --- Vsplit Log buffer width
     width = 75,
     --- Default log buffer direction: { "horizontal", "vertical" }
