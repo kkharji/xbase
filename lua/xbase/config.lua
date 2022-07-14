@@ -4,6 +4,7 @@ _XBASECONFIG = _XBASECONFIG or {}
 
 config.values = _XBASECONFIG
 
+--- TODO: Use common highlight names instead
 ---@class xbaseOptions
 local defaults = {
   --- Log level. Set to ERROR to ignore everything
@@ -11,11 +12,10 @@ local defaults = {
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },
-    running = { icon = "⚙", color = "#e0af68" },
     device_running = { icon = "", color = "#4a6edb" },
     success = { icon = "", color = "#1abc9c" },
     failure = { icon = "", color = "#db4b4b" },
-    show_progress = false,
+    show_progress = true, -- TODO: make show_progress = false actually work
   },
   --- TODO(nvim): Limit devices platform to select from
   simctl = {
@@ -54,7 +54,7 @@ local defaults = {
   },
 }
 
---- Enahnced version of builtin type function that inclued list type.
+--- Enhanced version of builtin type function that include list type.
 ---@param val any
 ---@return string
 local get_type = function(val)

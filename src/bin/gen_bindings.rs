@@ -1,6 +1,5 @@
 use std::{fs, path::PathBuf, process::Command};
 use typescript_definitions::TypeScriptifyTrait;
-use which::which;
 use xbase::*;
 
 fn main() {
@@ -17,43 +16,74 @@ fn main() {
     eslint_format(ts_root)
 }
 
+macro_rules! struct_to_lines {
+    ($name:ident) => {
+        $name::type_script_ify()
+            .split("\n")
+            .map(ToString::to_string)
+    };
+}
+
 fn gen_ts_types_file(path: PathBuf) {
-    let mut output = read_file_content(&path);
+    let content = read_file_content(&path);
+    let mut generated: Vec<String> = vec![];
+    use {broadcast::*, server::*, types::*};
 
-    output += &server::Request::type_script_ify();
+    generated.extend(
+        server::Request::type_script_ify()
+            .split("\n")
+            .map(ToString::to_string),
+    );
 
-    output += "// Server Requests\n\n";
-    output += &server::BuildRequest::type_script_ify();
-    output += &server::RunRequest::type_script_ify();
-    output += &server::RegisterRequest::type_script_ify();
-    output += &server::DropRequest::type_script_ify();
-    output += &server::GetProjectInfoRequest::type_script_ify();
+    generated.push("\n/* Server Requests */\n".into());
 
-    output += "// Server Response\n\n";
-    output += &error::ServerError::type_script_ify();
-    output += &server::Response::type_script_ify();
+    generated.extend(struct_to_lines!(BuildRequest));
+    generated.extend(struct_to_lines!(RunRequest));
+    generated.extend(struct_to_lines!(RegisterRequest));
+    generated.extend(struct_to_lines!(DropRequest));
+    generated.extend(struct_to_lines!(GetProjectInfoRequest));
 
-    output += "// General Transport types\n\n";
-    output += &server::ProjectInfo::type_script_ify();
-    output += &types::TargetInfo::type_script_ify();
-    output += &server::Runners::type_script_ify();
-    output += &types::Operation::type_script_ify();
-    output += &types::BuildSettings::type_script_ify();
-    output += &types::DeviceLookup::type_script_ify();
+    generated.push("\n/* Server Response */\n".into());
+    generated.extend(struct_to_lines!(ServerError));
+    generated.extend(struct_to_lines!(Response));
 
-    output += "// Broadcast server Messages\n\n";
+    generated.push("\n/* General Transport types */\n".into());
+    generated.extend(struct_to_lines!(ProjectInfo));
+    generated.extend(struct_to_lines!(TargetInfo));
+    generated.extend(struct_to_lines!(Runners));
+    generated.extend(struct_to_lines!(Operation));
+    generated.extend(struct_to_lines!(BuildSettings));
+    generated.extend(struct_to_lines!(DeviceLookup));
 
-    output += &broadcast::Message::type_script_ify();
-    output += &broadcast::MessageLevel::type_script_ify();
-    output += &broadcast::Task::type_script_ify();
-    output += &broadcast::StatuslineState::type_script_ify();
+    generated.push("\n/* Broadcast server Messages */\n".into());
 
-    output = output.replace(": Value", ": unknown");
-    output = output.replace(": Error", ": ServerError");
-    output = output.replace(": PBXTargetPlatform", ": string");
-    output = output.replace("};", "}\n\n");
+    generated.extend(struct_to_lines!(Message));
+    generated.extend(struct_to_lines!(ContentLevel));
+    generated.extend(struct_to_lines!(TaskKind));
+    generated.extend(struct_to_lines!(TaskStatus));
 
-    fs::write(&path, output).expect("failed to write typescript types");
+    for line in generated.iter_mut() {
+        if line.starts_with(" |") {
+            *line = line.replace(" |", "  |");
+        }
+
+        if line.ends_with("};") {
+            *line = line.replace("};", "};\n");
+        };
+
+        if line.contains("Value") {
+            *line = line.replace(": Value", ": unknown");
+        } else if line.contains("Value") {
+            *line = line.replace(": Error", ": ServerError");
+        } else if line.contains("PBXTargetPlatform") {
+            *line = line.replace(": PBXTargetPlatform", ": string");
+        }
+
+        *line = line.trim_end_matches(' ').to_string();
+    }
+
+    fs::write(&path, content + "\n" + &generated.join("\n"))
+        .expect("failed to write typescript types");
 }
 
 fn gen_ts_constant(path: PathBuf) {
@@ -106,10 +136,9 @@ fn read_file_content(file: &PathBuf) -> String {
 }
 
 fn eslint_format(ts_root: PathBuf) {
-    let pnpm = which("pnpm").unwrap();
-    let format_status = Command::new(pnpm)
-        .current_dir(ts_root)
-        .args(&["lint", "--fix"])
+    let format_status = Command::new(ts_root.join("node_modules").join(".bin").join("prettier"))
+        .arg(ts_root.join("xbase").join("types.ts"))
+        .arg("--write")
         .output()
         .expect("failed to run pnpm lint on ts_out")
         .status;

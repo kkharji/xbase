@@ -1,5 +1,5 @@
 import * as path from "path";
-import { Disposable, Uri, window, WorkspaceFolder } from "vscode";
+import { Disposable, Uri, WorkspaceFolder } from "vscode";
 import Broadcast from "./broadcast";
 import { projectName } from "./util";
 import { WorkspaceContext } from "./workspaceContext";
@@ -19,19 +19,19 @@ export default class FolderContext implements Disposable {
     uri: Uri, folder: WorkspaceFolder, ctx: WorkspaceContext
   ): Promise<FolderContext> {
     const name = projectName(uri.fsPath);
-    const statusItemText = `[${name}] Registering`;
-    console.log(statusItemText);
+    const registering = `[${name}] Registering`;
 
-    // ctx.statusItem.start(statusItemText);
+    ctx.statusline.update({ content: registering });
+    console.log(registering);
+
     const broadcast = await ctx.server.register(uri.fsPath)
-      .then(address => Broadcast.connect(address, ctx.outputChannel))
+      .then(address => Broadcast.connect(folder.name, address, ctx.outputChannel, ctx.statusline))
       .catch(error => {
         throw Error(`[${name}] Failed to Initialize: ${error}`);
       });
-    const registered = `[${name}] Registered`;
-    // ctx.statusItem.end(statusItemText);
-    window.showInformationMessage(registered);
-    console.log(registered);
+
+    ctx.statusline.setDefault();
+    console.log(`[${name}] Registered`);
 
     return new FolderContext(uri, folder, broadcast);
   }

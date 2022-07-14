@@ -1,7 +1,9 @@
-mod logger;
 mod message;
+mod task;
 
 pub use self::message::*;
+pub use task::*;
+
 use crate::util::extensions::PathExt;
 use crate::Result;
 use process_stream::*;
@@ -71,43 +73,6 @@ impl Broadcast {
         })
     }
 
-    /// Set the process stderr/stdout to be consumed and transformed to messages to be boradcasted
-    /// as logs
-    ///
-    /// Return receiver for single message, whether the process successes or failed
-    pub fn consume(&self, mut process: Box<dyn ProcessExt + Send>) -> Result<Receiver<bool>> {
-        let mut stream = process.spawn_and_stream()?;
-        let cancel = self.abort.clone();
-        let abort = process.aborter().unwrap();
-        let tx = self.tx.clone();
-        let (send_status, recv_status) = channel(1);
-
-        tokio::spawn(async move {
-            loop {
-                let send_status = send_status.clone();
-                tokio::select! {
-                    _ = cancel.notified() => {
-                        abort.notify_one();
-                        send_status.send(false).await.unwrap_or_default();
-                        break;
-                    },
-                    result = stream.next() => match result {
-                        Some(output) => {
-                            if let Some(succ) = output.is_success() {
-                                send_status.send(succ).await.ok();
-                            } else if let Err(e) = tx.send(output.into()) {
-                                tracing::error!("Fail to send to channel {e}");
-                            };
-                        }
-                        None => break,
-                    }
-
-                };
-            }
-        });
-        Ok(recv_status)
-    }
-
     /// Start Broadcast server and start accepting clients
     fn start_server(
         address: PathBuf,
@@ -152,26 +117,40 @@ impl Broadcast {
                         None => break,
                         Some(output) => {
                             let listeners =  listeners.clone();
-                            tokio::spawn(async move {
-                                let mut listeners = listeners.lock().await;
-                                match serde_json::to_string(&output) {
-                                    Ok(mut value) => {
-                                        tracing::debug!("Sent: {value}");
-                                        value.push('\n');
-                                        for listener in listeners.iter_mut() {
-                                            listener.write_all(value.as_bytes()).await.ok();
-                                            listener.flush().await.ok();
-                                        };
-                                    },
-                                    Err(err) => tracing::warn!("SendError: `{output:?}` = `{err}`"),
-                                }
-                            });
-
+                            let mut listeners = listeners.lock().await;
+                            match serde_json::to_string(&output) {
+                                Ok(mut value) => {
+                                    tracing::debug!("Sent: {value}");
+                                    value.push('\n');
+                                    for listener in listeners.iter_mut() {
+                                        listener.write_all(value.as_bytes()).await.ok();
+                                        listener.flush().await.ok();
+                                    };
+                                },
+                                Err(err) => tracing::warn!("SendError: `{output:?}` = `{err}`"),
+                            }
                         }
                     }
                 }
             }
         })
         .pipe(Ok)
+    }
+
+    /// Explicitly Abort/Consume logger
+    pub fn abort(&self) {
+        self.abort.notify_waiters();
+    }
+
+    /// Get a reference to the logger's project root.
+    #[must_use]
+    pub fn root(&self) -> &PathBuf {
+        &self.root
+    }
+
+    /// Get a reference to the logger's log path.
+    #[must_use]
+    pub fn address(&self) -> &PathBuf {
+        &self.address
     }
 }

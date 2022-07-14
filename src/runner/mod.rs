@@ -16,7 +16,7 @@ pub use {device::*, service::*, simulator::*};
 
 #[async_trait]
 pub trait Runner {
-    async fn run<'a>(&self, broadcast: &Broadcast) -> Result<Process>;
+    async fn run<'a>(&self, task: &Task) -> Result<Process>;
 }
 
 pub struct BinRunner {
@@ -37,7 +37,7 @@ impl BinRunner {
 
 #[async_trait::async_trait]
 impl Runner for BinRunner {
-    async fn run<'a>(&self, _logger: &Broadcast) -> Result<Process> {
+    async fn run<'a>(&self, _task: &Task) -> Result<Process> {
         if !self.path.exists() {
             return Err(Error::Run(format!("{:?} doesn't exist!", self.path)));
         }
@@ -54,25 +54,13 @@ pub async fn get_runner<'a>(
     broadcast: &Arc<Broadcast>,
 ) -> Result<Process> {
     let target = &settings.target;
-    let device_name = device.map(|d| d.to_string()).unwrap_or("macOs".into());
-
-    broadcast.info(format!("[{target}({device_name})] Running ⚙"));
-
-    let (runner, args, mut recv) = project.get_runner(&settings, device, broadcast)?;
-
-    broadcast.update_statusline(StatuslineState::Processing);
+    let (runner, _args, mut recv) = project.get_runner(&settings, device, broadcast)?;
 
     if !recv.recv().await.unwrap_or_default() {
-        let msg = format!("[{target}] Failed to build for running ");
-        broadcast.error(&msg);
-        broadcast.log_error(format!("[{target}] xcodebuild {}", args.join(" ")));
-        broadcast.open_logger();
-        return Err(crate::Error::Run(msg));
+        return Err(crate::Error::Run(format!("{target} build failed")));
     }
+    let task = Task::new(TaskKind::Run, target, broadcast.clone());
 
-    let process = runner.run(broadcast).await?;
-
-    broadcast.update_statusline(StatuslineState::Running);
-
+    let process = runner.run(&task).await?;
     Ok(process)
 }

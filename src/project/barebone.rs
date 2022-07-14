@@ -53,7 +53,6 @@ impl ProjectCompile for BareboneProject {
         let (name, root) = (self.name(), self.root());
         let cache_root = self.build_cache_root()?;
         let mut args = self.compile_arguments();
-        self.on_compile_start(broadcast)?;
 
         args.push(format!("SYMROOT={cache_root}"));
 
@@ -69,16 +68,19 @@ impl ProjectCompile for BareboneProject {
         } else {
             args.extend_from_slice(&["-project".into(), format!("{name}.xcodeproj")]);
         }
+        let task = Task::new(TaskKind::Compile, name, broadcast.clone());
 
-        broadcast.log_debug(format!("[{name}] xcodebuild {}", args.join(" ")));
+        // broadcast.log_debug(format!("[{name}] xcodebuild {}", args.join(" ")));
         let xclogger = XCLogger::new(&root, &args)?;
         let xccommands = xclogger.compile_commands.clone();
-        let mut recv = broadcast.consume(Box::new(xclogger))?;
+        let mut recv = task.consume(Box::new(xclogger))?;
 
-        self.on_compile_finish(recv.recv().await.unwrap_or_default(), broadcast)?;
-
-        let json = serde_json::to_vec_pretty(&xccommands.lock().await.to_vec())?;
-        tokio::fs::write(root.join(".compile"), &json).await?;
+        // self.on_compile_finish(recv.recv().await.unwrap_or_default(), broadcast)?;
+        if recv.recv().await.unwrap_or_default() {
+            let json = serde_json::to_vec_pretty(&xccommands.lock().await.to_vec())?;
+            tokio::fs::write(root.join(".compile"), &json).await?;
+            broadcast.reload_lsp_server();
+        }
 
         Ok(())
     }

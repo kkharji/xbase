@@ -1,5 +1,3 @@
-local config = require("xbase.config").values
-
 local M = {}
 
 function M.is_watching(settings, command, device, watchlist)
@@ -40,45 +38,6 @@ function M.bind(m, bufnr)
   M.try_map(m.toggle_vsplit_log_buffer, function()
     require("xbase.logger").toggle(true, true)
   end, bufnr)
-end
-
-function M.feline_provider()
-  return {
-    provider = function(_)
-      icon = {}
-      --- TODO(nvim): only show build status in xcode supported files?
-      local config = config.statusline
-      local status = vim.g.xbase_watch_build_status
-
-      if status == "Processing" then
-        icon.str = config.running.icon
-        icon.hl = { fg = config.running.color }
-      elseif status == "Running" then
-        icon.str = config.device_running.icon
-        icon.hl = { fg = config.device_running.color }
-      elseif status == "Success" then
-        icon.str = config.success.icon
-        icon.hl = { fg = config.success.color }
-      elseif status == "Failure" then
-        icon.str = config.failure.icon
-        icon.hl = { fg = config.failure.color }
-      elseif status == "Watching" then
-        icon.str = config.watching.icon
-        icon.hl = { fg = config.watching.color }
-      else
-        icon.str = " "
-      end
-
-      if icon.str == " " then
-        return " ", icon
-      else
-        icon.str = " [" .. icon.str .. " xcode]"
-        return " ", icon
-      end
-    end,
-
-    hl = {},
-  }
 end
 
 return M

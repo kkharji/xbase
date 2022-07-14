@@ -1,39 +1,72 @@
-use process_stream::ProcessItem;
+use crate::{Broadcast, BuildSettings};
 use serde::{Deserialize, Serialize};
 use typescript_definitions::TypeScriptify;
 
 /// Representation of Messages that clients needs to process
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeScriptify)]
+#[derive(Debug, Clone, Serialize, TypeScriptify)]
 #[serde(tag = "type", content = "args")]
 pub enum Message {
     /// Notify use with a message
-    Notify { msg: String, level: MessageLevel },
-    /// Log a message
-    Log { msg: String, level: MessageLevel },
-    /// Execute an task
-    Execute(Task),
+    Notify {
+        content: String,
+        level: ContentLevel,
+    },
+    Log {
+        content: String,
+        level: ContentLevel,
+    },
+    /// Open Logger
+    OpenLogger,
+    /// Reload Language server
+    ReloadLspServer,
+    /// Set Current Task
+    SetCurrentTask {
+        kind: TaskKind,
+        target: String,
+        status: TaskStatus,
+    },
+    /// Update Current Task
+    UpdateCurrentTask {
+        content: String,
+        level: ContentLevel,
+    },
+    FinishCurrentTask {
+        status: TaskStatus,
+    },
+    /// Notify client that something is being watched
+    SetWatching {
+        watching: bool,
+        settings: BuildSettings,
+    },
 }
 
-/// Statusline state
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify)]
-pub enum StatuslineState {
-    /// Clear statusline
-    Clear,
-    /// Last task failed
-    Failure,
-    /// A Request is being processed.
+/// What kind of task is currently under progress?
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeScriptify)]
+pub enum TaskKind {
+    /// Build Task
+    Build,
+    /// Run Task
+    Run,
+    /// Compile Project (maybe setup)
+    Compile,
+    /// Generate xcodeproj
+    Generate,
+}
+
+/// What the status of task is currently under progress?
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeScriptify)]
+pub enum TaskStatus {
+    /// Task Failed,
+    Failed,
+    /// Task Succeeded,
+    Succeeded,
+    /// Processing Task,
     Processing,
-    /// that is currently running.
-    Running,
-    /// Last task was successful
-    Success,
-    /// Something is being watched.
-    Watching,
 }
 
-/// Message Level
+/// What a given content level is? for whether to log/show it
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify)]
-pub enum MessageLevel {
+pub enum ContentLevel {
     /// Trace Message
     Trace,
     /// Debug Message
@@ -44,85 +77,13 @@ pub enum MessageLevel {
     Warn,
     /// Error Message
     Error,
-    /// Success Message
-    Success,
-}
-
-impl std::fmt::Display for StatuslineState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let value = match self {
-            StatuslineState::Success => "success",
-            StatuslineState::Failure => "failure",
-            StatuslineState::Processing => "processing",
-            StatuslineState::Watching => "watching",
-            StatuslineState::Running => "running",
-            StatuslineState::Clear => "",
-        };
-        write!(f, "{value}")
-    }
-}
-
-/// Tasks that the clients should execute
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify)]
-#[serde(tag = "task")]
-pub enum Task {
-    OpenLogger,
-    ReloadLspServer,
-    UpdateStatusline { value: StatuslineState },
-}
-
-impl From<ProcessItem> for Message {
-    fn from(item: ProcessItem) -> Self {
-        let is_success = item.is_success();
-        match item {
-            ProcessItem::Output(value) => {
-                if value.to_lowercase().contains("error") {
-                    Self::Log {
-                        msg: value,
-                        level: MessageLevel::Error,
-                    }
-                } else if value.to_lowercase().contains("warn") {
-                    Self::Log {
-                        msg: value,
-                        level: MessageLevel::Warn,
-                    }
-                } else {
-                    Self::Log {
-                        msg: if value == "Resolving Packages" {
-                            Default::default()
-                        } else {
-                            value
-                        },
-                        level: MessageLevel::Info,
-                    }
-                }
-            }
-            ProcessItem::Error(value) => Self::Log {
-                msg: value,
-                level: MessageLevel::Error,
-            },
-            ProcessItem::Exit(code) => {
-                if is_success.unwrap() {
-                    Self::Log {
-                        msg: Default::default(),
-                        level: MessageLevel::Info,
-                    }
-                } else {
-                    Self::Log {
-                        msg: format!("[Error] {code} code"),
-                        level: MessageLevel::Error,
-                    }
-                }
-            }
-        }
-    }
 }
 
 impl From<String> for Message {
     fn from(value: String) -> Self {
         Self::Notify {
-            msg: value,
-            level: MessageLevel::Info,
+            content: value.into(),
+            level: ContentLevel::Info,
         }
     }
 }
@@ -130,73 +91,154 @@ impl From<String> for Message {
 impl From<&str> for Message {
     fn from(value: &str) -> Self {
         Self::Notify {
-            msg: value.to_string(),
-            level: MessageLevel::Info,
+            content: value.to_string().into(),
+            level: ContentLevel::Info,
         }
     }
 }
 
-impl Message {
-    pub fn notify_error<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Error,
-        }
+impl Broadcast {
+    /// Tell connected clients to open logger
+    pub fn open_logger(&self) {
+        self.tx.send(Message::OpenLogger).ok();
     }
 
-    pub fn notify_warn<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Warn,
-        }
+    /// Tell connected clients to reload language server
+    pub fn reload_lsp_server(&self) {
+        self.tx.send(Message::ReloadLspServer).ok();
     }
 
-    pub fn notify_trace<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Trace,
-        }
+    /// Notify client with a message
+    pub fn info<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        self.tx.send(msg.into()).ok();
     }
 
-    pub fn notify_debug<S: AsRef<str>>(value: S) -> Self {
-        Self::Notify {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Debug,
-        }
+    /// Notify client with an error message
+    pub fn error<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::error!("{msg}");
+        self.tx
+            .send(Message::Notify {
+                content: msg.to_string(),
+                level: ContentLevel::Error,
+            })
+            .ok();
     }
 
-    pub fn log_error<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Error,
-        }
+    /// Notify client with a warn message
+    pub fn warn<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::warn!("{msg}");
+        self.tx
+            .send(Message::Notify {
+                content: msg.to_string(),
+                level: ContentLevel::Warn,
+            })
+            .ok();
     }
 
-    pub fn log_info<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Info,
-        }
+    /// Notify client with a trace message
+    pub fn trace<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::trace!("{msg}");
+        self.tx
+            .send(Message::Notify {
+                content: msg.to_string(),
+                level: ContentLevel::Trace,
+            })
+            .ok();
     }
 
-    pub fn log_warn<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Warn,
-        }
+    /// Notify client with a debug message
+    pub fn debug<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::debug!("{msg}");
+        self.tx
+            .send(Message::Notify {
+                content: msg.to_string(),
+                level: ContentLevel::Debug,
+            })
+            .ok();
     }
 
-    pub fn log_trace<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Trace,
-        }
+    /// Notify client with a message
+    pub fn log_info<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        self.tx
+            .send(Message::Log {
+                content: msg.into(),
+                level: ContentLevel::Info,
+            })
+            .ok();
     }
 
-    pub fn log_debug<S: AsRef<str>>(value: S) -> Self {
-        Self::Log {
-            msg: value.as_ref().to_string(),
-            level: MessageLevel::Debug,
-        }
+    /// Notify client with an error message
+    pub fn log_error<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::error!("{msg}");
+        self.tx
+            .send(Message::Log {
+                content: msg.to_string(),
+                level: ContentLevel::Error,
+            })
+            .ok();
+    }
+
+    /// Notify client with a warn message
+    pub fn log_warn<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::warn!("{msg}");
+        self.tx
+            .send(Message::Log {
+                content: msg.to_string(),
+                level: ContentLevel::Warn,
+            })
+            .ok();
+    }
+
+    /// Notify client with a trace message
+    pub fn log_trace<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::trace!("{msg}");
+        self.tx
+            .send(Message::Log {
+                content: msg.to_string(),
+                level: ContentLevel::Trace,
+            })
+            .ok();
+    }
+
+    /// Notify client with a debug message
+    pub fn log_debug<S: AsRef<str>>(&self, msg: S) {
+        let msg = msg.as_ref();
+        tracing::debug!("{msg}");
+        self.tx
+            .send(Message::Log {
+                content: msg.to_string(),
+                level: ContentLevel::Debug,
+            })
+            .ok();
+    }
+
+    pub fn update_current_task<S: AsRef<str>>(&self, content: S, level: ContentLevel) {
+        self.tx
+            .send(Message::UpdateCurrentTask {
+                content: content.as_ref().into(),
+                level,
+            })
+            .ok();
+    }
+
+    pub fn finish_current_task(&self, success: bool) {
+        self.tx
+            .send(Message::FinishCurrentTask {
+                status: if success {
+                    TaskStatus::Succeeded
+                } else {
+                    TaskStatus::Failed
+                },
+            })
+            .ok();
     }
 }

@@ -54,31 +54,31 @@ impl ProjectCompile for XCodeGenProject {
         let name = self.root().name().unwrap();
         let cache_root = self.build_cache_root()?;
         let mut arguments = self.compile_arguments();
-
-        self.on_compile_start(broadcast)?;
+        let task = Task::new(TaskKind::Compile, &name, broadcast.clone());
 
         arguments.push(format!("SYMROOT={cache_root}"));
-        broadcast.log_debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
+        task.debug(format!("xcodebuild {}", arguments.join(" ")));
 
         let xclogger = XCLogger::new(&root, &arguments)?;
         let compile_commands = xclogger.compile_commands.clone();
 
-        let success = broadcast
+        let success = task
             .consume(Box::new(xclogger))?
             .recv()
             .await
             .unwrap_or_default();
-
-        self.on_compile_finish(success, broadcast)?;
-
-        let compile_db = CC::new(compile_commands.lock().await.to_vec());
-        let json = serde_json::to_vec_pretty(&compile_db)?;
-
-        tokio::fs::write(root.join(".compile"), &json).await?;
-
-        Ok(())
+        if success {
+            let compile_db = CC::new(compile_commands.lock().await.to_vec());
+            let json = serde_json::to_vec_pretty(&compile_db)?;
+            tokio::fs::write(root.join(".compile"), &json).await?;
+            broadcast.reload_lsp_server();
+            Ok(())
+        } else {
+            Err(Error::Compile)
+        }
     }
 }
+
 #[async_trait::async_trait]
 impl ProjectGenerate for XCodeGenProject {
     fn should_generate(&self, event: &Event) -> bool {
@@ -94,9 +94,9 @@ impl ProjectGenerate for XCodeGenProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
-        self.on_generate_start(broadcast)?;
-
         let mut process: Process = vec![which("xcodegen")?.as_str(), "generate", "-c"].into();
+        let name = self.root().name().unwrap();
+        let task = Task::new(TaskKind::Generate, &name, broadcast.clone());
         process.current_dir(self.root());
 
         let mut logs = process.spawn_and_stream()?.collect::<Vec<_>>().await;
@@ -106,13 +106,11 @@ impl ProjectGenerate for XCodeGenProject {
             let logs = logs.into_iter().map(|p| p.to_string()).collect::<Vec<_>>();
 
             for log in logs {
-                broadcast.log_error(log)
+                task.error(log)
             }
         }
-        self.on_generate_finish(success, broadcast)?;
 
         let xcodeproj_paths = self.get_xcodeproj_paths()?;
-        let name = self.name();
 
         if xcodeproj_paths.len() > 1 {
             let using = xcodeproj_paths[0].display();

@@ -98,6 +98,12 @@ function M.register(root)
 
   M.request(req, function(broadcast_address)
     notify.info(("[%s] Connected "):format(util.project_name(root)))
+    vim.schedule(function()
+      --- Clear statusline
+      vim.defer_fn(function()
+        print "  "
+      end, 2000)
+    end)
 
     broadcast.start(broadcast_address)
 

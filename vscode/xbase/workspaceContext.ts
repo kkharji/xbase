@@ -8,6 +8,7 @@ import FolderContext from "./folderContext";
 import { isPathInsidePath, isSupportedProjectRoot, pathExists } from "./util";
 import { dirname } from "path";
 import * as commands from "./commands";
+import Statusline from "./ui/statusline";
 
 /**
  * Context for whole workspace. Holds array of contexts for each workspace folder
@@ -21,6 +22,7 @@ export class WorkspaceContext implements Disposable {
   public folders: FolderContext[] = [];
   public currentFolder: FolderContext | null | undefined;
   public subscriptions: { dispose(): unknown }[] = [];
+  public statusline: Statusline;
   private observers: Set<WorkspaceFoldersObserver> = new Set();
 
   public static async init(): Promise<WorkspaceContext> {
@@ -34,12 +36,15 @@ export class WorkspaceContext implements Disposable {
       console.log(event);
     });
 
+    this.statusline = new Statusline();
+    this.outputChannel = new OutputChannel();
+
     this.server = server;
     this.runners = runners;
-    this.outputChannel = new OutputChannel();
     this.subscriptions = [
       this.server,
       this.outputChannel,
+      this.statusline,
       onChangeConfig
     ];
   };

@@ -55,13 +55,11 @@ impl RunServiceHandler {
                     Exit(code) => {
                         let success = &code == "0";
                         if success {
-                            broadcast.log_info("disconnected");
-                            broadcast.update_statusline(StatuslineState::Success);
+                            broadcast.log_info("Device Disconnected");
                         } else {
-                            broadcast.log_error(format!("disconnected, exit: {code}"));
-                            broadcast.update_statusline(StatuslineState::Failure);
+                            broadcast.log_error("Device Disconnected");
                         }
-
+                        broadcast.finish_current_task(success);
                         tracing::info!("[{target}] Runner Closed");
                         break;
                     }

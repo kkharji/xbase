@@ -21,7 +21,7 @@ function M:write(data)
   end
   uv.write(self._socket, vim.json.encode(data), function(err)
     if err then
-      error(self._stream_error or err)
+      print(self._stream_error or err)
     end
   end)
 end
