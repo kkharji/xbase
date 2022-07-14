@@ -15,9 +15,9 @@ export function projectName(path: string): string {
   * Check if xbase task is watched
 */
 export function isWatching(root: string, command: string, settings: BuildSettings, watchlist: string[], device?: DeviceLookup): boolean {
-  let key = `${root}:${command}`;
+  let key = `${root}:${command}:`;
 
-  if (command === "Run") key += (device) ? `:${device.name}` : ":Bin";
+  if (command === "Run") key += (device) ? `${device.name}:` : "Bin:";
 
   key += `-configuration ${settings.configuration}`;
   key += ` -target ${settings.target}`;
