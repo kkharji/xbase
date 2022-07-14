@@ -49,6 +49,25 @@
         "command": "xbase.toggleLogger",
         "title": "XBase: Toggle Logger"
       }
+    ],
+    "languages": [
+      {
+        "id": "xclog",
+        "aliases": [
+          "xcodelog"
+        ],
+        "extensions": [
+          ".xclog",
+          ".xcodelog"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "xclog",
+        "scopeName": "source.xclog",
+        "path": "./syntax/xclog.tmLanguage.json"
+      }
     ]
   },
   "scripts": {

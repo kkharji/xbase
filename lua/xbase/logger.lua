@@ -56,6 +56,7 @@ function M.toggle(vsplit, force)
   else
     vim.api.nvim_win_set_width(0, cfg.log_buffer.width)
   end
+  vim.fn.feedkeys "G"
 
   if not cfg.log_buffer.focus and curr_win ~= win then
     vim.api.nvim_set_current_win(curr_win)

@@ -105,6 +105,9 @@ export default class Broadcast implements Disposable {
 
     if (!(level === ContentLevel.Debug || level === ContentLevel.Trace)) {
       const { target, prefix, kind } = this.currentTask;
+
+      this.output.append(content, level);
+
       content = content.replace(`[${this.currentTask.target}]`, "");
 
       this.statusline.update({
@@ -112,9 +115,9 @@ export default class Broadcast implements Disposable {
         icon: TaskKind.isRun(kind) ? "$(code)" : undefined,
         level
       });
+
     }
 
-    this.output.append(content, level);
   }
 
   private async finishTask(status: TaskStatus) {
