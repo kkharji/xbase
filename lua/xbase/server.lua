@@ -129,14 +129,9 @@ function M.get_project_info(root, on_response)
 end
 
 ---Drop a given root or drop all tracked roots if root is nil
----@param roots string|string[]
-function M.drop(roots)
-  M.request {
-    method = "drop",
-    args = {
-      roots = type(roots) == "string" and { roots } or roots,
-    },
-  }
+---@param root string
+function M.drop(root)
+  M.request { method = "drop", args = { roots = { root } } }
 end
 
 return M

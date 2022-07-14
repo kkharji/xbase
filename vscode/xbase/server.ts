@@ -30,6 +30,18 @@ export default class Server implements Disposable {
     throw Error(`Expected response to be a string, got ${value}`);
   }
 
+  // Drop a root project
+  async drop(root: string): Promise<string> {
+    const value = await this.request({ method: "drop", args: { roots: [root] } })
+      .catch(error => {
+        throw Error(`Drop failed: ${error}`);
+      });
+
+    if (typeof value === "string") return value;
+
+    throw Error(`Expected response to be a string, got ${value}`);
+  }
+
   /**
     * Send a new request to xbase server
   */

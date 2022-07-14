@@ -16,12 +16,6 @@ local function try_attach(root)
     server.register(root)
     if not initialized then
       initialized = true
-      autocmd({ "VimLeavePre" }, {
-        pattern = "*",
-        callback = function()
-          server.drop(server.roots)
-        end,
-      })
       autocmd({ "BufEnter", "BufWinEnter" }, { pattern = file_patterns, callback = try_attach_mappings })
       autocmd({ "BufEnter" }, { pattern = "xclog", callback = try_attach_mappings })
     end

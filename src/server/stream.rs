@@ -28,22 +28,31 @@ impl ResponseStream {
 
 /// Future that await and process client requests.
 pub async fn handle(mut stream: tokio::net::UnixStream) {
-    use futures::{FutureExt, SinkExt, TryStreamExt};
+    use futures::{SinkExt, TryStreamExt};
     use tracing::{error, info};
 
     info!("Handling a new client");
 
+    // Client Registered roots
+    let mut roots = vec![];
     let (reader, writer) = stream.split();
     let (mut reader, mut writer) = (RequestStream::new(reader), ResponseStream::new(writer));
 
     loop {
         match reader.try_next().await {
             Ok(Some(request)) => {
-                let send_result = request.handle().then(|res| writer.send(res)).await;
-                send_result.map_err(|err| error!("Send Error: {err}")).ok();
+                if let Request::Register(r) = &request {
+                    roots.push(r.root.clone())
+                };
+                let response = request.handle().await;
+                let send_res = writer.send(response).await;
+                send_res.map_err(|err| error!("Send Error: {err}")).ok();
             }
             Err(err) => error!("Read Error: {err:#?}"),
-            Ok(None) => break,
+            Ok(None) => {
+                Request::Drop(DropRequest { roots }).handle().await;
+                break;
+            }
         }
     }
     info!("Disconnecting a client");
