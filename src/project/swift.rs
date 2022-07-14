@@ -56,7 +56,8 @@ impl ProjectBuild for SwiftProject {
 
         process.args(&args);
         process.current_dir(self.root());
-        let recv = broadcast.consume(Box::new(process))?;
+        let task = Task::new(TaskKind::Build, cfg.target.as_str(), broadcast.clone());
+        let recv = task.consume(Box::new(process))?;
 
         Ok((vec![], recv))
     }
@@ -125,22 +126,15 @@ impl ProjectGenerate for SwiftProject {
         let name = self.root().name().unwrap();
         process.current_dir(self.root());
 
-        broadcast.info(format!("[{name}] Compiling"));
-        broadcast.log_step(format!("[{name}] Compiling"));
-
-        let success = broadcast
+        let task = Task::new(TaskKind::Compile, &name, broadcast.clone());
+        let success = task
             .consume(Box::new(process))?
             .recv()
             .await
             .unwrap_or_default();
 
         if !success {
-            broadcast.error(format!("[{name}] Failed to compiled "));
-            broadcast.open_logger();
             return Err(Error::Generate);
-        } else {
-            broadcast.success(format!("[{name}] Compiled "));
-            broadcast.log_step(format!("[{name}] Compiled "));
         }
 
         self.update_project_info().await?;

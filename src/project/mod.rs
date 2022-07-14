@@ -59,6 +59,7 @@ pub trait ProjectBuild: ProjectData {
         let target = &cfg.target;
         let name = self.name().to_owned();
         let xcworkspace = format!("{}.xcworkspace", &name);
+        let task = Task::new(TaskKind::Build, target, broadcast.clone());
 
         args.insert(0, "build".to_string());
 
@@ -82,10 +83,9 @@ pub trait ProjectBuild: ProjectData {
             args.extend_from_slice(&["-project".into(), format!("{}.xcodeproj", name)]);
         }
 
-        broadcast.log_step(format!("[{target}] Building"));
-        broadcast.log_debug(format!("[{target}] {}", args.join(" ")));
+        task.debug(format!("[{target}] {}", args.join(" ")));
 
-        let recv = broadcast.consume(Box::new(XCLogger::new(self.root(), &args)?))?;
+        let recv = task.consume(Box::new(XCLogger::new(self.root(), &args)?))?;
 
         Ok((args, recv))
     }
@@ -144,31 +144,6 @@ pub trait ProjectCompile: ProjectData {
         .map(ToString::to_string)
         .collect()
     }
-
-    /// Function be executed when generation starts
-    fn on_compile_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
-        let name = self.name();
-        broadcast.info(format!("[{name}] Compiling ⚙"));
-        broadcast.log_step(format!("[{name}] Compiling ⚙"));
-        Ok(())
-    }
-
-    /// Function be executed when generation starts
-    fn on_compile_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
-        let name = self.name();
-        if success {
-            broadcast.reload_lsp_server();
-            broadcast.success(format!("[{name}] Compiled "));
-            broadcast.log_step(format!("[{name}] Compiled "));
-            broadcast.update_statusline(StatuslineState::Success);
-            Ok(())
-        } else {
-            broadcast.error(format!("[{name}] Failed to generate compile commands "));
-            broadcast.update_statusline(StatuslineState::Failure);
-            broadcast.open_logger();
-            Err(crate::Error::Compile)
-        }
-    }
 }
 
 #[async_trait::async_trait]
@@ -179,30 +154,6 @@ pub trait ProjectGenerate: ProjectData {
     }
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()>;
-
-    /// Function be executed when generation starts
-    fn on_generate_start(&self, broadcast: &Arc<Broadcast>) -> Result<()> {
-        let name = self.root().name().unwrap();
-        broadcast.info(format!("[{name}] Generating ⚙"));
-        broadcast.log_step(format!("[{name}] Generating ⚙"));
-        Ok(())
-    }
-
-    /// Function be executed when generation starts
-    fn on_generate_finish(&self, success: bool, broadcast: &Arc<Broadcast>) -> Result<()> {
-        let name = self.root().name().unwrap();
-        if success {
-            broadcast.success(format!("[{name}] Generated "));
-            broadcast.log_step(format!("[{name}] Generated "));
-            Ok(())
-        } else {
-            broadcast.error(format!("[{name}] Failed to generate project "));
-            broadcast.update_statusline(StatuslineState::Failure);
-            broadcast.open_logger();
-
-            Err(crate::Error::Generate)
-        }
-    }
 }
 
 #[async_trait::async_trait]

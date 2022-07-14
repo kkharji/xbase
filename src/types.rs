@@ -16,7 +16,7 @@ pub enum Operation {
 }
 
 /// Build Settings used in building/running a target/scheme
-#[derive(Clone, Debug, Serialize, Deserialize, TypeScriptify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypeScriptify)]
 pub struct BuildSettings {
     /// Target to build
     pub target: String,

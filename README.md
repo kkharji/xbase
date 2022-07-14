@@ -155,7 +155,7 @@ shortcuts.
 using `vim.g.xbase_watch_build_status` you can easily setup statusline indicators.
 
 ```lua
-require("xbase.util").feline_provider() -- append to feline setup function
+require("xbase.statusline").feline() -- append to feline setup function
 ```
 
 
@@ -168,11 +168,9 @@ require("xbase.util").feline_provider() -- append to feline setup function
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },
-    running = { icon = "⚙", color = "#e0af68" },
     device_running = { icon = "", color = "#4a6edb" },
     success = { icon = "", color = "#1abc9c" },
     failure = { icon = "", color = "#db4b4b" },
-    show_progress = false,
   },
   --- TODO(nvim): Limit devices platform to select from
   simctl = {

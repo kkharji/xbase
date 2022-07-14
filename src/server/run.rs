@@ -56,9 +56,9 @@ impl RequestHandler<()> for RunRequest {
         let mut watcher = watcher.lock().await;
 
         if self.operation.is_watch() {
-            broadcast.update_statusline(StatuslineState::Watching);
+            // broadcast.update_statusline(StatuslineState::Watching);
             if watcher.contains_key(key) {
-                broadcast.warn(format!("Already watching with {key}!!"));
+                tracing::warn!("Already watching with {key}!!");
             } else {
                 self.into_service(&broadcast, weak_watcher, &mut project)
                     .await?
@@ -67,8 +67,8 @@ impl RequestHandler<()> for RunRequest {
         } else {
             let listener = watcher.remove(&self.to_string())?;
             listener.discard().await?;
-            broadcast.info(format!("[{}] Watcher Stopped", &self.settings.target));
-            broadcast.update_statusline(StatuslineState::Clear);
+            // broadcast.info(format!("[{}] Watcher Stopped", &self.settings.target));
+            // broadcast.update_statusline(StatuslineState::Clear);
         }
 
         Ok(())

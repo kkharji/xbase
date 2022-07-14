@@ -11,12 +11,15 @@ rules:
     - consistent
   eqeqeq: warn
   no-throw-literal: warn
-  semi: off
   quotes:
     - error
     - double
   "@typescript-eslint/no-non-null-assertion": off
   "@typescript-eslint/semi": warn
+  indent:
+    - error
+    - 2
+    - SwitchCase: 1
 extends:
   - eslint:recommended
   - plugin:@typescript-eslint/recommended

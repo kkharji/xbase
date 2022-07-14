@@ -25,7 +25,6 @@ impl fmt::Display for BuildRequest {
 impl RequestHandler<()> for BuildRequest {
     async fn handle(self) -> Result<()> {
         let broadcast = self.root.try_get_broadcast().await?;
-        let target = &self.settings.target;
         // let args = &self.settings.to_string();
 
         tracing::trace!("{:#?}", self);
@@ -41,13 +40,14 @@ impl RequestHandler<()> for BuildRequest {
         let mut watcher = self.root.try_get_watcher().await?;
 
         if self.operation.is_watch() {
-            broadcast.success(format!("[{target}] Watching "));
-            broadcast.update_statusline(StatuslineState::Watching);
+            // TODO: SetWatching
+            // broadcast.success(format!("[{target}] Watching "));
+            // broadcast.update_statusline(StatuslineState::Watching);
             watcher.add(self)?;
         } else {
-            broadcast.info(format!("[{}] Wathcer Stopped", &self.settings.target));
+            // broadcast.info(format!("[{}] Wathcer Stopped", &self.settings.target));
             watcher.remove(&self.to_string())?;
-            broadcast.update_statusline(StatuslineState::Clear);
+            // broadcast.update_statusline(StatuslineState::Clear);
         }
 
         Ok(())
@@ -63,33 +63,27 @@ impl Watchable for BuildRequest {
         broadcast: &Arc<Broadcast>,
         _watcher: Weak<Mutex<WatchService>>,
     ) -> Result<()> {
-        broadcast.update_statusline(StatuslineState::Processing);
-        let is_once = self.operation.is_once();
         let config = &self.settings;
-        let target = &self.settings.target;
 
-        if is_once {
-            broadcast.info(format!("[{target}] Building ⚙"));
-        }
-        let (args, mut recv) = project.build(&config, None, broadcast)?;
+        let (_, mut recv) = project.build(&config, None, broadcast)?;
 
         if !recv.recv().await.unwrap_or_default() {
-            let verb = if is_once { "building" } else { "Rebuilding" };
-            broadcast.error(format!("[{target}] {verb} Failed "));
-            broadcast.log_error(format!(
-                "[{target}] build args `xcodebuild {}`",
-                args.join(" ")
-            ));
-            broadcast.update_statusline(StatuslineState::Failure);
-            broadcast.open_logger();
+            // let verb = if is_once { "building" } else { "Rebuilding" };
+            // broadcast.error(format!("[{target}] {verb} Failed "));
+            // broadcast.log_error(format!(
+            //     "[{target}] build args `xcodebuild {}`",
+            //     args.join(" ")
+            // ));
+            // broadcast.update_statusline(StatuslineState::Failure);
+            // broadcast.open_logger();
         } else {
-            broadcast.success(format!("[{target}] Built "));
-            broadcast.log_info(format!("[{target}] Built Successfully "));
-            if is_once {
-                broadcast.update_statusline(StatuslineState::Success);
-            } else {
-                broadcast.update_statusline(StatuslineState::Watching);
-            }
+            // broadcast.success(format!("[{target}] Built "));
+            // broadcast.log_info(format!("[{target}] Built Successfully "));
+            // if is_once {
+            //     broadcast.update_statusline(StatuslineState::Success);
+            // } else {
+            //     broadcast.update_statusline(StatuslineState::Watching);
+            // }
         };
 
         Ok(())

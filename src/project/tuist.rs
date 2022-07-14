@@ -63,7 +63,6 @@ impl ProjectCompile for TuistProject {
         let arguments = self.compile_arguments();
         let mut compile_commands: Vec<C> = vec![];
 
-        self.on_compile_start(broadcast)?;
         // Compile manifests
         let (mut manifest_compile_success, manifest_compile_commands) = {
             let mut arguments = arguments.clone();
@@ -76,11 +75,12 @@ impl ProjectCompile for TuistProject {
                 "Manifests".into(),
             ]);
 
-            broadcast.log_debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
+            let task = Task::new(TaskKind::Compile, "Manifest", broadcast.clone());
+            task.debug(format!("xcodebuild {}", arguments.join(" ")));
 
             let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();
-            let recv = broadcast.consume(Box::new(xclogger))?;
+            let recv = task.consume(Box::new(xclogger))?;
             (recv, xccommands)
         };
 
@@ -96,26 +96,28 @@ impl ProjectCompile for TuistProject {
                 format!("{name}"),
             ]);
 
-            broadcast.log_debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
+            let task = Task::new(TaskKind::Compile, name, broadcast.clone());
+            task.debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
 
             let xclogger = XCLogger::new(&root, &arguments)?;
             let xccommands = xclogger.compile_commands.clone();
-            let recv = broadcast.consume(Box::new(xclogger))?;
+            let recv = task.consume(Box::new(xclogger))?;
             (recv, xccommands)
         };
 
-        let success = project_compile_success.recv().await.unwrap_or_default()
-            && manifest_compile_success.recv().await.unwrap_or_default();
+        if manifest_compile_success.recv().await.unwrap_or_default()
+            && project_compile_success.recv().await.unwrap_or_default()
+        {
+            compile_commands.extend(manifest_compile_commands.lock().await.to_vec());
+            compile_commands.extend(project_compile_commands.lock().await.to_vec());
 
-        self.on_compile_finish(success, broadcast)?;
-
-        compile_commands.extend(manifest_compile_commands.lock().await.to_vec());
-        compile_commands.extend(project_compile_commands.lock().await.to_vec());
-
-        let json = serde_json::to_vec_pretty(&compile_commands)?;
-        tokio::fs::write(root.join(".compile"), &json).await?;
-
-        Ok(())
+            let json = serde_json::to_vec_pretty(&compile_commands)?;
+            tokio::fs::write(root.join(".compile"), &json).await?;
+            broadcast.reload_lsp_server();
+            Ok(())
+        } else {
+            Err(Error::Compile)
+        }
     }
 }
 
@@ -135,15 +137,12 @@ impl ProjectGenerate for TuistProject {
 
     /// Generate xcodeproj
     async fn generate(&mut self, broadcast: &Arc<Broadcast>) -> Result<()> {
-        self.on_generate_start(broadcast)?;
-
-        self.tuist(broadcast, &["edit", "--permanent"]).await?;
-        self.tuist(broadcast, &["generate", "--no-open"]).await?;
+        let task = Task::new(TaskKind::Generate, self.name(), broadcast.clone());
+        self.tuist(&task, &["edit", "--permanent"]).await?;
+        self.tuist(&task, &["generate", "--no-open"]).await?;
 
         let (xcodeproj_path, manifest_path) = self.xcodeproj_paths()?;
         let (xcodeproj_path, manifest_path) = (xcodeproj_path.unwrap(), manifest_path.unwrap());
-
-        self.on_generate_finish(true, broadcast)?;
 
         self.manifest = XCodeProject::new(&manifest_path)?;
         self.manifest_path = manifest_path;
@@ -193,7 +192,7 @@ impl TuistProject {
     }
 
     /// Run tuist command with given args
-    async fn tuist(&mut self, broadcast: &Broadcast, args: &[&str]) -> Result<()> {
+    async fn tuist(&mut self, task: &Task, args: &[&str]) -> Result<()> {
         let mut process = Process::new(which("tuist")?);
 
         process.args(args);
@@ -202,11 +201,11 @@ impl TuistProject {
         let success = logs.pop().unwrap().is_success().unwrap_or_default();
 
         if !success {
-            broadcast.error("Tuist Project Generation failed ");
+            task.error("Tuist Project Generation failed ");
             let logs = logs.into_iter().map(|p| p.to_string()).collect::<Vec<_>>();
 
             for log in logs {
-                broadcast.error(log)
+                task.error(log)
             }
 
             return Err(Error::Generate);
@@ -237,13 +236,15 @@ impl Project for TuistProject {
         let (xcodeproj_path, manifest_path) = match project.xcodeproj_paths()? {
             (Some(xcodeproj_path), Some(manifest_path)) => (xcodeproj_path, manifest_path),
             (Some(_), None) => {
-                project.tuist(broadcast, &["edit", "--permanent"]).await?;
+                let task = Task::new(TaskKind::Generate, "Manifest", broadcast.clone());
+                project.tuist(&task, &["edit", "--permanent"]).await?;
 
                 let (a, b) = project.xcodeproj_paths()?;
                 (a.unwrap(), b.unwrap())
             }
             (None, Some(_)) => {
-                project.tuist(broadcast, &["generate", "--no-open"]).await?;
+                let task = Task::new(TaskKind::Generate, project.name(), broadcast.clone());
+                project.tuist(&task, &["generate", "--no-open"]).await?;
 
                 let (a, b) = project.xcodeproj_paths()?;
                 (a.unwrap(), b.unwrap())

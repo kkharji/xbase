@@ -15,11 +15,11 @@ pub struct SimulatorRunner {
 
 #[async_trait::async_trait]
 impl Runner for SimulatorRunner {
-    async fn run<'a>(&self, broadcast: &Broadcast) -> Result<Process> {
-        broadcast.log_step(format!("[{}] Connecting", self.device.name));
-        self.boot(broadcast).await?;
-        self.install(broadcast).await?;
-        self.launch(broadcast).await
+    async fn run<'a>(&self, task: &Task) -> Result<Process> {
+        self.boot(task).await?;
+        self.install(task).await?;
+        let process = self.launch(task).await;
+        process
     }
 }
 
@@ -32,48 +32,45 @@ impl SimulatorRunner {
         }
     }
 
-    pub async fn boot<'a>(&self, broadcast: &Broadcast) -> Result<()> {
+    pub async fn boot<'a>(&self, task: &Task) -> Result<()> {
         match pid::get_pid_by_name("Simulator") {
             Err(Error::Lookup(_, _)) => {
-                let msg = format!("[Simulator] Launching");
-                broadcast.log_info(msg);
+                task.info(format!("[Simulator] Launching"));
                 Command::new("open")
                     .args(&["-a", "Simulator"])
                     .spawn()?
                     .wait()
                     .await?;
-                broadcast.log_info("[Simulator] Connected");
-                broadcast.log_info(format!("{}", util::fmt::separator()));
+                task.info("[Simulator] Connected");
             }
             Err(err) => {
-                let msg = err.to_string();
-                broadcast.log_error(msg);
+                task.error(err.to_string());
             }
             _ => {}
         }
 
-        broadcast.log_info(self.booting_msg());
+        task.info(self.booting_msg());
         if let Err(e) = self.device.boot() {
             let err: Error = e.into();
             let err_msg = err.to_string();
             if !err_msg.contains("current state Booted") {
-                broadcast.log_error(err_msg);
+                // task.log_error(err_msg);
             }
         }
         Ok(())
     }
 
-    pub async fn install<'a>(&self, broadcast: &Broadcast) -> Result<()> {
-        broadcast.log_info(self.installing_msg());
+    pub async fn install<'a>(&self, task: &Task) -> Result<()> {
+        task.info(self.installing_msg());
         self.device
             .install(&self.output_dir)
-            .pipe(|res| self.ok_or_abort(res, broadcast))
+            .pipe(|res| self.ok_or_abort(res, task))
             .await?;
         Ok(())
     }
 
-    pub async fn launch<'a>(&self, broadcast: &Broadcast) -> Result<Process> {
-        broadcast.log_info(self.launching_msg());
+    pub async fn launch<'a>(&self, task: &Task) -> Result<Process> {
+        task.info(self.launching_msg());
         let mut process = Process::new("xcrun");
         let args = &[
             "simctl",
@@ -86,20 +83,15 @@ impl SimulatorRunner {
 
         process.args(args);
 
-        broadcast.log_info(self.connected_msg());
-        broadcast.log_info(util::fmt::separator());
+        task.info(self.connected_msg());
 
         Ok(process)
     }
 
-    async fn ok_or_abort<'a, T>(
-        &self,
-        res: simctl::Result<T>,
-        broadcast: &Broadcast,
-    ) -> Result<()> {
+    async fn ok_or_abort<'a, T>(&self, res: simctl::Result<T>, task: &Task) -> Result<()> {
         if let Err(e) = res {
             let error: Error = e.into();
-            broadcast.log_error(error.to_string());
+            task.error(error.to_string());
             Err(error)
         } else {
             Ok(())
@@ -119,7 +111,7 @@ impl SimulatorRunner {
     }
 
     fn connected_msg(&self) -> String {
-        format!("[{}] Connected", self.device.name)
+        format!("[{}]", self.device.name)
     }
 }
 
