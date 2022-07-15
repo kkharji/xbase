@@ -55,7 +55,7 @@ function getPickerItems(
     const getDetail = (isWatching?: boolean, device?: DeviceLookup) => {
       let detail = `${baseDetail}`;
       if (device)
-        detail += `on ${device.name}`;
+        detail += ` on ${device.name}`;
       if (isWatching !== undefined) {
         const watchAction = isWatching ? "Stop" : "Watch";
         detail = `${watchAction} ${detail}`;
