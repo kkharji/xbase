@@ -86,6 +86,7 @@ function getPickerItems(
 }
 
 async function serverExecute(command: string, ctx: WorkspaceContext) {
+  ctx.logger.diagnosticCollection.clear();
   try {
     const root = ctx.currentFolder?.uri.fsPath;
     if (root === undefined) {

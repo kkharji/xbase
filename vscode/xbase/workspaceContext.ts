@@ -18,11 +18,11 @@ import Statusline from "./ui/statusline";
 export class WorkspaceContext implements Disposable {
   public server: Server;
   public runners: Runners;
-  public logger: Logger;
+  public logger = new Logger();
   public folders: FolderContext[] = [];
   public currentFolder: FolderContext | null | undefined;
   public subscriptions: { dispose(): unknown }[] = [];
-  public statusline: Statusline;
+  public statusline = new Statusline();
   private observers: Set<WorkspaceFoldersObserver> = new Set();
 
   public static async init(): Promise<WorkspaceContext> {
@@ -35,9 +35,6 @@ export class WorkspaceContext implements Disposable {
     const onChangeConfig = workspace.onDidChangeConfiguration(event => {
       console.log(event);
     });
-
-    this.statusline = new Statusline();
-    this.logger = new Logger();
 
     this.server = server;
     this.runners = runners;
