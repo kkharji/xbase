@@ -2,7 +2,7 @@ import { filter, map, pipe, split, toAsync } from "iter-ops";
 import net from "net";
 import { Disposable, window } from "vscode";
 import { Message, ContentLevel, TaskKind, TaskStatus } from "./types";
-import OutputChannel from "./ui/outputChannel";
+import Logger from "./ui/logger";
 import Statusline from "./ui/statusline";
 
 interface CurrentTask {
@@ -15,12 +15,12 @@ interface CurrentTask {
 export default class Broadcast implements Disposable {
   public name: string;
   public socket: net.Socket;
-  private output: OutputChannel;
+  private output: Logger;
   private statusline: Statusline;
   private currentTask?: CurrentTask;
 
   private constructor(
-    name: string, socket: net.Socket, output: OutputChannel, statusbar: Statusline
+    name: string, socket: net.Socket, output: Logger, statusbar: Statusline
   ) {
     this.name = name.charAt(0).toUpperCase() + name.slice(1);
     this.socket = socket;
@@ -29,7 +29,7 @@ export default class Broadcast implements Disposable {
   }
 
   public static async connect(
-    name: string, address: string, logger: OutputChannel, statusbar: Statusline
+    name: string, address: string, logger: Logger, statusbar: Statusline
   ): Promise<Broadcast> {
     return new Promise((resolve, reject) => {
       const socket = net.createConnection(address, () => {
@@ -71,7 +71,7 @@ export default class Broadcast implements Disposable {
         break;
       }
       case "OpenLogger":
-        this.output.show();
+        this.output.toggle();
         break;
       case "SetCurrentTask":
         this.setTask(message.args.kind, message.args.target, message.args.status);
