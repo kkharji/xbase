@@ -229,15 +229,6 @@ In case, you need to manually stop servers:
 killall xbase xbase-sourcekit-helper
 ```
 
-## 🎥 Preview
-
-Watch build service.
-
-![](./.github/media/statusline_watch.gif)
-
-On error it opens a log buffer where you can inspect what went wrong, otherwise only the
-statusline get updated.
-
 [xcodegen]: https://github.com/yonaskolb/XcodeGen
 [sourcekit-lsp]: https://github.com/apple/sourcekit-lsp
 [XBase]: https://github.com/xbase-lab/xbase

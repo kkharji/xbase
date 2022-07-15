@@ -4,6 +4,7 @@ import { ContentLevel } from "../types";
 
 export default class OutputChannel implements vscode.Disposable {
   private channel: vscode.OutputChannel;
+  // TODO: find a more accurate way to check whether output window is shown
   private shown = false;
 
   constructor() {
@@ -17,14 +18,14 @@ export default class OutputChannel implements vscode.Disposable {
   /* show output */
   public show() {
     this.channel.show(true);
-    this.channel.hide();
   }
+
   public toggle() {
     if (this.shown) {
-      this.channel.hide();
+      this.show();
       this.shown = false;
     } else {
-      this.channel.show(true);
+      this.show();
       this.shown = true;
     }
   }
