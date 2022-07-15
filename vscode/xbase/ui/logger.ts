@@ -1,8 +1,8 @@
-import type vscode from "vscode";
+import vscode from "vscode";
 import { window } from "vscode";
 import { ContentLevel } from "../types";
 
-export default class OutputChannel implements vscode.Disposable {
+export default class Logger implements vscode.Disposable {
   private channel: vscode.OutputChannel;
   // TODO: find a more accurate way to check whether output window is shown
   private shown = false;
@@ -16,16 +16,14 @@ export default class OutputChannel implements vscode.Disposable {
   }
 
   /* show output */
-  public show() {
-    this.channel.show(true);
-  }
-
-  public toggle() {
+  public async toggle() {
+    await vscode.commands.executeCommand("workbench.action.output.toggleOutput");
+    await vscode.commands.executeCommand("workbench.action.focusFirstEditorGroup");
     if (this.shown) {
-      this.show();
       this.shown = false;
+      this.channel.hide();
     } else {
-      this.show();
+      this.channel.show(true);
       this.shown = true;
     }
   }

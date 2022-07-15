@@ -119,6 +119,6 @@ export function register(ctx: WorkspaceContext) {
     commands.registerCommand("xbase.build", () => serverExecute("Build", ctx)),
     commands.registerCommand("xbase.run", () => serverExecute("Run", ctx)),
     commands.registerCommand("xbase.watch", () => serverExecute("Watch", ctx)),
-    commands.registerCommand("xbase.toggleLogger", () => ctx.outputChannel.toggle()),
+    commands.registerCommand("xbase.toggleLogger", () => ctx.logger.toggle()),
   );
 }

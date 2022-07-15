@@ -1,7 +1,7 @@
 import {
   Disposable, TextEditor, Uri, window, workspace, WorkspaceFolder, WorkspaceFoldersChangeEvent
 } from "vscode";
-import OutputChannel from "./ui/outputChannel";
+import Logger from "./ui/logger";
 import Server from "./server";
 import { Runners } from "./types";
 import FolderContext from "./folderContext";
@@ -18,7 +18,7 @@ import Statusline from "./ui/statusline";
 export class WorkspaceContext implements Disposable {
   public server: Server;
   public runners: Runners;
-  public outputChannel: OutputChannel;
+  public logger: Logger;
   public folders: FolderContext[] = [];
   public currentFolder: FolderContext | null | undefined;
   public subscriptions: { dispose(): unknown }[] = [];
@@ -37,13 +37,13 @@ export class WorkspaceContext implements Disposable {
     });
 
     this.statusline = new Statusline();
-    this.outputChannel = new OutputChannel();
+    this.logger = new Logger();
 
     this.server = server;
     this.runners = runners;
     this.subscriptions = [
       this.server,
-      this.outputChannel,
+      this.logger,
       this.statusline,
       onChangeConfig
     ];
