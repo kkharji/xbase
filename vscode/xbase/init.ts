@@ -11,7 +11,7 @@ export interface Api {
 }
 
 export async function activate(context: ExtensionContext): Promise<Api> {
-  console.info("Activating XBase");
+  console.info("[XBase] Activating");
 
   const workspaceContext = await WorkspaceContext.init();
 

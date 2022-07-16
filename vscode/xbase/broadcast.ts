@@ -1,9 +1,12 @@
 import { filter, map, pipe, split, toAsync } from "iter-ops";
 import net from "net";
-import { Disposable, window } from "vscode";
+import { Disposable, window, WorkspaceFolder } from "vscode";
 import { Message, ContentLevel, TaskKind, TaskStatus } from "./types";
 import Logger from "./ui/logger";
 import Statusline from "./ui/statusline";
+import configuration from "./config";
+import { WorkspaceContext } from "./workspaceContext";
+import SourcekitLsp from "./sourcekit-lsp";
 
 interface CurrentTask {
   prefix: { processing: string, done: string },
@@ -14,26 +17,32 @@ interface CurrentTask {
 
 export default class Broadcast implements Disposable {
   public name: string;
+  public folder: WorkspaceFolder;
   public socket: net.Socket;
-  private output: Logger;
+  private logger: Logger;
   private statusline: Statusline;
   private currentTask?: CurrentTask;
+  private sourcekit: SourcekitLsp;
 
   private constructor(
-    name: string, socket: net.Socket, output: Logger, statusbar: Statusline
+    folder: WorkspaceFolder, socket: net.Socket, ctx: WorkspaceContext
   ) {
-    this.name = name.charAt(0).toUpperCase() + name.slice(1);
+    this.folder = folder;
+    this.name = folder.name.charAt(0).toUpperCase() + folder.name.slice(1);
     this.socket = socket;
-    this.output = output;
-    this.statusline = statusbar;
+    this.logger = ctx.logger;
+    this.statusline = ctx.statusline;
+    this.sourcekit = ctx.sourcekit;
   }
 
   public static async connect(
-    name: string, address: string, logger: Logger, statusbar: Statusline
+    folder: WorkspaceFolder,
+    address: string,
+    ctx: WorkspaceContext
   ): Promise<Broadcast> {
     return new Promise((resolve, reject) => {
       const socket = net.createConnection(address, () => {
-        const broadcast = new Broadcast(name, socket, logger, statusbar);
+        const broadcast = new Broadcast(folder, socket, ctx);
         socket.on("data", async buffer => {
           for await (const message of Broadcast.get_messages(buffer))
             await broadcast.handleMessage(message);
@@ -67,11 +76,12 @@ export default class Broadcast implements Disposable {
         const { content, level } = message.args;
         // TODO: check for current log level
         if (level !== ContentLevel.Debug && level !== ContentLevel.Trace)
-          this.output.append(content, level);
+          this.logger.append(content, level);
         break;
       }
       case "OpenLogger":
-        this.output.toggle();
+        if (configuration.ui.openLoggerOnError)
+          this.logger.toggle();
         break;
       case "SetCurrentTask":
         this.setTask(message.args.kind, message.args.target, message.args.status);
@@ -83,7 +93,7 @@ export default class Broadcast implements Disposable {
         await this.finishTask(message.args.status);
         break;
       case "ReloadLspServer":
-        // TODO: Implement
+        await this.sourcekit.restartClient(this.folder.uri);
         break;
     }
   }
@@ -106,7 +116,7 @@ export default class Broadcast implements Disposable {
     if (!(level === ContentLevel.Debug || level === ContentLevel.Trace)) {
       const { target, prefix, kind } = this.currentTask;
 
-      this.output.append(content, level);
+      this.logger.append(content, level);
 
       content = content.replace(`[${this.currentTask.target}]`, "");
 
@@ -137,7 +147,7 @@ export default class Broadcast implements Disposable {
         ? `[${target}] ${prefix.processing} Failed`
         : `[${target}] ${prefix.done}`);
 
-    this.output.append(content, level);
+    this.logger.append(content, level);
 
     this.statusline.set({
       icon: taskFailed ? "$(error)" : "$(pass)",
