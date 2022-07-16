@@ -6,7 +6,7 @@ use tap::Pipe;
 use xcodeproj::pbxproj::PBXTargetPlatform;
 
 /// Represntaiton of Project runners index by Platfrom
-#[derive(Serialize, Deserialize, TypeScriptify)]
+#[derive(Serialize, Deserialize, TypeDef)]
 pub struct Runners(pub HashMap<String, Vec<DeviceLookup>>);
 
 pub async fn handle() -> Result<Runners> {

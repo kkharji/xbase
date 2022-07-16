@@ -49,8 +49,7 @@ function getPickerItems(
       : undefined;
 
     const getOperation = (isWatching?: boolean) => (isWatching !== undefined)
-      ? (isWatching ? Operation.Stop : Operation.Watch)
-      : Operation.Once;
+      ? (isWatching ? "Stop" : "Watch") : "Once";
 
     const getDetail = (isWatching?: boolean, device?: DeviceLookup) => {
       let detail = `${baseDetail}`;

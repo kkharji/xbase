@@ -2,13 +2,12 @@ use crate::error::*;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use strum::{Display as EnumDisplay, EnumString};
-use typescript_definitions::TypeScriptify;
-use xcodeproj::pbxproj::PBXTargetPlatform;
+use typescript_type_def::TypeDef;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Type of operation for building/ruuning a target/scheme
-#[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString, TypeScriptify)]
+#[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString, TypeDef)]
 pub enum Operation {
     Watch,
     Stop,
@@ -16,7 +15,7 @@ pub enum Operation {
 }
 
 /// Build Settings used in building/running a target/scheme
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypeScriptify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypeDef)]
 pub struct BuildSettings {
     /// Target to build
     pub target: String,
@@ -27,14 +26,13 @@ pub struct BuildSettings {
 }
 
 /// Target specfic information
-#[derive(Clone, Debug, Serialize, Deserialize, TypeScriptify)]
+#[derive(Clone, Debug, Serialize, Deserialize, TypeDef)]
 pub struct TargetInfo {
-    /// Configuration to build with, default Debug
-    pub platform: PBXTargetPlatform,
+    pub platform: String,
 }
 
 /// Device Lookup information to run built project with
-#[derive(Clone, Default, Debug, Serialize, Deserialize, TypeScriptify)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, TypeDef)]
 pub struct DeviceLookup {
     pub name: String,
     pub id: String,

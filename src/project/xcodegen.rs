@@ -121,9 +121,14 @@ impl ProjectGenerate for XCodeGenProject {
         for (key, platform) in self.xcodeproj.targets_platform().into_iter() {
             if self.targets.contains_key(&key) {
                 let info = self.targets.get_mut(&key).unwrap();
-                info.platform = platform;
+                info.platform = platform.to_string();
             } else {
-                self.targets.insert(key, TargetInfo { platform });
+                self.targets.insert(
+                    key,
+                    TargetInfo {
+                        platform: platform.to_string(),
+                    },
+                );
             }
         }
 
@@ -159,7 +164,14 @@ impl Project for XCodeGenProject {
                 .xcodeproj
                 .targets_platform()
                 .into_iter()
-                .map(|(k, platform)| (k, TargetInfo { platform }))
+                .map(|(k, platform)| {
+                    (
+                        k,
+                        TargetInfo {
+                            platform: platform.to_string(),
+                        },
+                    )
+                })
                 .collect();
         } else {
             project.generate(broadcast).await?;

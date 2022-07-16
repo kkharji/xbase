@@ -6,12 +6,12 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Request to Get `ProjectInfo`
-#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
+#[derive(Debug, Serialize, Deserialize, TypeDef)]
 pub struct GetProjectInfoRequest {
     root: PathBuf,
 }
 
-#[derive(Debug, Serialize, TypeScriptify)]
+#[derive(Debug, Serialize, TypeDef)]
 pub struct ProjectInfo {
     /// Get watched configurations for given root
     watchlist: Vec<String>,

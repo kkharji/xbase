@@ -3,7 +3,6 @@
 import * as vs from "vscode";
 import * as lc from "vscode-languageclient/node";
 import configuration from "../config";
-import { ContentLevel } from "../types";
 import { isPathInsidePath, projectName } from "../util";
 import { FolderEvent, WorkspaceContext } from "../workspaceContext";
 
@@ -132,7 +131,7 @@ export default class SourcekitLsp implements vs.Disposable {
       this.cancellationToken?.dispose();
       this.restartedPromise = client.stop().then(
         async () => await this.setupClient(uri, true),
-        err => logger.append(`${err}`, ContentLevel.Error));
+        err => logger.append(`${err}`, "Error"));
     }
   }
 

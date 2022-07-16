@@ -24,7 +24,7 @@ export default class Logger implements vscode.Disposable {
     }
   }
 
-  append(line: string, level: ContentLevel = ContentLevel.Debug) {
+  append(line: string, level: ContentLevel = "Debug") {
     const groups = this.problemRegex.exec(line);
 
     if (groups) {

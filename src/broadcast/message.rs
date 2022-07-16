@@ -1,9 +1,9 @@
 use crate::{Broadcast, BuildSettings};
 use serde::{Deserialize, Serialize};
-use typescript_definitions::TypeScriptify;
+use typescript_type_def::TypeDef;
 
 /// Representation of Messages that clients needs to process
-#[derive(Debug, Clone, Serialize, TypeScriptify)]
+#[derive(Debug, Clone, Serialize, TypeDef)]
 #[serde(tag = "type", content = "args")]
 pub enum Message {
     /// Notify use with a message
@@ -41,7 +41,7 @@ pub enum Message {
 }
 
 /// What kind of task is currently under progress?
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeScriptify)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeDef)]
 pub enum TaskKind {
     /// Build Task
     Build,
@@ -54,7 +54,7 @@ pub enum TaskKind {
 }
 
 /// What the status of task is currently under progress?
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeScriptify)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TypeDef)]
 pub enum TaskStatus {
     /// Task Failed,
     Failed,
@@ -65,7 +65,7 @@ pub enum TaskStatus {
 }
 
 /// What a given content level is? for whether to log/show it
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeScriptify)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, TypeDef)]
 pub enum ContentLevel {
     /// Trace Message
     Trace,

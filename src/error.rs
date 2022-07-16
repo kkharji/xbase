@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
-use typescript_definitions::TypeScriptify;
+use typescript_type_def::TypeDef;
 
 /// Server Error due to failure while processing a `Request
-#[derive(Deserialize, Serialize, TypeScriptify)]
+#[derive(Debug, Deserialize, Serialize, TypeDef)]
 pub struct ServerError {
     kind: String,
     msg: String,
@@ -33,7 +33,7 @@ pub enum Error {
     #[error("{0}")]
     Unexpected(String),
     #[error("{0}")]
-    JoinError(#[from] tokio::task::JoinError),
+    JoinError(String),
     #[error("{0}")]
     SendError(String),
     #[error("Failed to parse broadcast message: {0}")]

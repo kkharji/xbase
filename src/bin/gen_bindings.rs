@@ -20,72 +20,40 @@ fn main() {
 fn main() {}
 
 #[cfg(feature = "gen")]
-macro_rules! struct_to_lines {
-    ($name:ident) => {
-        $name::type_script_ify()
-            .split("\n")
-            .map(ToString::to_string)
-    };
-}
-
-#[cfg(feature = "gen")]
 fn gen_ts_types_file(path: PathBuf) {
-    use typescript_definitions::TypeScriptifyTrait;
-    let content = read_file_content(&path);
-    let mut generated: Vec<String> = vec![];
+    use typescript_type_def::{write_definition_file, DefinitionFileOptions};
     use xbase::{broadcast::*, server::*, types::*, *};
+    let mut buf = Vec::new();
+    let content = read_file_content(&path);
+    let mut options = DefinitionFileOptions::default();
 
-    generated.push("\n/* Server Requests */\n".into());
+    options.root_namespace = None;
+    options.header = None;
 
-    generated.extend(struct_to_lines!(Request));
-    generated.extend(struct_to_lines!(BuildRequest));
-    generated.extend(struct_to_lines!(RunRequest));
-    generated.extend(struct_to_lines!(RegisterRequest));
-    generated.extend(struct_to_lines!(DropRequest));
-    generated.extend(struct_to_lines!(GetProjectInfoRequest));
+    type Requests = (
+        Request,
+        RunRequest,
+        RegisterRequest,
+        DropRequest,
+        GetProjectInfoRequest,
+    );
+    type Responses = (Response, ServerError);
+    type Transports = (
+        ProjectInfo,
+        TargetInfo,
+        Runners,
+        Operation,
+        BuildSettings,
+        DeviceLookup,
+    );
+    type Messages = (Message, ContentLevel, TaskKind, TaskStatus);
+    type API = (Messages, Transports, Responses, Requests);
 
-    generated.push("\n/* Server Response */\n".into());
-    generated.extend(struct_to_lines!(ServerError));
-    generated.extend(struct_to_lines!(Response));
+    write_definition_file::<_, API>(&mut buf, options).unwrap();
 
-    generated.push("\n/* General Transport types */\n".into());
-    generated.extend(struct_to_lines!(ProjectInfo));
-    generated.extend(struct_to_lines!(TargetInfo));
-    generated.extend(struct_to_lines!(Runners));
-    generated.extend(struct_to_lines!(Operation));
-    generated.extend(struct_to_lines!(BuildSettings));
-    generated.extend(struct_to_lines!(DeviceLookup));
+    let generated = String::from_utf8(buf).unwrap();
 
-    generated.push("\n/* Broadcast server Messages */\n".into());
-
-    generated.extend(struct_to_lines!(Message));
-    generated.extend(struct_to_lines!(ContentLevel));
-    generated.extend(struct_to_lines!(TaskKind));
-    generated.extend(struct_to_lines!(TaskStatus));
-
-    for line in generated.iter_mut() {
-        if line.starts_with(" |") {
-            *line = line.replace(" |", "  |");
-        }
-
-        if line.ends_with("};") {
-            *line = line.replace("};", "};\n");
-        };
-
-        if line.contains("Value") {
-            *line = line.replace(": Value", ": unknown");
-        }
-        if line.contains("Error") {
-            *line = line.replace(": Error", ": ServerError");
-        } else if line.contains("PBXTargetPlatform") {
-            *line = line.replace(": PBXTargetPlatform", ": string");
-        }
-
-        *line = line.trim_end_matches(' ').to_string();
-    }
-
-    std::fs::write(&path, content + "\n" + &generated.join("\n"))
-        .expect("failed to write typescript types");
+    std::fs::write(&path, content + "\n" + &generated).expect("failed to write typescript types");
 }
 
 #[cfg(feature = "gen")]

@@ -226,7 +226,7 @@ impl SwiftProject {
                     Some((
                         name,
                         TargetInfo {
-                            platform: PBXTargetPlatform::MacOS,
+                            platform: PBXTargetPlatform::MacOS.to_string(),
                         },
                     ))
                 } else {

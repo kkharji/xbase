@@ -8,7 +8,7 @@ use std::sync::{Arc, Weak};
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
 /// Request to build a particular project
-#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
+#[derive(Debug, Serialize, Deserialize, TypeDef)]
 pub struct BuildRequest {
     pub root: PathBuf,
     pub settings: BuildSettings,

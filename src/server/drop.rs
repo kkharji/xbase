@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Drop a given set of roots to be dropped (i.e. unregistered)
-#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
+#[derive(Debug, Serialize, Deserialize, TypeDef)]
 pub struct DropRequest {
     pub roots: Vec<PathBuf>,
 }

@@ -75,7 +75,7 @@ export default class Broadcast implements Disposable {
       case "Log": {
         const { content, level } = message.args;
         // TODO: check for current log level
-        if (level !== ContentLevel.Debug && level !== ContentLevel.Trace)
+        if (!levelShouldIgnore(level))
           this.logger.append(content, level);
         break;
       }
@@ -99,7 +99,7 @@ export default class Broadcast implements Disposable {
   }
 
   private setTask(kind: TaskKind, target: string, status: TaskStatus) {
-    const prefix = TaskKind.prefix(kind);
+    const prefix = TaskKind.prefix(kind)!;
     this.currentTask = { target, kind, status, prefix };
     this.statusline.update({
       content: `[${target}] ${prefix.processing}`,
@@ -113,20 +113,21 @@ export default class Broadcast implements Disposable {
       return;
     };
 
-    if (!(level === ContentLevel.Debug || level === ContentLevel.Trace)) {
-      const { target, prefix, kind } = this.currentTask;
+    if (levelShouldIgnore(level))
+      return;
 
-      this.logger.append(content, level);
+    const { target, prefix, kind } = this.currentTask;
 
-      content = content.replace(`[${this.currentTask.target}]`, "");
+    this.logger.append(content, level);
 
-      this.statusline.update({
-        content: `[${target}] ${prefix.processing}: ${content}`,
-        icon: TaskKind.isRun(kind) ? "$(code)" : undefined,
-        level
-      });
+    content = content.replace(`[${this.currentTask.target}]`, "");
 
-    }
+    this.statusline.update({
+      content: `[${target}] ${prefix.processing}: ${content}`,
+      icon: TaskKind.isRun(kind) ? "$(code)" : undefined,
+      level
+    });
+
 
   }
 
@@ -137,10 +138,10 @@ export default class Broadcast implements Disposable {
     }
 
     const { target, prefix, kind } = { ...this.currentTask };
-    const taskFailed = (status === TaskStatus.Failed);
+    const taskFailed = (status === "Failed");
     this.currentTask = undefined;
 
-    const level = taskFailed ? ContentLevel.Error : ContentLevel.Info;
+    const level = taskFailed ? "Error" : "Info";
     const content = TaskKind.isRun(kind)
       ? `[${target}] Device disconnected`
       : (taskFailed
@@ -183,3 +184,6 @@ export default class Broadcast implements Disposable {
     this.socket.destroy();
   }
 }
+
+const levelShouldIgnore = (level: ContentLevel) =>
+  (level === "Debug" || level === "Trace");

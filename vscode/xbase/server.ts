@@ -1,5 +1,5 @@
 import net from "net";
-import type { ProjectInfo, Request, Response } from "./types";
+import type { JSONValue, ProjectInfo, Request, Response } from "./types";
 import { Disposable } from "vscode";
 
 export default class Server implements Disposable {
@@ -34,21 +34,17 @@ export default class Server implements Disposable {
   }
 
   // Drop a root project
-  async drop(root: string): Promise<string> {
-    const value = await this.request({ method: "drop", args: { roots: [root] } })
+  async drop(root: string): Promise<void> {
+    await this.request({ method: "drop", args: { roots: [root] } })
       .catch(error => {
         throw Error(`Drop failed: ${error}`);
       });
-
-    if (typeof value === "string") return value;
-
-    throw Error(`Expected response to be a string, got ${value}`);
   }
 
   /**
     * Send a new request to xbase server
   */
-  public async request(req: Request): Promise<unknown> {
+  public async request(req: Request): Promise<JSONValue | undefined> {
     const { socket } = this;
     const data = JSON.stringify(req);
 

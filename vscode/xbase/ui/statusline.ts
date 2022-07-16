@@ -22,7 +22,7 @@ export default class Statusline implements Disposable {
     this.item = window.createStatusBarItem(StatusBarAlignment.Left);
   }
 
-  public update({ content, level = ContentLevel.Info, icon = "$(sync~spin)" }: SetStatuslineArg) {
+  public update({ content, level = "Info", icon = "$(sync~spin)" }: SetStatuslineArg) {
     this.set({ icon, content, level });
   }
 
@@ -30,7 +30,7 @@ export default class Statusline implements Disposable {
     this.set({ content: "" });
   }
 
-  public set({ content, level = ContentLevel.Info, is_success, icon = "$(eye)" }: SetStatuslineArg) {
+  public set({ content, level = "Info", is_success, icon = "$(eye)" }: SetStatuslineArg) {
     this.item.text = `${icon} ${this.extName} ${content}`;
     this.item.show();
     this.setColor(level, is_success);
@@ -41,15 +41,15 @@ export default class Statusline implements Disposable {
       this.item.color = this.errorColor;
     } else {
       switch (level) {
-        case ContentLevel.Error:
+        case "Error":
           this.item.color = this.errorColor;
           break;
-        case ContentLevel.Warn:
+        case "Warn":
           this.item.color = this.warnColor;
           break;
-        case ContentLevel.Info:
-        case ContentLevel.Debug:
-        case ContentLevel.Trace:
+        case "Info":
+        case "Debug":
+        case "Trace":
           this.item.color = this.infoColor;
           break;
 

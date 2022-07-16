@@ -9,7 +9,7 @@ use tap::Pipe;
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
 /// Request to Run a particular project.
-#[derive(Debug, Serialize, Deserialize, TypeScriptify)]
+#[derive(Debug, Serialize, Deserialize, TypeDef)]
 pub struct RunRequest {
     pub root: PathBuf,
     pub settings: BuildSettings,
