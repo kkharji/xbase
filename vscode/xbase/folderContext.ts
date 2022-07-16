@@ -25,7 +25,7 @@ export default class FolderContext implements Disposable {
     console.log(registering);
 
     const broadcast = await ctx.server.register(uri.fsPath)
-      .then(address => Broadcast.connect(folder.name, address, ctx.logger, ctx.statusline))
+      .then(address => Broadcast.connect(folder, address, ctx))
       .catch(error => {
         throw Error(`[${name}] Failed to Initialize: ${error}`);
       });

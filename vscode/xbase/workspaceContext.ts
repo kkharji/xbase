@@ -9,6 +9,7 @@ import { isPathInsidePath, isSupportedProjectRoot, pathExists } from "./util";
 import { dirname } from "path";
 import * as commands from "./commands";
 import Statusline from "./ui/statusline";
+import SourcekitLsp from "./sourcekit-lsp";
 
 /**
  * Context for whole workspace. Holds array of contexts for each workspace folder
@@ -24,6 +25,7 @@ export class WorkspaceContext implements Disposable {
   public subscriptions: { dispose(): unknown }[] = [];
   public statusline = new Statusline();
   private observers: Set<WorkspaceFoldersObserver> = new Set();
+  public sourcekit: SourcekitLsp;
 
   public static async init(): Promise<WorkspaceContext> {
     const server = await Server.connect();
@@ -36,12 +38,14 @@ export class WorkspaceContext implements Disposable {
       console.log(event);
     });
 
+    this.sourcekit = new SourcekitLsp(this);
     this.server = server;
     this.runners = runners;
     this.subscriptions = [
       this.server,
       this.logger,
       this.statusline,
+      this.sourcekit,
       onChangeConfig
     ];
   };

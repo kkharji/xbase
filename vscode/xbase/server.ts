@@ -14,7 +14,10 @@ export default class Server implements Disposable {
       socket.on("error", (err) => {
         reject(Error(`Failed to connect to xbase socket: ${err}`));
       });
-      socket.on("connect", () => resolve(new Server(socket)));
+      socket.on("connect", () => {
+        console.log("[XBase] Server Connected");
+        resolve(new Server(socket));
+      });
     });
   }
 

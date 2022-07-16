@@ -50,6 +50,44 @@
         "title": "XBase: Toggle Logger"
       }
     ],
+    "configuration": [
+      {
+        "id": "sourcekit-lsp",
+        "title": "SourceKit-Lsp",
+        "properties": {
+          "xbase.sourcekit-lsp.path": {
+            "markdownDescription": "The path of the `sourcekit-lsp` executable.",
+            "default": "/usr/bin/sourcekit-lsp",
+            "type": "string",
+            "order": 1
+          },
+          "xbase.sourcekit-lsp.arguments": {
+            "markdownDescription": "sourcekit-lsp init arguments. keys and values must be provided as separate entries",
+            "type": "array",
+            "default": [
+              "--log-level",
+              "warning"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "order": 2
+          }
+        }
+      },
+      {
+        "id": "ui",
+        "title": "UI",
+        "properties": {
+          "xbase.ui.openLoggerOnError": {
+            "markdownDescription": "Whether logger should be open when build errors",
+            "default": false,
+            "type": "boolean",
+            "order": 1
+          }
+        }
+      }
+    ],
     "languages": [
       {
         "id": "xclog",
@@ -98,6 +136,7 @@
   },
   "dependencies": {
     "iter-ops": "^1.6.2",
-    "tiny-glob": "^0.2.9"
+    "tiny-glob": "^0.2.9",
+    "vscode-languageclient": "^8.0.0"
   }
 }
