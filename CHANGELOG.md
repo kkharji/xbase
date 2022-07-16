@@ -1,4 +1,51 @@
 # Changelog
+## 🔥 [Unreleased](https://github.com/xbase-lab/xbase)
+### <!-- 0 -->Features
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/b51e40033a29d28f840cd459e63ed2c4bf488ac4">Auto drop registered roots</a></b> <code>#daemon</code> <u><b>....</b></u></summary><br />
+
+Now clients won't have to handle on client exit event</details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/4404e56d5569bc422b1b560ce3fd8921b2f8f1f7">Apply eslint fixes</a></b> <code>#gen</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/af6fa904554655dddba40b54f61838c2b774f257">Show live progress of xbase setup/build/run</a></b> <code>#statusline</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/6cfc56ccf7ba09a14419c2a019814f3eb9e443cb">Connect and register client</a></b> <code>#typescript</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/ad5ee56efa576c6b95bfc4041781e293d106c677">Handle server messages</a></b> <code>#typescript</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/1b1272e9a69c3ae37f5c9d6d186b501bcac35826">Accept and process messages</a></b> <code>#typescript</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/54e6146d19123b2c24fec51bfd1d9e9e2db785b9">Support building/running/watching</a></b> <code>#typescript</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/1360d7a54c9b4ba6fe57a7de91686889a73022e8">Multi-workspace support</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/6103b5d065fcc0e88b22364a17970dafbac611d9">Toggle logger</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/2c16c225c2dce973cd2b1372ec496184550a31b4">Xclog syntax highlighting</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/8780d834747ddc54ada537d7ac8e4da205a7991d">Append errors from build log to problems</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/303eecff53f9cafe486e5cbf2108102bf11ae467">Integrate sourcekit-lsp</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/adeb220e6a77e2b7f3e6933edc72035e1bcbf805">Generate typescript types</a></b> <code>#general</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/ffb7cfb10938af92be658be69a7434fb71c78605">Generate constants for lua and typescript</a></b> <code>#general</code></summary></details></dd></dl>
+
+### <!-- 1 -->Bug Fixes
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/36b2db80e07c648fad41e57c63d943b038d7bd56">Deeply nested encode error</a></b> <code>#nvim</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/6dd6d5b0093ca17b51a8b53cdcc1c3d0bafc14e0">Missing messages</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/1f2871da38c057a1be65cdc235bf89c756b73835">Logger toggle</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/e5217a46b3a6eeabc5f2200d2a7feccb1e04475b">Incorrect watch key format</a></b> <code>#general</code></summary></details></dd></dl>
+
+### <!-- 2 -->Refactor
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/fe6e974b9fa0654489f93fa02c6d96b8287e5a79">Enums -> {tag, content}</a></b> <code>#core</code></summary></details></dd></dl>
+
+<dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/ecb1668066b842b6cee8c849da8f86461736ee21">Src => xbase</a></b> <code>#vscode</code></summary></details></dd></dl>
+
+
 ## 🎉 [v0.3.0](https://github.com/xbase-lab/xbase/tree/v0.3.0) - 2022-07-09
 ### <!-- 0 -->Features
 <dl><dd><details><summary><b><a href="https://github.com/xbase-lab/xbase/commit/a307197fc66836e2a3de44bf74879627d03b8760">Use vim.notify</a></b> <code>#editor</code></summary></details></dd></dl>
