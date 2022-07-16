@@ -17,6 +17,6 @@ tap                   = "1.0.1"
 
 # Logging
 tracing               = { version = "0.1.32" }
-tracing-attributes    = { version = "0.1.21" }
+tracing-attributes    = { version = "0.1.22" }
 tracing-appender      = { version = "0.2.1"  }
 tracing-subscriber    = { version = "0.3.9",  features = ["env-filter"]  }
