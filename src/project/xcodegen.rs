@@ -99,13 +99,18 @@ impl ProjectGenerate for XCodeGenProject {
         let task = Task::new(TaskKind::Generate, &name, broadcast.clone());
         process.current_dir(self.root());
 
-        let mut logs = process.spawn_and_stream()?.collect::<Vec<_>>().await;
+        let mut logs = process
+            .spawn_and_stream()
+            .context("Spawn xcodegen")?
+            .collect::<Vec<_>>()
+            .await;
         let success = logs.pop().unwrap().is_success().unwrap_or_default();
 
         if !success {
             let logs = logs.into_iter().map(|p| p.to_string()).collect::<Vec<_>>();
 
             for log in logs {
+                tracing::error!("{log}");
                 task.error(log)
             }
         }
@@ -117,7 +122,7 @@ impl ProjectGenerate for XCodeGenProject {
             tracing::warn!("[{name}] Found more then on xcodeproj, using {using}",);
         }
 
-        self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
+        self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0]).context("Reading Project")?;
         for (key, platform) in self.xcodeproj.targets_platform().into_iter() {
             if self.targets.contains_key(&key) {
                 let info = self.targets.get_mut(&key).unwrap();
@@ -138,7 +143,9 @@ impl ProjectGenerate for XCodeGenProject {
 
 #[async_trait::async_trait]
 impl Project for XCodeGenProject {
+    #[tracing::instrument(parent = None, name = "Project", skip_all, fields(name = root.name().unwrap(), kind = "xcodegen"))]
     async fn new(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<Self> {
+        tracing::info!("Processing");
         let mut watchignore = generate_watchignore(root).await;
         watchignore.extend(["**/*.xcodeproj/**".into(), "**/*.xcworkspace/**".into()]);
 
@@ -149,17 +156,21 @@ impl Project for XCodeGenProject {
             ..Self::default()
         };
 
+        tracing::debug!("Searching for *.xcodeproj");
         let xcodeproj_paths = project.get_xcodeproj_paths()?;
 
         if xcodeproj_paths.len() > 1 {
             tracing::warn!(
-                "Found more then on xcodeproj, using {:?}",
+                "Found more then one *.xcodeproj, using {:?}",
                 xcodeproj_paths[0]
             );
         }
 
         if !xcodeproj_paths.is_empty() {
-            project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
+            let xcpath = &xcodeproj_paths[0];
+            tracing::debug!("Using {}", xcpath.abbrv().unwrap().display());
+            project.xcodeproj = XCodeProject::new(xcpath).context("Reading XCodeProject")?;
+            tracing::debug!("Identifying targets");
             project.targets = project
                 .xcodeproj
                 .targets_platform()
@@ -173,11 +184,18 @@ impl Project for XCodeGenProject {
                     )
                 })
                 .collect();
+            tracing::debug!("Targets: {:?} ", project.targets);
         } else {
-            project.generate(broadcast).await?;
+            tracing::info!("Generating xcodeproj ...");
+            if let Err(err) = project.generate(broadcast).await {
+                return Err(Error::Setup(
+                    project.name().to_string(),
+                    format!("Generation failure {err}"),
+                ));
+            };
         }
 
-        tracing::info!("[{}] targets: {:?}", project.name(), project.targets());
+        tracing::info!("Created");
         Ok(project)
     }
 }

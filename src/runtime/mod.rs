@@ -34,7 +34,7 @@ impl ProjectRuntime {
         info!("[Initializing] ------------------------");
         let (sender, receiver) = mpsc::unbounded_channel::<PRMessage>();
         let broadcaster = Arc::new(Broadcast::new(&root).await?);
-        let project = project(&root, &broadcaster).await?;
+        let project = project::project(&root, &broadcaster).await?;
         let rsender = PRMessageSender::new(&root, broadcaster.address(), &sender);
         let name = project.name().to_string();
         let watcher_subscribers = WatchSubscribers::new(&name);

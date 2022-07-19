@@ -39,8 +39,7 @@ impl RequestHandler<PathBuf> for RegisterRequest {
             Ok(v) => v,
             Err(err) => {
                 let name = root.as_path().name().unwrap();
-                let msg = format!("[{name}] Runtime setup failed: {err}");
-                return Err(Error::Unexpected(msg));
+                return Err(Error::Setup(name, err.to_string()));
             }
         };
 

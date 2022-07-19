@@ -166,7 +166,7 @@ pub trait Project:
     where
         Self: Sized;
 
-    /// Ensure Daemon support for given project
+    #[tracing::instrument(parent = None, name = "Runtime", skip_all, fields(name = self.name()))]
     async fn ensure_setup(
         &mut self,
         event: Option<&Event>,
@@ -223,8 +223,14 @@ pub trait Project:
 
         if let Some(event) = event {
             if self.should_generate(event) {
-                self.generate(broadcast).await?;
-                self.update_compile_database(broadcast).await?;
+                self.generate(broadcast).await.map_err(|err| {
+                    Error::Setup(self.name().to_string(), format!("Generation failure {err}"))
+                })?;
+                self.update_compile_database(broadcast)
+                    .await
+                    .map_err(|err| {
+                        Error::Setup(self.name().to_string(), format!("Compile database: {err}"))
+                    })?;
                 return Ok(true);
             }
         }
@@ -242,6 +248,7 @@ pub trait Project:
 pub type ProjectImpl = Box<dyn Project + Send + Sync>;
 
 /// Create a project from given client
+
 pub async fn project(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<ProjectImpl> {
     Ok(if root.join("project.yml").exists() {
         Box::new(xcodegen::XCodeGenProject::new(root, broadcast).await?)

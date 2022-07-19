@@ -13,8 +13,8 @@ pub struct ServerError {
 
 #[derive(ThisError, Debug)]
 pub enum Error {
-    #[error("Failed to setup project: {0}")]
-    Setup(String),
+    #[error("[{0}] Failed to setup project: {1}")]
+    Setup(String, String),
     #[error("No `{1}` found with `{0}`")]
     /// Key, Type
     Lookup(String, String),
@@ -47,7 +47,7 @@ pub enum Error {
 impl From<ServerError> for Error {
     fn from(v: ServerError) -> Self {
         match v.kind.as_str() {
-            "Setup" => Self::Setup(v.msg),
+            "Setup" => Self::Setup("".into(), v.msg),
             "Build" => Self::Build(v.msg),
             "Run" => Self::Run(v.msg),
             "Generate" => Self::Generate,
@@ -68,7 +68,7 @@ impl From<&Error> for ServerError {
             msg: err.to_string(),
         };
         match err {
-            Error::Setup(_) => res.kind = "Setup".into(),
+            Error::Setup(_, _) => res.kind = "Setup".into(),
             Error::Lookup(_, _) => res.kind = "Lookup".into(),
             Error::Build(_) => res.kind = "Build".into(),
             Error::Run(_) => res.kind = "Run".into(),
