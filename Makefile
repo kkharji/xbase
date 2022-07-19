@@ -31,7 +31,7 @@ install: clean
 install_debug: clean
 	killall xbase xbase-sourcekit-helper || true
 	mkdir $(XBASE_LOCAL_ROOT)
-	cargo build -p xbase -p xbase-sourcekit-helper
+	RUST_LOG=trace cargo build -p xbase -p xbase-sourcekit-helper
 	ln -sf $(ROOT_DIR)/target/debug/xbase                       $(XBASE_LOCAL_ROOT)/xbase
 	ln -sf $(ROOT_DIR)/target/debug/xbase-sourcekit-helper      $(XBASE_LOCAL_ROOT)/xbase-sourcekit-helper
 	echo "DONE"

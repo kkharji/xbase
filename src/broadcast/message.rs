@@ -1,9 +1,18 @@
-use crate::{Broadcast, BuildSettings};
+use crate::{BuildSettings, ProjectInfo, Runners};
 use serde::{Deserialize, Serialize};
 use typescript_type_def::TypeDef;
 
+/// State usesd to set client state
+#[derive(Debug, Serialize, TypeDef)]
+#[serde(tag = "key", content = "value")]
+#[serde(rename_all = "camelCase")]
+pub enum State {
+    Runners(Runners),
+    ProjectInfo(ProjectInfo),
+}
+
 /// Representation of Messages that clients needs to process
-#[derive(Debug, Clone, Serialize, TypeDef)]
+#[derive(Debug, Serialize, TypeDef)]
 #[serde(tag = "type", content = "args")]
 pub enum Message {
     /// Notify use with a message
@@ -38,6 +47,11 @@ pub enum Message {
         watching: bool,
         settings: BuildSettings,
     },
+    /// Notification to client to update a state with the given value
+    SetState(State),
+    /// Internal!
+    #[serde(skip)]
+    Disconnect,
 }
 
 /// What kind of task is currently under progress?
@@ -94,151 +108,5 @@ impl From<&str> for Message {
             content: value.to_string().into(),
             level: ContentLevel::Info,
         }
-    }
-}
-
-impl Broadcast {
-    /// Tell connected clients to open logger
-    pub fn open_logger(&self) {
-        self.tx.send(Message::OpenLogger).ok();
-    }
-
-    /// Tell connected clients to reload language server
-    pub fn reload_lsp_server(&self) {
-        self.tx.send(Message::ReloadLspServer).ok();
-    }
-
-    /// Notify client with a message
-    pub fn info<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        self.tx.send(msg.into()).ok();
-    }
-
-    /// Notify client with an error message
-    pub fn error<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::error!("{msg}");
-        self.tx
-            .send(Message::Notify {
-                content: msg.to_string(),
-                level: ContentLevel::Error,
-            })
-            .ok();
-    }
-
-    /// Notify client with a warn message
-    pub fn warn<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::warn!("{msg}");
-        self.tx
-            .send(Message::Notify {
-                content: msg.to_string(),
-                level: ContentLevel::Warn,
-            })
-            .ok();
-    }
-
-    /// Notify client with a trace message
-    pub fn trace<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::trace!("{msg}");
-        self.tx
-            .send(Message::Notify {
-                content: msg.to_string(),
-                level: ContentLevel::Trace,
-            })
-            .ok();
-    }
-
-    /// Notify client with a debug message
-    pub fn debug<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::debug!("{msg}");
-        self.tx
-            .send(Message::Notify {
-                content: msg.to_string(),
-                level: ContentLevel::Debug,
-            })
-            .ok();
-    }
-
-    /// Notify client with a message
-    pub fn log_info<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        self.tx
-            .send(Message::Log {
-                content: msg.into(),
-                level: ContentLevel::Info,
-            })
-            .ok();
-    }
-
-    /// Notify client with an error message
-    pub fn log_error<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::error!("{msg}");
-        self.tx
-            .send(Message::Log {
-                content: msg.to_string(),
-                level: ContentLevel::Error,
-            })
-            .ok();
-    }
-
-    /// Notify client with a warn message
-    pub fn log_warn<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::warn!("{msg}");
-        self.tx
-            .send(Message::Log {
-                content: msg.to_string(),
-                level: ContentLevel::Warn,
-            })
-            .ok();
-    }
-
-    /// Notify client with a trace message
-    pub fn log_trace<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::trace!("{msg}");
-        self.tx
-            .send(Message::Log {
-                content: msg.to_string(),
-                level: ContentLevel::Trace,
-            })
-            .ok();
-    }
-
-    /// Notify client with a debug message
-    pub fn log_debug<S: AsRef<str>>(&self, msg: S) {
-        let msg = msg.as_ref();
-        tracing::debug!("{msg}");
-        self.tx
-            .send(Message::Log {
-                content: msg.to_string(),
-                level: ContentLevel::Debug,
-            })
-            .ok();
-    }
-
-    pub fn update_current_task<S: AsRef<str>>(&self, content: S, level: ContentLevel) {
-        self.tx
-            .send(Message::UpdateCurrentTask {
-                content: content.as_ref().into(),
-                level,
-            })
-            .ok();
-    }
-
-    pub fn finish_current_task(&self, success: bool) {
-        self.tx
-            .send(Message::FinishCurrentTask {
-                status: if success {
-                    TaskStatus::Succeeded
-                } else {
-                    TaskStatus::Failed
-                },
-            })
-            .ok();
     }
 }

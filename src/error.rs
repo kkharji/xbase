@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
 use typescript_type_def::TypeDef;
@@ -38,6 +40,8 @@ pub enum Error {
     SendError(String),
     #[error("Failed to parse broadcast message: {0}")]
     MessageParse(String),
+    #[error("{0} is not a registered project!")]
+    UnknownProject(PathBuf),
 }
 
 impl From<ServerError> for Error {
@@ -72,11 +76,12 @@ impl From<&Error> for ServerError {
             Error::DefinitionParsing(_) => res.kind = "DefinitionParsing".into(),
             Error::DefinitionLocating => res.kind = "DefinitionLocating".into(),
             Error::DefinitionMutliFound => res.kind = "DefinitionMutliFound".into(),
-            Error::Unexpected(_) => res.kind = "General".into(),
+            Error::Unexpected(_) => res.kind = "Unexpected".into(),
             Error::JoinError(_) => res.kind = "JoinError".into(),
             Error::SendError(_) => res.kind = "SendError".into(),
             Error::MessageParse(_) => res.kind = "MessageParse".into(),
             Error::Compile => res.kind = "Compile".into(),
+            Error::UnknownProject(_) => res.kind = "UnknownProject".into(),
         };
         res
     }

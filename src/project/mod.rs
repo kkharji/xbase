@@ -167,11 +167,11 @@ pub trait Project:
         Self: Sized;
 
     /// Ensure Daemon support for given project
-    async fn ensure_server_support(
+    async fn ensure_setup(
         &mut self,
         event: Option<&Event>,
         broadcast: &Arc<Broadcast>,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         use tokio::fs::File;
         use tokio::io::AsyncWriteExt;
 
@@ -225,21 +225,24 @@ pub trait Project:
             if self.should_generate(event) {
                 self.generate(broadcast).await?;
                 self.update_compile_database(broadcast).await?;
+                return Ok(true);
             }
         }
 
         if !is_swift_project && !compile_path.exists() {
             self.update_compile_database(broadcast).await.ok();
+            Ok(true)
+        } else {
+            Ok(false)
         }
-        Ok(())
     }
 }
 
 /// Alias for Box Project
-pub type ProjectImplementer = Box<dyn Project + Send + Sync>;
+pub type ProjectImpl = Box<dyn Project + Send + Sync>;
 
 /// Create a project from given client
-pub async fn project(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<ProjectImplementer> {
+pub async fn project(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<ProjectImpl> {
     Ok(if root.join("project.yml").exists() {
         Box::new(xcodegen::XCodeGenProject::new(root, broadcast).await?)
     } else if root.join("Project.swift").exists() {

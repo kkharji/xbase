@@ -19,24 +19,25 @@ pub fn setup(
     let filename = path.file_name().unwrap().to_str().unwrap();
 
     let default_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::from_default_env().add_directive(default_level.into()));
+        .unwrap_or_else(|_| EnvFilter::from_default_env().add_directive(default_level.into()))
+        .add_directive("tokio_util=warn".parse().unwrap());
 
     let fmt_file = Layer::new()
         .with_writer(rolling::never(root, filename))
-        .with_target(true)
+        .with_target(false)
         .with_file(false)
         .without_time()
         .with_thread_names(false)
-        .with_thread_ids(false)
-        // .with_ansi(false)
-        .compact();
+        .with_thread_ids(false);
+    // .with_ansi(false)
+    // .compact();
     let fmt_stdout = Layer::new()
         .with_writer(io::stdout)
-        .with_target(true)
+        .with_target(false)
         .with_line_number(true)
-        .without_time()
-        .with_file(false)
-        .compact();
+        // .without_time()
+        .with_file(true);
+    // .compact();
 
     if with_stdout {
         set_global_default(

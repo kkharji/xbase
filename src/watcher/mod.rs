@@ -1,154 +1,208 @@
 mod event;
-mod interface;
-mod state;
 
 use crate::*;
-use std::collections::HashMap;
+use async_trait::async_trait;
 use std::path::PathBuf;
-use std::sync::{Arc, Weak};
-use tokio::sync::mpsc::channel;
-use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
+use std::sync::Arc;
+use std::{sync::Mutex, time::SystemTime};
+use tokio::sync::mpsc::{self, channel, Receiver};
+use tokio::sync::Notify;
+use tracing::{error, info, instrument, warn};
 
-pub use {event::*, interface::*};
+pub use event::*;
 
-#[derive(derive_deref_rs::Deref)]
-pub struct WatchService {
-    #[deref]
-    pub listeners: HashMap<String, Box<(dyn Watchable + Send + Sync + 'static)>>,
-    pub handler: JoinHandle<Result<()>>,
+pub struct Watcher {
+    name: String,
+    state: WatcherState,
+    sender: mpsc::UnboundedSender<runtime::PRMessage>,
+    ignore: Vec<String>,
+    abort: Arc<Notify>,
+    root: PathBuf,
 }
 
-impl WatchService {
-    pub async fn new(
+impl Watcher {
+    pub fn new(
+        name: &String,
+        state: &WatcherState,
+        sender: &mpsc::UnboundedSender<runtime::PRMessage>,
+        abort: &Arc<Notify>,
         root: &PathBuf,
-        watchignore: Vec<String>,
-        broadcast: Weak<Broadcast>,
-        project: Weak<Mutex<ProjectImplementer>>,
-    ) -> Result<Self> {
-        let root = root.clone();
-        let mut discards = vec![];
-        let internal_state = Default::default();
-        let listeners = Default::default();
+        ignore: &Vec<String>,
+    ) -> Self {
+        Self {
+            name: name.clone(),
+            state: state.clone(),
+            sender: sender.clone(),
+            ignore: ignore.clone(),
+            abort: abort.clone(),
+            root: root.clone(),
+        }
+    }
 
-        let handler = tokio::spawn(async move {
-            let (mut rx, _w) = start_watcher(&root)?;
-            let watchignore = watchignore.iter().map(AsRef::as_ref).collect::<Vec<&str>>();
-            let ignore = wax::any::<wax::Glob, _>(watchignore).unwrap();
+    #[instrument(parent = None, name = "FSWatcher", skip_all, fields(name = self.name))]
+    pub async fn start(self) {
+        let (mut rx, _w) = self.get_watcher().unwrap();
+        let watchignore = self.ignore.iter().map(AsRef::as_ref).collect::<Vec<&str>>();
+        let ignore = wax::any::<wax::Glob, _>(watchignore).unwrap();
 
-            while let Some(event) = rx.recv().await {
-                let ref event = match Event::new(&ignore, &internal_state, event) {
-                    Some(e) => e,
-                    None => continue,
-                };
+        tracing::info!("Watching");
+        loop {
+            tokio::select! {
+                _ = self.abort.notified() => break,
+                event = rx.recv() => {
+                    if event.is_none() { break; }
+                    let event = event.unwrap();
+                    let event = match Event::new(&ignore, &self.state, event) {
+                        Some(e) => e,
+                        None => continue,
+                    };
 
-                // IGNORE EVENTS OF RENAME FOR PATHS THAT NO LONGER EXISTS
-                if !event.path().exists() && event.is_rename_event() {
-                    tracing::debug!("{} [ignored]", event);
-                    continue;
-                }
-
-                let broadcast = match broadcast.upgrade() {
-                    Some(broadcast) => broadcast,
-                    None => {
-                        tracing::warn!(r"No broadcast found for {root:?}, dropping watcher ..");
-                        break;
-                    }
-                };
-
-                let project = &mut match project.upgrade() {
-                    Some(p) => p.lock_owned().await,
-                    None => {
-                        let msg = format!(r"No project found for {root:?}, dropping watcher ..");
-                        broadcast.warn(msg);
-
-                        break;
-                    }
-                };
-
-                if event.is_create_event()
-                    || event.is_remove_event()
-                    || event.is_content_update_event()
-                    || event.is_rename_event() && !event.is_seen()
-                {
-                    project
-                        .ensure_server_support(event.into(), &broadcast)
-                        .await?;
-                };
-
-                let w = match root.try_get_mutex_watcher().await {
-                    Ok(w) => w,
-                    Err(err) => {
-                        tracing::error!(r#"Unable to get watcher for {root:?}: {err}"#);
-                        tracing::info!(r#"Dropping watcher for {root:?}: {err}"#);
-                        break;
-                    }
-                };
-
-                let mut watcher = w.lock().await;
-
-                for (key, listener) in watcher.listeners.iter() {
-                    if listener.should_discard(event).await {
-                        if let Err(err) = listener.discard().await {
-                            tracing::error!(" discard errored for `{key}`!: {err}");
-                        } else {
-                            discards.push(key.to_string());
-                        }
+                    // IGNORE EVENTS OF RENAME FOR PATHS THAT NO LONGER EXISTS
+                    if !event.path().exists() && event.is_rename_event() {
+                        tracing::debug!("{} [ignored]", event);
                         continue;
                     }
-
-                    if listener.should_trigger(event).await {
-                        // WARN: This would block if trigger it self access watcher
-                        // Use for trigger inner handle like run service handler
-                        let trigger =
-                            listener.trigger(project, event, &broadcast, Arc::downgrade(&w));
-
-                        if let Err(err) = trigger.await {
-                            tracing::error!("trigger errored for `{key}`!: {err}");
-                        }
-                    }
+                    self.sender.send(PRMessage::FSEvent(event)).ok();
                 }
-
-                for key in discards.iter() {
-                    tracing::info!("[{key:?}] discarded");
-                    watcher.listeners.remove(key);
-                }
-
-                discards.clear();
-                internal_state.update_debounce();
-
-                tracing::info!("{event} consumed successfully");
             }
+        }
 
-            tracing::info!("Dropped {:?}!!", root.as_path().abbrv()?.display());
+        tracing::info!("[Dropped]");
+    }
 
-            Ok(())
-        });
+    fn get_watcher(&self) -> Result<(Receiver<notify::Event>, impl notify::Watcher)> {
+        use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
+        let (tx, rx) = channel::<notify::Event>(1);
+        let create = <RecommendedWatcher as Watcher>::new;
+        let to_err = |e: notify::Error| crate::Error::Unexpected(e.to_string());
 
-        Ok(Self { handler, listeners })
+        let mut watcher = create(move |res: notify::Result<notify::Event>| {
+            res.map(|event| tx.blocking_send(event).unwrap()).ok();
+        })
+        .map_err(to_err)?;
+
+        watcher.watch(&self.root, Recursive).map_err(to_err)?;
+        watcher
+            .configure(Config::NoticeEvents(true))
+            .map_err(to_err)?;
+
+        Ok((rx, watcher))
     }
 }
 
-fn start_watcher(
-    root: &PathBuf,
-) -> Result<(
-    tokio::sync::mpsc::Receiver<notify::Event>,
-    impl notify::Watcher,
-)> {
-    use notify::{Config, RecommendedWatcher, RecursiveMode::Recursive, Watcher};
-    let (tx, rx) = channel::<notify::Event>(1);
-    let create = <RecommendedWatcher as Watcher>::new;
-    let to_err = |e: notify::Error| crate::Error::Unexpected(e.to_string());
+/// Trait to make an object react to filesystem changes.
+#[async_trait]
+pub trait Watchable: ToString + Send + Sync + 'static {
+    /// Trigger Restart of Watchable.
+    async fn trigger(
+        &self,
+        project: &mut ProjectImpl,
+        ev: &Event,
+        b: &Arc<Broadcast>,
+    ) -> Result<()>;
 
-    let mut watcher = create(move |res: notify::Result<notify::Event>| {
-        res.map(|event| tx.blocking_send(event).unwrap()).ok();
-    })
-    .map_err(to_err)?;
+    /// A function that controls whether a a Watchable should restart
+    async fn should_trigger(&self, ev: &Event) -> bool;
 
-    watcher.watch(root, Recursive).map_err(to_err)?;
-    watcher
-        .configure(Config::NoticeEvents(true))
-        .map_err(to_err)?;
+    /// A function that controls whether a watchable should be dropped
+    async fn should_discard(&self, ev: &Event) -> bool;
 
-    Ok((rx, watcher))
+    /// Drop watchable for watching a given file system
+    async fn discard(&self);
+}
+
+#[derive(Default)]
+pub struct WatchSubscribers {
+    name: String,
+    inner: HashMap<String, Box<(dyn Watchable + Send + Sync + 'static)>>,
+}
+
+impl WatchSubscribers {
+    pub fn new(name: &String) -> Self {
+        Self {
+            name: name.clone(),
+            inner: Default::default(),
+        }
+    }
+    #[instrument(parent = None, name = "FSWatcher", skip_all, fields(name = self.name))]
+    pub fn add<W: Watchable>(&mut self, watchable: W) {
+        let key = watchable.to_string();
+        if self.inner.contains_key(&key) {
+            warn!("trying to add {key}!!");
+        } else {
+            self.inner.insert(key, Box::new(watchable));
+        }
+    }
+
+    #[instrument(parent = None, name = "FSWatcher", skip_all, fields(name = self.name))]
+    pub async fn remove<S: ToString>(&mut self, t: &S) {
+        let key = t.to_string();
+        if let Some(w) = self.inner.remove(&key) {
+            w.discard().await;
+            info!("Removed watch subscriber: `{key}`");
+        } else {
+            error!("Trying to remove non-existent watch subscriber: `{key}`")
+        }
+    }
+
+    pub fn keys(&self) -> Vec<String> {
+        self.inner.keys().map(ToString::to_string).collect()
+    }
+
+    #[instrument(parent = None, name = "FSWatcher", skip_all, fields(name = self.name))]
+    pub async fn trigger(
+        &mut self,
+        project: &mut ProjectImpl,
+        event: &Event,
+        broadcast: &Arc<Broadcast>,
+    ) {
+        let mut discards = vec![];
+
+        for (key, w) in self.inner.iter() {
+            if w.should_discard(&event).await {
+                w.discard().await;
+                discards.push(key.to_string());
+            } else if w.should_trigger(&event).await {
+                let trigger = w.trigger(project, event, broadcast);
+                if let Err(err) = trigger.await {
+                    error!("trigger errored for `{key}`!: {err}");
+                }
+            }
+        }
+
+        for key in discards {
+            info!("Discarded: `{key}`");
+            self.inner.remove(&key);
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct WatcherState {
+    debounce: Arc<Mutex<SystemTime>>,
+    last_path: Arc<Mutex<PathBuf>>,
+}
+
+impl WatcherState {
+    pub fn new() -> Self {
+        Self {
+            debounce: Arc::new(Mutex::new(SystemTime::now())),
+            last_path: Default::default(),
+        }
+    }
+    pub fn update_debounce(&self) {
+        let mut debounce = self.debounce.lock().unwrap();
+        *debounce = SystemTime::now();
+        tracing::trace!("Debounce updated!!!");
+    }
+
+    pub fn last_run(&self) -> u128 {
+        self.debounce.lock().unwrap().elapsed().unwrap().as_millis()
+    }
+
+    /// Get a reference to the internal state's last path.
+    #[must_use]
+    pub fn last_path(&self) -> Arc<Mutex<PathBuf>> {
+        self.last_path.clone()
+    }
 }

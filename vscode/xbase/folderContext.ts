@@ -1,14 +1,17 @@
 import * as path from "path";
 import { Disposable, Uri, WorkspaceFolder } from "vscode";
 import Broadcast from "./broadcast";
+import { ProjectInfo } from "./types";
 import { projectName } from "./util";
 import { WorkspaceContext } from "./workspaceContext";
 
 export default class FolderContext implements Disposable {
+  public projectInfo: ProjectInfo = { watchlist: [], targets: {} };
+  public subscriptions: Disposable[] = [];
   private constructor(
+    public ctx: WorkspaceContext,
     public uri: Uri,
     public folder: WorkspaceFolder,
-    private broadcast: Broadcast
   ) { }
 
   /**
@@ -20,20 +23,22 @@ export default class FolderContext implements Disposable {
   ): Promise<FolderContext> {
     const name = projectName(uri.fsPath);
     const registering = `[${name}] Registering`;
+    const folderCtx = new FolderContext(ctx, uri, folder);
 
     ctx.statusline.update({ content: registering });
     console.log(registering);
 
-    const broadcast = await ctx.server.register(uri.fsPath)
-      .then(address => Broadcast.connect(folder, address, ctx))
-      .catch(error => {
-        throw Error(`[${name}] Failed to Initialize: ${error}`);
-      });
+    folderCtx.subscriptions.push(
+      await ctx.server.register(uri.fsPath)
+        .then(address => Broadcast.connect(folderCtx, address, ctx))
+        .catch(error => {
+          throw Error(`[${name}] Failed to Initialize: ${error}`);
+        }));
 
     ctx.statusline.setDefault();
     console.log(`[${name}] Registered`);
 
-    return new FolderContext(uri, folder, broadcast);
+    return folderCtx;
   }
 
   get relativePath(): string {
@@ -53,7 +58,7 @@ export default class FolderContext implements Disposable {
   }
 
   dispose() {
-    this.broadcast.dispose();
+    this.subscriptions.map(v => v.dispose());
   }
 
 }

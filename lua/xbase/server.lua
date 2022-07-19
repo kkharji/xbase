@@ -5,6 +5,7 @@ local notify = require "xbase.notify"
 local broadcast = require "xbase.broadcast"
 local constants = require "xbase.constants"
 local uv = vim.loop
+local id = vim.loop.os_getpid()
 
 ---@class XBase
 local M = {
@@ -87,45 +88,17 @@ end
 ---@return boolean
 function M.register(root)
   validate { root = { root, "string", false } }
+  if M.roots[root] then
+    return
+  end
 
   require("xbase.logger").setup()
-  local req = {
-    method = "register",
-    args = {
-      root = root,
-    },
-  }
 
+  local req = { method = "register", args = { id = id, root = root } }
   M.request(req, function(broadcast_address)
-    notify.info(("[%s] Connected "):format(util.project_name(root)))
-    vim.schedule(function()
-      --- Clear statusline
-      vim.defer_fn(function()
-        print "  "
-      end, 2000)
-    end)
-
-    broadcast.start(broadcast_address)
-
-    M.roots[#M.roots + 1] = root
-
-    -- Fill state with available runners
-    if not require("xbase.state").runners then
-      M.request({ method = "get_runners" }, function(runners)
-        require("xbase.state").runners = runners
-      end)
-    end
+    broadcast.start(root, broadcast_address)
+    M.roots[root] = true
   end)
-end
-
----Get Project information
-function M.get_project_info(root, on_response)
-  M.request({
-    method = "get_project_info",
-    args = {
-      root = root,
-    },
-  }, on_response)
 end
 
 ---Drop a given root or drop all tracked roots if root is nil

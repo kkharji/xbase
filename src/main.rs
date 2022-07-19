@@ -26,7 +26,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     loop {
         select! {
-            Ok((stream, _)) = listener.accept() => tokio::spawn(server::stream::handle(stream)),
+            Ok((stream, _)) = listener.accept() => tokio::spawn(server::handle(stream)),
             _ = &mut os_signal_handler => break,
         };
     }

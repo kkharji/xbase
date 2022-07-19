@@ -14,10 +14,6 @@ pub enum Request {
     Run(RunRequest),
     /// Drop projects at a given roots
     Drop(DropRequest),
-    /// Get available runners
-    GetRunners,
-    /// Get project info that might change between calls, like targets or watchlist
-    GetProjectInfo(GetProjectInfoRequest),
 }
 
 impl Request {
@@ -27,8 +23,6 @@ impl Request {
             Request::Build(req) => req.handle().await.pipe(Response::new),
             Request::Run(req) => req.handle().await.pipe(Response::new),
             Request::Drop(req) => req.handle().await.pipe(Response::new),
-            Request::GetRunners => super::runners::handle().await.pipe(Response::new),
-            Request::GetProjectInfo(req) => req.handle().await.pipe(Response::new),
         }
     }
 }

@@ -18,7 +18,7 @@ import SourcekitLsp from "./sourcekit-lsp";
  */
 export class WorkspaceContext implements Disposable {
   public server: Server;
-  public runners: Runners;
+  public runners: Runners = {};
   public logger = new Logger();
   public folders: FolderContext[] = [];
   public currentFolder: FolderContext | null | undefined;
@@ -29,18 +29,16 @@ export class WorkspaceContext implements Disposable {
 
   public static async init(): Promise<WorkspaceContext> {
     const server = await Server.connect();
-    const runners = await server.request({ method: "get_runners" }) as Runners;
-    return new WorkspaceContext(server, runners);
+    return new WorkspaceContext(server);
   }
 
-  constructor(server: Server, runners: Runners) {
+  constructor(server: Server) {
     const onChangeConfig = workspace.onDidChangeConfiguration(event => {
       console.log(event);
     });
 
     this.sourcekit = new SourcekitLsp(this);
     this.server = server;
-    this.runners = runners;
     this.subscriptions = [
       this.server,
       this.logger,

@@ -1,10 +1,18 @@
 use crate::error::*;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 use strum::{Display as EnumDisplay, EnumString};
 use typescript_type_def::TypeDef;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+#[derive(Debug, Serialize, TypeDef)]
+pub struct ProjectInfo {
+    /// Get watched configurations for given root
+    pub watchlist: Vec<String>,
+    /// Get targets information for a registers project with a given root
+    pub targets: HashMap<String, TargetInfo>,
+}
 
 /// Type of operation for building/ruuning a target/scheme
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDisplay, EnumString, TypeDef)]
@@ -36,6 +44,12 @@ pub struct TargetInfo {
 pub struct DeviceLookup {
     pub name: String,
     pub id: String,
+}
+
+impl DeviceLookup {
+    pub fn new(name: String, id: String) -> Self {
+        Self { name, id }
+    }
 }
 
 impl Default for Operation {

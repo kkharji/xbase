@@ -63,7 +63,8 @@ local insert_entry = function(acc, picker, command, target, configuration, watch
   acc[#acc + 1] = item
 end
 
-local get_selections = function(project_info, picker)
+local get_selections = function(root, picker)
+  local project_info = require("xbase.state").project_info[root]
   local commands = picker == C.Watch and { C.Build, C.Run } or { picker }
   local targets = project_info.targets
   local include_devices = picker == C.Run or picker == C.Watch
@@ -158,26 +159,15 @@ end
 local find = function(name, opts)
   opts = themes.get_dropdown(opts or {})
   opts.root = opts.root or vim.loop.cwd()
-  local _find = function(opts)
-    picker(opts, {
-      prompt_title = opts.name,
-      sorter = sorter {},
-      finder = finder {
-        results = get_selections(opts.project_info, name),
-        entry_maker = entry_maker,
-      },
-      attach_mappings = mappings,
-    }):find()
-  end
-
-  if opts.project_info then
-    _find(opts)
-  else
-    server.get_project_info(opts.root, function(project_info)
-      opts.project_info = project_info
-      _find(opts)
-    end)
-  end
+  picker(opts, {
+    prompt_title = opts.name,
+    sorter = sorter {},
+    finder = finder {
+      results = get_selections(opts.root, name),
+      entry_maker = entry_maker,
+    },
+    attach_mappings = mappings,
+  }):find()
 end
 
 M.watch = function(opts)
@@ -195,55 +185,51 @@ end
 M.actions = function(opts)
   opts = require("telescope.themes").get_dropdown(opts or {})
   opts.root = opts.root or vim.loop.cwd()
-  server.get_project_info(opts.root, function(project_info)
-    opts.project_info = project_info
-
-    picker(opts, {
-      sorter = sorter {},
-      prompt_title = "Pick Xbase Action Category",
-      finder = finder {
-        results = {
-          { value = C.Build },
-          { value = C.Watch },
-          { value = C.Run },
-        },
-        entry_maker = function(entry)
-          entry.ordinal = entry.value
-          entry.display = function(e)
-            local opts = {}
-
-            opts.separator = " "
-            opts.hl_chars = { ["|"] = "TelescopeResultsNumber" }
-            opts.items = { { width = 40 } }
-
-            return maker(opts) { { e.value, "TelescopeResultsMethod" } }
-          end
-
-          return entry
-        end,
+  picker(opts, {
+    sorter = sorter {},
+    prompt_title = "Pick Xbase Action Category",
+    finder = finder {
+      results = {
+        { value = C.Build },
+        { value = C.Watch },
+        { value = C.Run },
       },
-      attach_mappings = function(_, _)
-        a.select_default:replace(function(bufnr)
-          local selected = s.get_selected_entry()
+      entry_maker = function(entry)
+        entry.ordinal = entry.value
+        entry.display = function(e)
+          local opts = {}
 
-          a.close(bufnr)
-          if not selected then
-            print "No selection"
-            return
-          end
+          opts.separator = " "
+          opts.hl_chars = { ["|"] = "TelescopeResultsNumber" }
+          opts.items = { { width = 40 } }
 
-          if selected.value == C.Watch then
-            M.watch(opts)
-          elseif selected.value == C.Build then
-            M.build(opts)
-          elseif selected.value == C.Run then
-            M.run(opts)
-          end
-        end)
-        return true
+          return maker(opts) { { e.value, "TelescopeResultsMethod" } }
+        end
+
+        return entry
       end,
-    }):find()
-  end)
+    },
+    attach_mappings = function(_, _)
+      a.select_default:replace(function(bufnr)
+        local selected = s.get_selected_entry()
+
+        a.close(bufnr)
+        if not selected then
+          print "No selection"
+          return
+        end
+
+        if selected.value == C.Watch then
+          M.watch(opts)
+        elseif selected.value == C.Build then
+          M.build(opts)
+        elseif selected.value == C.Run then
+          M.run(opts)
+        end
+      end)
+      return true
+    end,
+  }):find()
 end
 
 return M

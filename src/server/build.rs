@@ -1,11 +1,8 @@
-use super::*;
-use crate::*;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::path::PathBuf;
-use std::sync::{Arc, Weak};
-use tokio::sync::{Mutex, OwnedMutexGuard};
+use std::fmt::{self, Display};
+use std::{path::PathBuf, sync::Arc};
+use {super::*, crate::*};
 
 /// Request to build a particular project
 #[derive(Debug, Serialize, Deserialize, TypeDef)]
@@ -15,87 +12,34 @@ pub struct BuildRequest {
     pub operation: Operation,
 }
 
-impl fmt::Display for BuildRequest {
+#[async_trait]
+impl RequestHandler<()> for BuildRequest {
+    async fn handle(self) -> Result<()> {
+        tracing::trace!("{:#?}", self);
+        runtimes()
+            .await
+            .get(&self.root)
+            .ok_or_else(|| Error::UnknownProject(self.root.clone()))
+            .map(|r| r.send(PRMessage::Build(self)))
+    }
+}
+
+impl Display for BuildRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:Build:{}", self.root.display(), self.settings)
     }
 }
 
 #[async_trait]
-impl RequestHandler<()> for BuildRequest {
-    async fn handle(self) -> Result<()> {
-        let broadcast = self.root.try_get_broadcast().await?;
-        // let args = &self.settings.to_string();
-
-        tracing::trace!("{:#?}", self);
-
-        if self.operation.is_once() {
-            let mut project = self.root.try_get_project().await?;
-
-            self.trigger(&mut project, &Event::default(), &broadcast, Weak::new())
-                .await?;
-            return Ok(());
-        }
-
-        let mut watcher = self.root.try_get_watcher().await?;
-
-        if self.operation.is_watch() {
-            // TODO: SetWatching
-            // broadcast.success(format!("[{target}] Watching "));
-            // broadcast.update_statusline(StatuslineState::Watching);
-            watcher.add(self)?;
-        } else {
-            // broadcast.info(format!("[{}] Wathcer Stopped", &self.settings.target));
-            watcher.remove(&self.to_string())?;
-            // broadcast.update_statusline(StatuslineState::Clear);
-        }
-
-        Ok(())
-    }
-}
-
-#[async_trait]
 impl Watchable for BuildRequest {
-    async fn trigger(
-        &self,
-        project: &mut OwnedMutexGuard<ProjectImplementer>,
-        _event: &Event,
-        broadcast: &Arc<Broadcast>,
-        _watcher: Weak<Mutex<WatchService>>,
-    ) -> Result<()> {
-        let config = &self.settings;
-
-        let (_, mut recv) = project.build(&config, None, broadcast)?;
-
-        if !recv.recv().await.unwrap_or_default() {
-            // let verb = if is_once { "building" } else { "Rebuilding" };
-            // broadcast.error(format!("[{target}] {verb} Failed "));
-            // broadcast.log_error(format!(
-            //     "[{target}] build args `xcodebuild {}`",
-            //     args.join(" ")
-            // ));
-            // broadcast.update_statusline(StatuslineState::Failure);
-            // broadcast.open_logger();
-        } else {
-            // broadcast.success(format!("[{target}] Built "));
-            // broadcast.log_info(format!("[{target}] Built Successfully "));
-            // if is_once {
-            //     broadcast.update_statusline(StatuslineState::Success);
-            // } else {
-            //     broadcast.update_statusline(StatuslineState::Watching);
-            // }
-        };
-
+    async fn trigger(&self, p: &mut ProjectImpl, _: &Event, b: &Arc<Broadcast>) -> Result<()> {
+        p.build(&self.settings, None, b)?;
         Ok(())
     }
 
     /// A function that controls whether a a Watchable should restart
     async fn should_trigger(&self, event: &Event) -> bool {
-        event.is_content_update_event()
-            || event.is_rename_event()
-            || event.is_create_event()
-            || event.is_remove_event()
-            || !(event.path().exists() || event.is_seen())
+        event.is_any_but_not_seen()
     }
 
     /// A function that controls whether a watchable should be droped
@@ -104,7 +48,5 @@ impl Watchable for BuildRequest {
     }
 
     /// Drop watchable for watching a given file system
-    async fn discard(&self) -> Result<()> {
-        Ok(())
-    }
+    async fn discard(&self) {}
 }

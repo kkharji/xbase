@@ -109,6 +109,46 @@ export type BuildSettings =
   };
 
 /**
+ * Device Lookup information to run built project with
+ */
+export type DeviceLookup =
+  /**
+   * Device Lookup information to run built project with
+   */
+  { name: string; id: string };
+
+/**
+ * Represntaiton of Project runners index by Platfrom
+ */
+export type Runners = Record<string, DeviceLookup[]>;
+
+/**
+ * Target specfic information
+ */
+export type TargetInfo =
+  /**
+   * Target specfic information
+   */
+  { platform: string };
+export type ProjectInfo = {
+  /**
+   * Get watched configurations for given root
+   */
+  watchlist: string[];
+  /**
+   * Get targets information for a registers project with a given root
+   */
+  targets: Record<string, TargetInfo>;
+};
+
+/**
+ * State usesd to set client state
+ */
+export type State =
+  | { key: "runners"; value: Runners }
+  | { key: "projectInfo"; value: ProjectInfo };
+
+/**
  * Representation of Messages that clients needs to process
  */
 export type Message =
@@ -153,40 +193,14 @@ export type Message =
        */
       type: "SetWatching";
       args: { watching: boolean; settings: BuildSettings };
+    }
+  | {
+      /**
+       * Notification to client to update a state with the given value
+       */
+      type: "SetState";
+      args: State;
     };
-
-/**
- * Target specfic information
- */
-export type TargetInfo =
-  /**
-   * Target specfic information
-   */
-  { platform: string };
-export type ProjectInfo = {
-  /**
-   * Get watched configurations for given root
-   */
-  watchlist: string[];
-  /**
-   * Get targets information for a registers project with a given root
-   */
-  targets: Record<string, TargetInfo>;
-};
-
-/**
- * Device Lookup information to run built project with
- */
-export type DeviceLookup =
-  /**
-   * Device Lookup information to run built project with
-   */
-  { name: string; id: string };
-
-/**
- * Represntaiton of Project runners index by Platfrom
- */
-export type Runners = Record<string, DeviceLookup[]>;
 
 /**
  * Type of operation for building/ruuning a target/scheme
@@ -217,6 +231,7 @@ export type Response =
    * Server Response
    */
   { data?: JSONValue; error?: ServerError };
+export type U32 = number;
 
 /**
  * Register a project root
@@ -225,7 +240,7 @@ export type RegisterRequest =
   /**
    * Register a project root
    */
-  { root: string };
+  { id: U32; root: string };
 
 /**
  * Request to build a particular project
@@ -257,16 +272,7 @@ export type DropRequest =
   /**
    * Drop a given set of roots to be dropped (i.e. unregistered)
    */
-  { roots: string[] };
-
-/**
- * Request to Get `ProjectInfo`
- */
-export type GetProjectInfoRequest =
-  /**
-   * Request to Get `ProjectInfo`
-   */
-  { root: string };
+  { id: U32; roots: string[] };
 
 /**
  * Requests clinets can make
@@ -299,17 +305,4 @@ export type Request =
        */
       method: "drop";
       args: DropRequest;
-    }
-  | {
-      /**
-       * Get available runners
-       */
-      method: "get_runners";
-    }
-  | {
-      /**
-       * Get project info that might change between calls, like targets or watchlist
-       */
-      method: "get_project_info";
-      args: GetProjectInfoRequest;
     };

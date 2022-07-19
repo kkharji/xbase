@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use super::state::InternalState;
+use super::WatcherState;
 use notify::{Event as NotifyEvent, EventKind as NotifyEventKind};
 use std::{
     fmt,
@@ -8,6 +8,15 @@ use std::{
 };
 use wax::Any;
 
+#[derive(Default, Debug)]
+pub struct Event {
+    path: PathBuf,
+    file_name: String,
+    kind: EventKind,
+    last_path: Arc<Mutex<PathBuf>>,
+}
+
+#[derive(Debug)]
 pub enum EventKind {
     None,
     FileCreated,
@@ -25,18 +34,10 @@ impl Default for EventKind {
     }
 }
 
-#[derive(Default)]
-pub struct Event {
-    path: PathBuf,
-    file_name: String,
-    kind: EventKind,
-    last_path: Arc<Mutex<PathBuf>>,
-}
-
 impl Event {
     pub fn new<'a>(
         ignore: &'a Any<'a>,
-        state: &InternalState,
+        state: &WatcherState,
         mut event: NotifyEvent,
     ) -> Option<Self> {
         use notify::event::{CreateKind, DataChange, ModifyKind, RemoveKind};
@@ -99,6 +100,14 @@ impl Event {
     /// Returns `true` if the watch event kind is [`EventKind::FileUpdated`]
     pub fn is_content_update_event(&self) -> bool {
         matches!(self.kind, EventKind::FileUpdated)
+    }
+
+    pub fn is_any_but_not_seen(&self) -> bool {
+        self.is_content_update_event()
+            || self.is_rename_event()
+            || self.is_create_event()
+            || self.is_remove_event()
+            || !(self.path().exists() || self.is_seen())
     }
 
     /// Returns `true` if the watch event kind is [`EventKind::FileCreated`] or
@@ -176,11 +185,11 @@ impl fmt::Display for Event {
             FileUpdated => "modified",
             FileRenamed => "renamed",
             Other(event) => {
-                tracing::trace!("[FsEvent] Other: {:?}", event);
+                tracing::trace!("{:?}", event);
                 "other"
             }
             _ => "",
         };
-        write!(f, "[{event_name}] {:?}", self.file_name)
+        write!(f, "{:?} [{event_name}]", self.file_name)
     }
 }

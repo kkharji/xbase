@@ -1,5 +1,5 @@
 import net from "net";
-import type { JSONValue, ProjectInfo, Request, Response } from "./types";
+import type { JSONValue, Request, Response } from "./types";
 import { Disposable } from "vscode";
 
 export default class Server implements Disposable {
@@ -23,7 +23,7 @@ export default class Server implements Disposable {
 
   // Register a given root
   async register(root: string): Promise<string> {
-    const value = await this.request({ method: "register", args: { root } })
+    const value = await this.request({ method: "register", args: { root, id: process.pid } })
       .catch(error => {
         throw Error(`Registeration failed: ${error}`);
       });
@@ -35,7 +35,7 @@ export default class Server implements Disposable {
 
   // Drop a root project
   async drop(root: string): Promise<void> {
-    await this.request({ method: "drop", args: { roots: [root] } })
+    await this.request({ method: "drop", args: { id: process.pid, roots: [root] } })
       .catch(error => {
         throw Error(`Drop failed: ${error}`);
       });
@@ -63,17 +63,6 @@ export default class Server implements Disposable {
         }
       });
     });
-  }
-
-  /**
-    * Get Project Information for a given `root`
-  */
-  public async getProjectInfo(root: string): Promise<ProjectInfo> {
-    return this.request({ method: "get_project_info", args: { root } })
-      .then(result => {
-        if (result !== null || result !== undefined) return result as ProjectInfo;
-        throw Error("Expected server to return project Information, got nothing");
-      });
   }
 
   dispose() {

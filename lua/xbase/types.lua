@@ -63,6 +63,9 @@ M.Message = {
   is_set_watching = function(ty)
     return ty == "SetWatching"
   end,
+  is_set_state = function(ty)
+    return ty == "SetState"
+  end,
 }
 
 return M

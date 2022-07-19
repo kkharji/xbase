@@ -30,13 +30,7 @@ fn gen_ts_types_file(path: PathBuf) {
     options.root_namespace = None;
     options.header = None;
 
-    type Requests = (
-        Request,
-        RunRequest,
-        RegisterRequest,
-        DropRequest,
-        GetProjectInfoRequest,
-    );
+    type Requests = (Request, RunRequest, RegisterRequest, DropRequest);
     type Responses = (Response, ServerError);
     type Transports = (
         ProjectInfo,
@@ -45,6 +39,7 @@ fn gen_ts_types_file(path: PathBuf) {
         Operation,
         BuildSettings,
         DeviceLookup,
+        State,
     );
     type Messages = (Message, ContentLevel, TaskKind, TaskStatus);
     type API = (Messages, Transports, Responses, Requests);

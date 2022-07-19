@@ -114,29 +114,3 @@ impl SimulatorRunner {
         format!("[{}]", self.device.name)
     }
 }
-
-#[derive(Debug, serde::Serialize, derive_deref_rs::Deref)]
-pub struct Devices(std::collections::HashMap<String, Device>);
-
-impl Default for Devices {
-    fn default() -> Self {
-        Devices(
-            simctl::Simctl::new()
-                .list()
-                .unwrap()
-                .devices()
-                .to_vec()
-                .into_iter()
-                .filter(|d| d.is_available)
-                .map(|d| (d.udid.clone(), Device::from(d)))
-                .collect(),
-        )
-    }
-}
-
-impl Devices {
-    /// Get Device from Device lookup
-    pub fn from_lookup(&self, lookup: Option<DeviceLookup>) -> Option<Device> {
-        lookup.and_then(|d| self.get(&d.id)).cloned()
-    }
-}

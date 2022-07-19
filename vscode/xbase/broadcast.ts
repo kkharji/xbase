@@ -1,12 +1,13 @@
 import { filter, map, pipe, split, toAsync } from "iter-ops";
 import net from "net";
-import { Disposable, window, WorkspaceFolder } from "vscode";
+import { Disposable, window, commands } from "vscode";
 import { Message, ContentLevel, TaskKind, TaskStatus } from "./types";
 import Logger from "./ui/logger";
 import Statusline from "./ui/statusline";
 import configuration from "./config";
 import { WorkspaceContext } from "./workspaceContext";
 import SourcekitLsp from "./sourcekit-lsp";
+import FolderContext from "./folderContext";
 
 interface CurrentTask {
   prefix: { processing: string, done: string },
@@ -17,7 +18,7 @@ interface CurrentTask {
 
 export default class Broadcast implements Disposable {
   public name: string;
-  public folder: WorkspaceFolder;
+  public folderCtx: FolderContext;
   public socket: net.Socket;
   private logger: Logger;
   private statusline: Statusline;
@@ -25,9 +26,9 @@ export default class Broadcast implements Disposable {
   private sourcekit: SourcekitLsp;
 
   private constructor(
-    folder: WorkspaceFolder, socket: net.Socket, ctx: WorkspaceContext
+    folder: FolderContext, socket: net.Socket, ctx: WorkspaceContext
   ) {
-    this.folder = folder;
+    this.folderCtx = folder;
     this.name = folder.name.charAt(0).toUpperCase() + folder.name.slice(1);
     this.socket = socket;
     this.logger = ctx.logger;
@@ -36,7 +37,7 @@ export default class Broadcast implements Disposable {
   }
 
   public static async connect(
-    folder: WorkspaceFolder,
+    folder: FolderContext,
     address: string,
     ctx: WorkspaceContext
   ): Promise<Broadcast> {
@@ -47,6 +48,7 @@ export default class Broadcast implements Disposable {
           for await (const message of Broadcast.get_messages(buffer))
             await broadcast.handleMessage(message);
         });
+        socket.write(`${process.pid}\n`);
         resolve(broadcast);
       });
       socket.on("error", err => {
@@ -93,7 +95,19 @@ export default class Broadcast implements Disposable {
         await this.finishTask(message.args.status);
         break;
       case "ReloadLspServer":
-        await this.sourcekit.restartClient(this.folder.uri);
+        await this.sourcekit.restartClient(this.folderCtx.uri);
+        break;
+      case "SetState":
+        switch (message.args.key) {
+          case "runners":
+            console.log("Runners are set");
+            this.folderCtx.ctx.runners = message.args.value;
+            break;
+          case "projectInfo":
+            console.log("projectInfo is set");
+            this.folderCtx.projectInfo = message.args.value;
+            break;
+        }
         break;
     }
   }
@@ -127,8 +141,6 @@ export default class Broadcast implements Disposable {
       icon: TaskKind.isRun(kind) ? "$(code)" : undefined,
       level
     });
-
-
   }
 
   private async finishTask(status: TaskStatus) {
@@ -167,13 +179,19 @@ export default class Broadcast implements Disposable {
   private async notify(msg: string, level: ContentLevel) {
     switch (level) {
       case "Info":
-        await window.showInformationMessage(msg);
+        window.showInformationMessage(msg);
+        if (msg.trim().endsWith("Registered")) {
+          setTimeout(async () => {
+            console.log("Clearing ...");
+            await commands.executeCommand("notifications.clearAll");
+          }, 3500);
+        }
         break;
       case "Warn":
-        await window.showWarningMessage(msg);
+        window.showWarningMessage(msg);
         break;
       case "Error":
-        await window.showErrorMessage(msg);
+        window.showErrorMessage(msg);
         break;
     }
   }

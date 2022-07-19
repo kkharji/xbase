@@ -6,7 +6,9 @@ local msg, tkind, tstatus = types.Message, types.TaskKind, types.TaskStatus
 local config = require("xbase.config").values
 
 local M = {}
+
 M.expect_second_run = false
+
 local function task_set(args)
   M.has_task = true
   local running, _ = tkind:prefix(args.kind)
@@ -86,8 +88,14 @@ local function task_finish(args)
   end)
 end
 
-function M.start(address)
+function M.start(root, address)
   local socket = socket:connect(address)
+
+  socket._socket:write(string.format("%s\n", vim.loop.os_getpid()), function(err)
+    if err then
+      print(socket._stream_error or err)
+    end
+  end)
 
   socket:read_start(function(chunk)
     local chunk = vim.trim(chunk)
@@ -109,7 +117,15 @@ function M.start(address)
         end
 
         if msg.is_notify(type) then
-          return notify(args.content, args.level)
+          notify(args.content, args.level)
+          if string.find(args.content, "Registered") ~= nil then
+            vim.schedule(function()
+              vim.defer_fn(function()
+                print "  "
+              end, 2000)
+            end)
+          end
+          return
         end
 
         if msg.is_reload_lsp_server(type) then
@@ -122,6 +138,16 @@ function M.start(address)
 
         if msg.is_log(type) then
           return logger.log(args.content, args.level)
+        end
+
+        if msg.is_set_state(type) then
+          local key, value = args.key, args.value
+          if key == "runners" then
+            require("xbase.state").runners = value
+          elseif key == "projectInfo" then
+            require("xbase.state").project_info[root] = value
+          end
+          return
         end
 
         ---@diagnostic disable-next-line: empty-block

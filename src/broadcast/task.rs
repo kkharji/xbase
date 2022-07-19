@@ -14,11 +14,14 @@ impl Task {
     pub fn new(task: TaskKind, target: &str, broadcast: Arc<Broadcast>) -> Task {
         broadcast
             .tx
-            .send(Message::SetCurrentTask {
-                kind: task.clone(),
-                target: target.into(),
-                status: TaskStatus::Processing,
-            })
+            .send((
+                None,
+                Message::SetCurrentTask {
+                    kind: task.clone(),
+                    target: target.into(),
+                    status: TaskStatus::Processing,
+                },
+            ))
             .ok();
         Task {
             task,
@@ -30,7 +33,7 @@ impl Task {
     fn update<S: AsRef<str>>(&self, level: ContentLevel, content: S) {
         let content = content.as_ref().into();
         let message = Message::UpdateCurrentTask { content, level };
-        self.inner.tx.send(message).ok();
+        self.inner.tx.send((None, message)).ok();
     }
 
     /// Update CurrentTask with info and content
@@ -61,13 +64,16 @@ impl Task {
     pub fn finish(&self, success: bool) {
         self.inner
             .tx
-            .send(Message::FinishCurrentTask {
-                status: if success {
-                    TaskStatus::Succeeded
-                } else {
-                    TaskStatus::Failed
+            .send((
+                None,
+                Message::FinishCurrentTask {
+                    status: if success {
+                        TaskStatus::Succeeded
+                    } else {
+                        TaskStatus::Failed
+                    },
                 },
-            })
+            ))
             .ok();
 
         if !success {

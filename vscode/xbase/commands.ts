@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { commands, window } from "vscode";
-import type { BuildSettings, DeviceLookup, ProjectInfo, Request } from "./types";
+import type { BuildSettings, DeviceLookup, Request } from "./types";
 import { Operation } from "./types";
 import * as util from "./util";
 import { WorkspaceContext } from "./workspaceContext";
@@ -18,13 +18,17 @@ interface PickerItem {
 function getPickerItems(
   root: string,
   command: string,
-  projectInfo: ProjectInfo,
   ctx: WorkspaceContext,
 ): PickerItem[] {
   const pickerItems: PickerItem[] = [];
   const isWatchCommand = (command === "Watch");
   const cmds = isWatchCommand ? ["Build", "Run"] : [command];
-  const { targets, watchlist } = projectInfo;
+  const folderCtx = ctx.folders.find(f => f.uri.fsPath === root);
+  if (folderCtx === undefined) {
+    window.showErrorMessage("No folder context found, please report issue");
+    return [];
+  }
+  const { targets, watchlist } = folderCtx.projectInfo;
   // TODO: make cfgList part of targets
   const cfgList = ["Debug", "Release"];
 
@@ -92,9 +96,8 @@ async function serverExecute(command: string, ctx: WorkspaceContext) {
       window.showErrorMessage(`${command}: No project root found`);
       return;
     }
-    const projectInfo = await ctx.server.getProjectInfo(root);
     const entry = await window.showQuickPick(
-      getPickerItems(root, command, projectInfo, ctx),
+      getPickerItems(root, command, ctx),
       {
         title: `XBase ${command}`,
         matchOnDescription: true
