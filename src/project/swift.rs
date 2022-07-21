@@ -227,6 +227,8 @@ impl SwiftProject {
                         name,
                         TargetInfo {
                             platform: PBXTargetPlatform::MacOS.to_string(),
+                            // TODO: get swift configurations
+                            configurations: vec!["Debug".into()],
                         },
                     ))
                 } else {

@@ -126,16 +126,9 @@ impl Project for BareboneProject {
         project.xcodeproj = XCodeProject::new(&xcodeproj_paths[0])?;
         project.targets = project
             .xcodeproj
-            .targets_platform()
+            .targets_info()
             .into_iter()
-            .map(|(k, platform)| {
-                (
-                    k,
-                    TargetInfo {
-                        platform: platform.to_string(),
-                    },
-                )
-            })
+            .map(|(k, info)| (k, info.into()))
             .collect();
 
         tracing::info!("targets: {:?}", project.targets());

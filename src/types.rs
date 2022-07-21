@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 use strum::{Display as EnumDisplay, EnumString};
 use typescript_type_def::TypeDef;
+use xcodeproj::pbxproj::PBXTargetInfo;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -37,6 +38,16 @@ pub struct BuildSettings {
 #[derive(Clone, Debug, Serialize, Deserialize, TypeDef)]
 pub struct TargetInfo {
     pub platform: String,
+    pub configurations: Vec<String>,
+}
+
+impl From<PBXTargetInfo> for TargetInfo {
+    fn from(info: PBXTargetInfo) -> Self {
+        Self {
+            platform: info.platform.to_string(),
+            configurations: info.configurations,
+        }
+    }
 }
 
 /// Device Lookup information to run built project with

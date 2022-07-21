@@ -129,7 +129,7 @@ export type TargetInfo =
   /**
    * Target specfic information
    */
-  { platform: string };
+  { platform: string; configurations: string[] };
 export type ProjectInfo = {
   /**
    * Get watched configurations for given root

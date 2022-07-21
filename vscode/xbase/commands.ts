@@ -29,14 +29,12 @@ function getPickerItems(
     return [];
   }
   const { targets, watchlist } = folderCtx.projectInfo;
-  // TODO: make cfgList part of targets
-  const cfgList = ["Debug", "Release"];
 
-  const forEach = (fn: (cmd: string, cfg: string, target: string) => void
-  ) => cmds.forEach(
-    cmd => cfgList.forEach(
-      cfg => Object.keys(targets).forEach(
-        target => fn(cmd, cfg, target))));
+  const forEach = (fn: (cmd: string, cfg: string, target: string) => void) =>
+    cmds.forEach(cmd =>
+      Object.keys(targets).forEach(target =>
+        targets[target].configurations.forEach(cfg =>
+          fn(cmd, cfg, target))));
 
   forEach((command, configuration, target) => {
     const platform = targets[target].platform;

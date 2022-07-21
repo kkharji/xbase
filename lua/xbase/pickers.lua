@@ -74,21 +74,12 @@ local get_selections = function(root, picker)
     error "No targets found"
   end
 
-  -- TOOD(core): Support custom project configurations and schemes
-  local configurations
-
-  if vim.loop.fs_stat(vim.loop.cwd() .. "/Package.swift") then
-    configurations = { "Debug" }
-  else
-    configurations = { "Debug", "Release" }
-  end
-
   local results = {}
 
   for _, command in ipairs(commands) do
-    for target, target_info in pairs(targets) do
-      for _, configuration in ipairs(configurations) do
-        local devices = state.runners[target_info.platform]
+    for target, info in pairs(targets) do
+      for _, configuration in ipairs(info.configurations) do
+        local devices = state.runners[info.platform]
         if include_devices and command == C.Run and not (devices == nil or #devices == 0) then
           for _, device in ipairs(devices) do
             insert_entry(results, picker, command, target, configuration, watchlist, device)

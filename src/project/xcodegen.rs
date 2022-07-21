@@ -123,17 +123,12 @@ impl ProjectGenerate for XCodeGenProject {
         }
 
         self.xcodeproj = XCodeProject::new(&xcodeproj_paths[0]).context("Reading Project")?;
-        for (key, platform) in self.xcodeproj.targets_platform().into_iter() {
+        for (key, info) in self.xcodeproj.targets_info().into_iter() {
             if self.targets.contains_key(&key) {
-                let info = self.targets.get_mut(&key).unwrap();
-                info.platform = platform.to_string();
+                let existing_info = self.targets.get_mut(&key).unwrap();
+                *existing_info = info.into();
             } else {
-                self.targets.insert(
-                    key,
-                    TargetInfo {
-                        platform: platform.to_string(),
-                    },
-                );
+                self.targets.insert(key, info.into());
             }
         }
 
@@ -173,16 +168,9 @@ impl Project for XCodeGenProject {
             tracing::debug!("Identifying targets");
             project.targets = project
                 .xcodeproj
-                .targets_platform()
+                .targets_info()
                 .into_iter()
-                .map(|(k, platform)| {
-                    (
-                        k,
-                        TargetInfo {
-                            platform: platform.to_string(),
-                        },
-                    )
-                })
+                .map(|(k, info)| (k, info.into()))
                 .collect();
             tracing::debug!("Targets: {:?} ", project.targets);
         } else {
