@@ -68,7 +68,7 @@ default = []
 gen = []
 
 [dev-dependencies]
-tracing-test = "0.2.2"
+tracing-test = "0.2.3"
 
 [profile.dev]
 debug = 0
