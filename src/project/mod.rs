@@ -252,10 +252,10 @@ pub type ProjectImpl = Box<dyn Project + Send + Sync>;
 pub async fn project(root: &PathBuf, broadcast: &Arc<Broadcast>) -> Result<ProjectImpl> {
     Ok(if root.join("project.yml").exists() {
         Box::new(xcodegen::XCodeGenProject::new(root, broadcast).await?)
-    } else if root.join("Project.swift").exists() {
-        Box::new(tuist::TuistProject::new(root, broadcast).await?)
     } else if root.join("Package.swift").exists() {
         Box::new(swift::SwiftProject::new(root, broadcast).await?)
+    } else if root.join("Project.swift").exists() {
+        Box::new(tuist::TuistProject::new(root, broadcast).await?)
     } else {
         Box::new(barebone::BareboneProject::new(root, broadcast).await?)
     })
