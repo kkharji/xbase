@@ -45,7 +45,7 @@ xclog                 = { version  = "0.3.*",  features = ["with_tracing"] }
 simctl                = { git = "https://github.com/xbase-lab/simctl" }
 derive-deref-rs       = { version = "0.1.1"}
 shell-words           = { version  = "1.1.0" }
-xcodeproj             = { version = "0.2.*" }
+xcodeproj             = { version = "0.3.*" }
 
 # Unix Api
 libc                  = { version = "0.2.126" }

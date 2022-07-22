@@ -231,12 +231,14 @@ pub trait Project:
                     .map_err(|err| {
                         Error::Setup(self.name().to_string(), format!("Compile database: {err}"))
                     })?;
+                broadcast.reload_lsp_server();
                 return Ok(true);
             }
         }
 
         if !is_swift_project && !compile_path.exists() {
-            self.update_compile_database(broadcast).await.ok();
+            self.update_compile_database(broadcast).await.unwrap();
+            broadcast.reload_lsp_server();
             Ok(true)
         } else {
             Ok(false)

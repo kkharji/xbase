@@ -2,10 +2,12 @@ use super::*;
 use crate::util::fs::which;
 use crate::watcher::Event;
 use crate::{Error, Result};
+use futures::future::try_join_all;
 use futures::StreamExt;
 use process_stream::{Process, ProcessExt};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
+use tap::Pipe;
 use xcodeproj::XCodeProject;
 
 #[derive(Debug, Serialize, Default)]
@@ -60,14 +62,16 @@ impl ProjectCompile for TuistProject {
         let name = self.name();
         let root = self.root();
         let cache_root = self.build_cache_root()?;
-        let arguments = self.compile_arguments();
-        let mut compile_commands: Vec<C> = vec![];
+        let args = self.compile_arguments();
+        let mut tasks_recvs = vec![];
+        let mut xccommands: Vec<Arc<Mutex<Vec<C>>>> = vec![];
+        let task = Task::new(TaskKind::Compile, self.name(), broadcast.clone());
 
-        // Compile manifests
-        let (mut manifest_compile_success, manifest_compile_commands) = {
-            let mut arguments = arguments.clone();
+        {
+            // Compile manifests
+            let mut args = args.clone();
 
-            arguments.extend_from_slice(&[
+            args.extend_from_slice(&[
                 format!("SYMROOT={cache_root}_tuist"),
                 "-workspace".into(),
                 "Manifests.xcworkspace".into(),
@@ -75,49 +79,61 @@ impl ProjectCompile for TuistProject {
                 "Manifests".into(),
             ]);
 
-            let task = Task::new(TaskKind::Compile, "Manifest", broadcast.clone());
-            task.debug(format!("xcodebuild {}", arguments.join(" ")));
+            let xclogger = XCLogger::new(&root, &args)?;
+            xccommands.push(xclogger.compile_commands.clone());
+            tasks_recvs.push(task.consume(Box::new(xclogger))?);
 
-            let xclogger = XCLogger::new(&root, &arguments)?;
-            let xccommands = xclogger.compile_commands.clone();
-            let recv = task.consume(Box::new(xclogger))?;
-            (recv, xccommands)
-        };
+            let argsstr = args.join(" ");
+            tracing::info!("Building Manifest ...");
+            tracing::trace!("\n\n xcodebuild {argsstr}\n\n");
+            task.debug(format!("[{name}] {argsstr}"));
+        }
 
-        // Compile Project
-        let (mut project_compile_success, project_compile_commands) = {
-            let mut arguments = arguments.clone();
+        for scheme in self.xcodeproj.schemes().into_iter() {
+            let mut args = args.clone();
 
-            arguments.extend_from_slice(&[
+            args.extend_from_slice(&[
                 format!("SYMROOT={cache_root}"),
                 "-workspace".into(),
                 format!("{name}.xcworkspace"),
                 "-scheme".into(),
-                format!("{name}"),
+                scheme.name.clone(),
             ]);
 
-            let task = Task::new(TaskKind::Compile, name, broadcast.clone());
-            task.debug(format!("[{name}] xcodebuild {}", arguments.join(" ")));
-
-            let xclogger = XCLogger::new(&root, &arguments)?;
-            let xccommands = xclogger.compile_commands.clone();
-            let recv = task.consume(Box::new(xclogger))?;
-            (recv, xccommands)
-        };
-
-        if manifest_compile_success.recv().await.unwrap_or_default()
-            && project_compile_success.recv().await.unwrap_or_default()
-        {
-            compile_commands.extend(manifest_compile_commands.lock().await.to_vec());
-            compile_commands.extend(project_compile_commands.lock().await.to_vec());
-
-            let json = serde_json::to_vec_pretty(&compile_commands)?;
-            tokio::fs::write(root.join(".compile"), &json).await?;
-            broadcast.reload_lsp_server();
-            Ok(())
-        } else {
-            Err(Error::Compile)
+            let xclogger = XCLogger::new(&root, &args)?;
+            xccommands.push(xclogger.compile_commands.clone());
+            tasks_recvs.push(task.consume(Box::new(xclogger))?);
+            let argsstr = args.join(" ");
+            tracing::info!("Building {} ...", scheme.name);
+            tracing::trace!("\n\n xcodebuild {argsstr}\n\n");
+            task.debug(format!("[{name}] {argsstr}"));
         }
+
+        let _all_pass = tasks_recvs
+            .into_iter()
+            .map(|mut t| tokio::spawn(async move { t.recv().await.unwrap_or_default() }))
+            .pipe(try_join_all)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .all(|f| f);
+
+        let mut xccommands = xccommands
+            .into_iter()
+            .map(|l| tokio::spawn(async move { l.lock().await.to_vec() }))
+            .pipe(try_join_all)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+        xccommands.dedup();
+
+        let json = serde_json::to_vec_pretty(&xccommands)?;
+        tokio::fs::write(root.join(".compile"), &json).await?;
+
+        Ok(())
     }
 }
 

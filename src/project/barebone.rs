@@ -1,7 +1,10 @@
 use super::*;
 use crate::*;
+use futures::future::try_join_all;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf};
+use tap::Pipe;
+use xclog::XCCompileCommand;
 use xcodeproj::XCodeProject;
 
 #[derive(Debug, Serialize, Default)]
@@ -53,34 +56,57 @@ impl ProjectCompile for BareboneProject {
         let (name, root) = (self.name(), self.root());
         let cache_root = self.build_cache_root()?;
         let mut args = self.compile_arguments();
+        let mut tasks_recvs = vec![];
+        let mut xccommands: Vec<Arc<Mutex<Vec<XCCompileCommand>>>> = vec![];
+
+        let task = Task::new(TaskKind::Compile, name, broadcast.clone());
 
         args.push(format!("SYMROOT={cache_root}"));
 
         let xcworkspace = format!("{name}.xcworkspace");
 
         if self.root().join(&xcworkspace).exists() {
-            args.extend_from_slice(&[
-                "-workspace".into(),
-                xcworkspace,
-                "-scheme".into(),
-                name.into(),
-            ]);
+            for scheme in self.xcodeproj.schemes().iter() {
+                let mut args = args.clone();
+                args.extend_from_slice(&[
+                    "-workspace".into(),
+                    xcworkspace.clone(),
+                    "-scheme".into(),
+                    scheme.name.clone(),
+                ]);
+                let xclogger = XCLogger::new(&root, &args)?;
+                xccommands.push(xclogger.compile_commands.clone());
+                tasks_recvs.push(task.consume(Box::new(xclogger))?);
+            }
         } else {
             args.extend_from_slice(&["-project".into(), format!("{name}.xcodeproj")]);
+            let xclogger = XCLogger::new(&root, &args)?;
+            xccommands.push(xclogger.compile_commands.clone());
+            tasks_recvs.push(task.consume(Box::new(xclogger))?);
         }
-        let task = Task::new(TaskKind::Compile, name, broadcast.clone());
 
-        // broadcast.log_debug(format!("[{name}] xcodebuild {}", args.join(" ")));
-        let xclogger = XCLogger::new(&root, &args)?;
-        let xccommands = xclogger.compile_commands.clone();
-        let mut recv = task.consume(Box::new(xclogger))?;
+        let _all_pass = tasks_recvs
+            .into_iter()
+            .map(|mut t| tokio::spawn(async move { t.recv().await.unwrap_or_default() }))
+            .pipe(try_join_all)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .all(|f| f);
 
-        // self.on_compile_finish(recv.recv().await.unwrap_or_default(), broadcast)?;
-        if recv.recv().await.unwrap_or_default() {
-            let json = serde_json::to_vec_pretty(&xccommands.lock().await.to_vec())?;
-            tokio::fs::write(root.join(".compile"), &json).await?;
-            broadcast.reload_lsp_server();
-        }
+        let mut xccommands = xccommands
+            .into_iter()
+            .map(|l| tokio::spawn(async move { l.lock().await.to_vec() }))
+            .pipe(try_join_all)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        xccommands.dedup();
+
+        let json = serde_json::to_vec_pretty(&xccommands)?;
+        tokio::fs::write(root.join(".compile"), &json).await?;
 
         Ok(())
     }

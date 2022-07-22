@@ -55,6 +55,14 @@ impl ProjectRuntime {
     /// Start Runtime Loop
     #[instrument(parent = None, name = "Runtime", skip_all, fields(name = self.name))]
     pub async fn start(mut self, id: u32) {
+        if let Err(err) = self
+            .project
+            .ensure_setup(None.as_ref(), &self.broadcaster)
+            .await
+        {
+            self.broadcaster.error(format!("[{}]  {err}", self.name));
+        };
+
         tokio::spawn(
             Watcher::new(
                 &self.name,
@@ -66,7 +74,6 @@ impl ProjectRuntime {
             )
             .start(),
         );
-
         self.on_connect(id);
 
         info!("[Initialized] -------------------------");
