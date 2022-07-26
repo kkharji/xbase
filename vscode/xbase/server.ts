@@ -1,23 +1,39 @@
 import net from "net";
 import type { JSONValue, Request, Response } from "./types";
 import { Disposable } from "vscode";
+import { spawn } from "child_process";
+import { XBASE_BIN_ROOT } from "./constants";
 
 export default class Server implements Disposable {
   roots: string[] = [];
 
+  private static onConnect = (resolve: (value: Server) => void, socket: net.Socket) =>
+    () => {
+      console.log("[XBase] Server Connected");
+      resolve(new Server(socket));
+    };
+  ;
   private constructor(public socket: net.Socket) { }
 
   public static async connect(): Promise<Server> {
     return new Promise((resolve, reject) => {
       const socket = net.createConnection("/tmp/xbase.socket");
-      // TODO: Spawn xbase socket
-      socket.on("error", (err) => {
-        reject(Error(`Failed to connect to xbase socket: ${err}`));
+
+      socket.on("error", () => {
+        console.log("[XBase] No socket running, spawning");
+        spawn(`${XBASE_BIN_ROOT}/xbase`, { detached: true, });
+
+        // TODO: Find a batter way
+        // The timeout is needed to give some time for xbase to startup
+        // NOTE: child.on('spawn') doesn't cut it.
+        setTimeout(() => {
+          const socket = net.createConnection("/tmp/xbase.socket");
+          socket.on("connect", Server.onConnect(resolve, socket));
+          socket.on("error", (err) => reject(Error(`Failed to connect to xbase socket: ${err}`)));
+        }, 500);
       });
-      socket.on("connect", () => {
-        console.log("[XBase] Server Connected");
-        resolve(new Server(socket));
-      });
+
+      socket.on("connect", Server.onConnect(resolve, socket));
     });
   }
 
