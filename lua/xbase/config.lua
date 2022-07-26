@@ -9,6 +9,9 @@ config.values = _XBASECONFIG
 local defaults = {
   --- Log level. Set to ERROR to ignore everything
   log_level = vim.log.levels.DEBUG,
+  --- Options to be passed to lspconfig.nvim's sourcekit setup function.
+  --- Usually empty map is sufficient, However, it is strongly recommended to use on_attach key to setup custom mapppings
+  sourcekit = {}, -- Set it to nil to skip lspconfig's sourcekit setup
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },
@@ -70,7 +73,7 @@ end
 ---@param key string
 ---@return boolean: true if it should be if key skipped
 local should_skip_type_checking = function(key)
-  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates" } do
+  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates", "sourcekit" } do
     for _, k in ipairs(vim.split(key, "%.")) do
       if k:find(v) then
         return true

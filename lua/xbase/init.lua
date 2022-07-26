@@ -10,12 +10,34 @@ local function try_attach_mappings()
   end
 end
 
-local function try_attach(root)
+local setup_lsp = function(opts)
+  local ok, lspconfig = pcall(require, "lspconfig")
+
+  if not ok then
+    return
+  end
+
+  local extend, setup = vim.tbl_deep_extend, lspconfig.sourcekit.setup
+  local pattern = require("lspconfig.util").root_pattern
+  local root_mkr = pattern("Package.swift", ".git", "project.yml", "Project.swift")
+
+  setup(extend("keep", opts.sourcekit, {
+    cmd = { "sourcekit-lsp", "--log-level", "error" },
+    filetypes = { "swift" },
+    root_dir = root_mkr,
+  }))
+end
+
+local function try_attach(root, opts)
   local file_patterns = { "*.m", "*.swift", "*.c", "*.yml" }
   if server.should_register(root) then
     server.register(root)
+
     if not initialized then
       initialized = true
+      if opts.sourcekit ~= nil then
+        setup_lsp(opts)
+      end
       autocmd({ "BufEnter", "BufWinEnter" }, { pattern = file_patterns, callback = try_attach_mappings })
       autocmd({ "BufEnter" }, { pattern = "xclog", callback = try_attach_mappings })
     end
@@ -28,7 +50,7 @@ return {
     vim.schedule(function()
       opts = opts or {}
       config.set(opts)
-      try_attach(vim.loop.cwd())
+      try_attach(vim.loop.cwd(), config.values)
       autocmd({ "DirChanged" }, {
         pattern = "*",
         callback = function()
