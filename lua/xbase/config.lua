@@ -10,7 +10,7 @@ local defaults = {
   --- Log level. Set to ERROR to ignore everything
   log_level = vim.log.levels.DEBUG,
   --- Options to be passed to lspconfig.nvim's sourcekit setup function.
-  --- Usually empty map is sufficient, However, it is strongly recommended to use on_attach key to setup custom mapppings
+  --- Usually empty map is sufficient, However, it is strongly recommended to use on_attach key to setup custom mappings
   sourcekit = {}, -- Set it to nil to skip lspconfig's sourcekit setup
   --- Statusline provider configurations
   statusline = {
@@ -20,12 +20,15 @@ local defaults = {
     failure = { icon = "", color = "#db4b4b" },
     show_progress = true, -- TODO: make show_progress = false actually work
   },
-  --- TODO(nvim): Limit devices platform to select from
+  --- Simulators to only include.
+  --- run `xcrun simctl list` to get a full list of available simulator
+  --- If the list is empty then all simulator available  will be included
   simctl = {
     iOS = {
-      "iPhone 13 Pro",
-      "iPad (9th generation)",
+      -- "iPhone 13 Pro", --- only use this devices
     },
+    watchOS = {}, -- all available devices
+    tvOS = {}, -- all available devices
   },
   --- Log buffer configurations
   log_buffer = {
@@ -73,7 +76,7 @@ end
 ---@param key string
 ---@return boolean: true if it should be if key skipped
 local should_skip_type_checking = function(key)
-  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates", "sourcekit" } do
+  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates", "sourcekit", "simctl" } do
     for _, k in ipairs(vim.split(key, "%.")) do
       if k:find(v) then
         return true

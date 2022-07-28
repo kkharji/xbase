@@ -75,12 +75,21 @@ local get_selections = function(root, picker)
   end
 
   local results = {}
+  local cfg = require("xbase.config").values
 
   for _, command in ipairs(commands) do
     for target, info in pairs(targets) do
       for _, configuration in ipairs(info.configurations) do
         local devices = state.runners[info.platform]
         if include_devices and command == C.Run and not (devices == nil or #devices == 0) then
+          local dvd = cfg.simctl[info.platform] or {}
+
+          if #dvd ~= 0 then
+            devices = vim.tbl_filter(function(mem)
+              return vim.tbl_contains(dvd, mem.name)
+            end, devices)
+          end
+
           for _, device in ipairs(devices) do
             insert_entry(results, picker, command, target, configuration, watchlist, device)
           end

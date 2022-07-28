@@ -175,12 +175,15 @@ require("xbase.statusline").feline() -- append to feline setup function
     success = { icon = "", color = "#1abc9c" },
     failure = { icon = "", color = "#db4b4b" },
   },
-  --- TODO(nvim): Limit devices platform to select from
+  --- Simulators to only include.
+  --- run `xcrun simctl list` to get a full list of available simulator
+  --- If the list is empty then all simulator available  will be included
   simctl = {
     iOS = {
-      "iPhone 13 Pro",
-      "iPad (9th generation)",
+      -- "iPhone 13 Pro", --- only use this devices
     },
+    watchOS = {}, -- all available devices
+    tvOS = {}, -- all available devices
   },
   --- Log buffer configurations
   log_buffer = {

@@ -86,6 +86,30 @@
             "order": 1
           }
         }
+      },
+      {
+        "id": "simctl",
+        "title": "Simulator",
+        "properties": {
+          "xbase.simctl.iOS": {
+            "markdownDescription": "iOS Simulators to include. run `xcrun simctl list` to get a full list of available simulator. If the list is empty then all simulator available will be included",
+            "default": [],
+            "type": "list",
+            "order": 1
+          },
+          "xbase.simctl.watchOS": {
+            "markdownDescription": "watchOS Simulators to include. run `xcrun simctl list` to get a full list of available simulator. If the list is empty then all simulator available will be included",
+            "default": [],
+            "type": "list",
+            "order": 2
+          },
+          "xbase.simctl.tvOS": {
+            "markdownDescription": "tvOS Simulators to include. run `xcrun simctl list` to get a full list of available simulator. If the list is empty then all simulator available will be included",
+            "default": [],
+            "type": "list",
+            "order": 3
+          }
+        }
       }
     ],
     "languages": [

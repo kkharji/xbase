@@ -30,9 +30,9 @@ end
 
 local function try_attach(root, opts)
   local file_patterns = { "*.m", "*.swift", "*.c", "*.yml" }
+
   if server.should_register(root) then
     server.register(root)
-
     if not initialized then
       initialized = true
       if opts.sourcekit ~= nil then

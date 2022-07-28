@@ -4,6 +4,7 @@ import type { BuildSettings, DeviceLookup, Request } from "./types";
 import { Operation } from "./types";
 import * as util from "./util";
 import { WorkspaceContext } from "./workspaceContext";
+import configurations from "./config";
 
 interface PickerItem {
   label: string,
@@ -29,6 +30,7 @@ function getPickerItems(
     return [];
   }
   const { targets, watchlist } = folderCtx.projectInfo;
+  const devices = configurations.devices;
 
   const forEach = (fn: (cmd: string, cfg: string, target: string) => void) =>
     cmds.forEach(cmd =>
@@ -65,22 +67,47 @@ function getPickerItems(
     };
 
     if (runners) {
-      runners.forEach(device => {
+      let platformRunners = runners;
+      let platformDevices: string[];
+
+      switch (platform) {
+        case "iOS":
+          platformDevices = devices.iOS;
+          break;
+        case "watchOS":
+          platformDevices = devices.watchOS;
+          break;
+        default:
+          platformDevices = devices.tvOS;
+          break;
+      }
+
+      if (platformDevices.length !== 0) {
+        platformRunners = platformRunners.filter(device => {
+          return platformDevices.includes(device.name);
+        });
+      }
+      console.log(platformRunners);
+
+      platformRunners.forEach(device => {
+        console.log(device);
         const item = { ...baseItem };
         const isWatching = isWatchingProject(device);
         item.device = device;
         item.label = `${target} on ${device.name}`;
         item.detail = getDetail(isWatching, device);
         item.operation = getOperation(isWatching);
-        return pickerItems.push(item);
+        pickerItems.push(item);
       });
+    } else {
+
+      const isWatching = isWatchingProject();
+      baseItem.detail = getDetail(isWatching);
+      baseItem.operation = getOperation(isWatching);
+
+      return pickerItems.push(baseItem);
     }
 
-    const isWatching = isWatchingProject();
-    baseItem.detail = getDetail(isWatching);
-    baseItem.operation = getOperation(isWatching);
-
-    return pickerItems.push(baseItem);
 
   });
   return pickerItems;
