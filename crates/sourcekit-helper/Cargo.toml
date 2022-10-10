@@ -11,8 +11,8 @@ serde                 = {version = "1.0.140", features = ["derive"]}
 bsp-server            = "0.1.*"
 dirs                  = "4.0"
 once_cell             = "1.13.0"
-serde_json            = "1.0.81"
-anyhow                = "1.0.58"
+serde_json            = "1.0.86"
+anyhow                = "1.0.65"
 tap                   = "1.0.1"
 
 # Logging
