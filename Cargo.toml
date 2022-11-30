@@ -20,7 +20,7 @@ thiserror             = { version = "1.0.31" }
 # Serialization Feature
 serde                 = { version = "1.0",    features = ["derive"] }
 serde_json            = { version = "1.0.89" }
-serde_repr            = { version = "0.1.8" }
+serde_repr            = { version = "0.1.9" }
 strum                 = { version = "0.24.0",  features = ["derive"] }
 
 # Async Runtime Feature
