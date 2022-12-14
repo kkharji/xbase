@@ -1850,8 +1850,9 @@ checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
 name = "typescript-type-def"
-version = "0.5.3"
-source = "git+https://github.com/kkharji/rust-typescript-type-def?branch=feat/replace_deprecated_functions_and_impl_pathbuf#057d15d7a79797c22a285077a081083e2a75ea77"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "947b91d2fe9ec02a6749b8b645541f16f527e2ea88a60b3f774eca26fd657325"
 dependencies = [
  "serde_json",
  "typescript-type-def-derive",
@@ -1859,8 +1860,9 @@ dependencies = [
 
 [[package]]
 name = "typescript-type-def-derive"
-version = "0.5.3"
-source = "git+https://github.com/kkharji/rust-typescript-type-def?branch=feat/replace_deprecated_functions_and_impl_pathbuf#057d15d7a79797c22a285077a081083e2a75ea77"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5c1bfe689e4067733530495b04959b00f05cd95f038bed59af4fc70b3e26240"
 dependencies = [
  "darling",
  "ident_case",
