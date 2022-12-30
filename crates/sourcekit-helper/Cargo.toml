@@ -10,7 +10,7 @@ xclog                 = "0.3.*"
 serde                 = {version = "1.0.148", features = ["derive"]}
 bsp-server            = "0.1.*"
 dirs                  = "4.0"
-once_cell             = "1.13.0"
+once_cell             = "1.17.0"
 serde_json            = "1.0.89"
 anyhow                = "1.0.58"
 tap                   = "1.0.1"
