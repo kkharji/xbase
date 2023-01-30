@@ -35,7 +35,7 @@ process-stream        = { version = "0.4.*", features = ["serde"] }
 once_cell             = { version = "1.13.0"  }
 
 # Filesystem watcher
-notify                = { version = "5.0.0-pre.13" }
+notify                = { version = "5.1.0" }
 dirs                  = { version = "4.0" }
 wax                   = { version = "0.5.0" }
 
