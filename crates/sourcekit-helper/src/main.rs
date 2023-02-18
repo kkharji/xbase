@@ -254,7 +254,15 @@ fn main() -> Result<()> {
 
     let (conn, io_threads) = Connection::stdio();
     tracing::info!("Started");
-    conn.initialize(|params| initialize(&params).expect("Initialize"))?;
+    conn.initialize(|params|
+        match initialize(&params) {
+            Err(err) => {
+                tracing::error!("Failed to Initialize: ${}", err);
+                panic!("Initialization Failure: ${}", err);
+            },
+            Ok(build) => build
+        }
+    )?;
     tracing::info!("Initialized");
 
     for msg in &conn.receiver {
