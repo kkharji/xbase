@@ -119,7 +119,9 @@ fn register_for_changes(conn: &Conn, id: Id, params: OptionsChangedRequest) -> R
         return Ok(());
     }
 
-    let filepath = params.uri.path();
+    let filepath = params.uri
+        .to_file_path()
+        .map_err(|_| anyhow!("Invalid File URI: {:?}", params.uri))?;
     // tracing::info!("{filepath}");
     let root_path = state().lock().unwrap().root_path.clone();
     let uri = Url::from_directory_path(root_path).ok();
