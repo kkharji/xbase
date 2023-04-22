@@ -80,14 +80,29 @@ local get_selections = function(root, picker)
   for _, command in ipairs(commands) do
     for target, info in pairs(targets) do
       for _, configuration in ipairs(info.configurations) do
-        local devices = state.runners[info.platform]
-        if include_devices and command == C.Run and not (devices == nil or #devices == 0) then
+        local available_devices = state.runners[info.platform]
+        if include_devices and command == C.Run and not (available_devices == nil or #available_devices == 0) then
           local dvd = cfg.simctl[info.platform] or {}
 
+          local devices = {}
           if #dvd ~= 0 then
             devices = vim.tbl_filter(function(mem)
               return vim.tbl_contains(dvd, mem.name)
-            end, devices)
+            end, available_devices)
+            if #devices == 0 then
+              error(
+                string.format(
+                  "No runners available based on user config. config: %s, available: %s",
+                  table.concat(dvd, ","),
+                  table.concat(
+                    vim.tbl_map(function(d)
+                      return d.name
+                    end, available_devices),
+                    ","
+                  )
+                )
+              )
+            end
           end
 
           for _, device in ipairs(devices) do
