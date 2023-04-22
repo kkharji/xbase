@@ -62,6 +62,8 @@ impl Task {
 
     /// Finish task with whether it was successfull or not
     pub fn finish(&self, success: bool) {
+        tracing::trace!("Finishing {:?}: success: {success}", self.task);
+
         self.inner
             .tx
             .send((
@@ -100,6 +102,7 @@ impl Task {
                     result = stream.next() => match result {
                         Some(output) => {
                             if let Some(succ) = output.is_success() {
+                                tracing::trace!("{output:?}");
                                 this.finish(succ);
                                 send_status.send(succ).await.ok();
                                 break;

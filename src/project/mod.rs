@@ -69,8 +69,14 @@ pub trait ProjectBuild: ProjectData {
 
         let cache_build_root = fs::get_build_cache_dir_with_config(self.root(), cfg)?;
 
-        args.push(format!("SYMROOT={cache_build_root}",));
-        args.push("-allowProvisioningUpdates".into());
+        args.extend_from_slice(&[
+            format!("SYMROOT={cache_build_root}"),
+            "-allowProvisioningUpdates".into(),
+            "CODE_SIGN_ENTITLEMENTS= ".into(),
+            "CODE_SIGN_IDENTITY= ".into(),
+            "CODE_SIGNING_REQUIRED=NO".into(),
+            "CODE_SIGNING_ALLOWED=NO".into(),
+        ]);
 
         if self.root().join(&xcworkspace).exists() {
             args.iter_mut().for_each(|arg| {
