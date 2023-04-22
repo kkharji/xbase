@@ -67,7 +67,7 @@ function getPickerItems(
     };
 
     if (runners) {
-      let platformRunners = runners;
+      let platformRunners: DeviceLookup[] = [];
       let platformDevices: string[];
 
       switch (platform) {
@@ -83,11 +83,15 @@ function getPickerItems(
       }
 
       if (platformDevices.length !== 0) {
-        platformRunners = platformRunners.filter(device => {
+        platformRunners = runners.filter(device => {
           return platformDevices.includes(device.name);
         });
+        if (platformRunners.length == 0) {
+          const configuredDevicesNames = platformDevices.join(", ");
+          const avaliableDeviceNames = runners.map(v => v.name).join(", ");
+          console.error(`No runners available based on user config. config: ${configuredDevicesNames}, available: ${avaliableDeviceNames}`);
+        }
       }
-      console.log(platformRunners);
 
       platformRunners.forEach(device => {
         console.log(device);
