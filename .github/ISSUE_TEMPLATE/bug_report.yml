@@ -1,0 +1,143 @@
+name: Bug report
+description: Report a problem with xbase
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **NOTE**: search [existing issues](https://github.com/kkharji/xbase/issues) before reporting, and make sure that xbase is updated to least version and all it's requirements are met.
+  - type: dropdown
+    validations: { required: true }
+    attributes:
+      label: "Editor/Client you used"
+      options:
+        - "Neovim"
+        - "VScode"
+  - type: checkboxes
+    attributes:
+      label: Installation and Dependences checklist
+      options:
+        - label: "xbase is installed and ~/.local/share/xbase has required binaries"
+          required: false
+        - label: "All listed editor/client dependences is installed"
+          required: false
+  - type: textarea
+    validations: { required: true }
+    attributes:
+      label: "Description"
+      render: Markdown
+      description: "A short description of the problem you are reporting"
+      placeholder: A clear and concise description of what the problem is.
+  - type: textarea
+    attributes:
+      label: "Expected behavior"
+      render: Markdown
+      description: "A clear and concise description of what you expected to happen."
+      placeholder: |
+        I expected y to x, given ...
+  - type: textarea
+    validations: { required: true }
+    attributes:
+      label: "Reproduce"
+      render: Markdown
+      description: "List steps to reproduce the problem"
+      placeholder: |
+        Steps to reproduce the behavior:
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+  - type: textarea
+    validations: { required: true }
+    attributes:
+      render: Markdown
+      label: "Actual behavior"
+      description: "Observed behavior (may optionally include logs, images, or videos)."
+  - type: input
+    validations: { required: true }
+    attributes:
+      label: "Operating system and version"
+      description: "Find out by running sw_vers in the terminal"
+      placeholder: "macOS 13.5"
+  - type: input
+    validations: { required: true }
+    attributes:
+      label: "xbase version / branch / rev"
+      placeholder: "xbase 0.3.0"
+  - type: input
+    attributes:
+      label: "Neovim version"
+      description: required if neovim is the editor you used
+      placeholder: "NVIM v0.9.0-dev"
+  - type: input
+    attributes:
+      label: "Vscode version (if the editor you used is vscode)"
+      description: required if vscode is the editor you used
+      placeholder: "1.74"
+  - type: textarea
+    validations: { required: true }
+    attributes:
+      label: "Installed XCode Developer Tools"
+      description: output of `system_profiler SPDeveloperToolsDataType`
+      render: bash
+      placeholder: |
+        Developer:
+
+            Developer Tools:
+
+              Version: 14.3 (14E222b)
+              Location: /Applications/Xcode.app
+              Applications:
+                  Xcode: 14.3 (21812)
+                  Instruments: 14.3 (64559.163)
+              SDKs:
+                  DriverKit:
+                      22.4:
+                  iOS:
+                      16.4: (20E238)
+                  iOS Simulator:
+                      16.4: (20E238)
+                  macOS:
+                      13.3: (22E245)
+                  tvOS:
+                      16.4: (20L489)
+                  tvOS Simulator:
+                      16.4: (20L489)
+                  watchOS:
+                      9.4: (20T248)
+                  watchOS Simulator:
+                      9.4: (20T248)
+              Additional SDKs:
+                  iOS:
+                      Asset Runtime SDK for macOS hosts targeting iOS 16.4: 16.4
+                  tvOS:
+                      Asset Runtime SDK for macOS hosts targeting tvOS 16.4: 16.4
+                  watchOS:
+                      Asset Runtime SDK for macOS hosts targeting watchOS 9.4: 9.4
+  - type: textarea
+    validations: { required: true }
+    attributes:
+      label: "XBase Logs"
+      description: output of `tail -f /tmp/xbase.log` after opening your editor in project root.
+      render: bash
+      placeholder: |
+        INFO SERVER STARTED
+        INFO Client{fd=13}: Connected
+        INFO Runtime{name="XBaseUI"}: [Initializing] ------------------------
+        INFO Broadcaster{name="XBaseUI"}: Created
+        INFO Runtime{name="XBaseUI"}: targets: {"XBaseUI": TargetInfo { platform: "iOS", configurations: ["Debug", "Release"] }}
+        INFO Broadcaster{name="XBaseUI"}: Connected [50590]
+        INFO Runtime{name="XBaseUI"}: Creating "/tmp/XBaseUI/buildServer.json"
+        INFO Runtime{name="XBaseUI"}: Connected [50590]
+        INFO FSWatcher{name="XBaseUI"}: Watching
+        INFO Runtime{name="XBaseUI"}: [Initialized] -------------------------
+  - type: textarea
+    attributes:
+      label: "XBase Build Server Logs"
+      description: Output of `tail -f /tmp/xbase-build-server.log` after navigating opening a project file. Required if you have issues with LSP features
+      render: bash
+      placeholder: |
+        INFO xbase_sourcekit_helper: Started
+        INFO xbase_sourcekit_helper: Initialized
+        DEBUG xbase_sourcekit_helper: [Store.swift] Querying compile_db
+        ERROR xbase_sourcekit_helper: Missing compile arguments for "/tmp/XBaseUI/XBaseUI/App/Store.swift"
