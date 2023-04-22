@@ -69,6 +69,9 @@ impl ProjectCompile for XCodeGenProject {
             .unwrap_or_default();
         if success {
             let compile_db = CC::new(compile_commands.lock().await.to_vec());
+            if compile_db.is_empty() {
+                broadcast.warn("No compile command was generated!");
+            }
             let json = serde_json::to_vec_pretty(&compile_db)?;
             tokio::fs::write(root.join(".compile"), &json).await?;
             broadcast.reload_lsp_server();

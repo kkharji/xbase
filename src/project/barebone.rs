@@ -103,7 +103,11 @@ impl ProjectCompile for BareboneProject {
             .into_iter()
             .flatten()
             .collect::<Vec<_>>();
+
         xccommands.dedup();
+        if xccommands.is_empty() {
+            broadcast.warn("No compile command was generated!");
+        }
 
         let json = serde_json::to_vec_pretty(&xccommands)?;
         tokio::fs::write(root.join(".compile"), &json).await?;
