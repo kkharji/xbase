@@ -119,7 +119,8 @@ fn register_for_changes(conn: &Conn, id: Id, params: OptionsChangedRequest) -> R
         return Ok(());
     }
 
-    let filepath = params.uri
+    let filepath = params
+        .uri
         .to_file_path()
         .map_err(|_| anyhow!("Invalid File URI: {:?}", params.uri))?;
     // tracing::info!("{filepath}");
@@ -254,15 +255,13 @@ fn main() -> Result<()> {
 
     let (conn, io_threads) = Connection::stdio();
     tracing::info!("Started");
-    conn.initialize(|params|
-        match initialize(&params) {
-            Err(err) => {
-                tracing::error!("Failed to Initialize: ${}", err);
-                panic!("Initialization Failure: ${}", err);
-            },
-            Ok(build) => build
+    conn.initialize(|params| match initialize(&params) {
+        Err(err) => {
+            tracing::error!("Failed to Initialize: ${}", err);
+            panic!("Initialization Failure: ${}", err);
         }
-    )?;
+        Ok(build) => build,
+    })?;
     tracing::info!("Initialized");
 
     for msg in &conn.receiver {
