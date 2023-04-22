@@ -100,7 +100,16 @@ function M.start(root, address)
   socket:read_start(function(chunk)
     local chunk = vim.trim(chunk)
     for _, chunk in ipairs(vim.split(chunk, "\n")) do
-      local item = vim.json.decode(chunk)
+      local is_succ, item = pcall(function(ch)
+        return vim.json.decode(ch)
+      end, chunk)
+      if not is_succ then
+        print "PARSE-ERROR===============================================START\n"
+        print(chunk)
+        print "PARSE-ERROR==============================================END\n"
+        return
+      end
+
       local type, args = item.type, item.args
 
       vim.schedule(function()
