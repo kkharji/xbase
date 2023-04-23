@@ -10,9 +10,9 @@ syn match   XbaseOperations   "\(Executing\|Compiling\|Generating\|Processing\|E
 syn match   XbaseSuccess      "\(Executed\|Compiled\|Generated\|Processed\|Emitted\|Copied\|Validated\|Signed\|Linked\|Installed\|Booted\|Launched\)"
 syn match   XbaseEntitlement  "Entitlement"
 syn region  XbaseScope        display oneline start='^\[' end='\]'
-syn match   XbaseLogError     "\(\[Error\]\)"
+syn match   XbaseLogError     "\c\(\[Error\]\|\[.*\].*failed\)"
 syn match   XbaseLogWarn      "\(\[Warning\]\)"
-syn match   XbaseLogSuccess   "\(\[Succeed\]\)"
+syn match   XbaseLogSuccess   "\c\(\[Succeed\]\|\[.*\] Built$\)"
 syn match   XbaseLogConnected "\(Connected\)"
 syn match   XbaseLogDone      "\(\[Done\]\)"
 syn match   XbaseLogPackage   "\(\[Package\]\)"
