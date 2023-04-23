@@ -103,6 +103,8 @@ local get_selections = function(root, picker)
                 )
               )
             end
+          else
+            devices = available_devices
           end
 
           for _, device in ipairs(devices) do

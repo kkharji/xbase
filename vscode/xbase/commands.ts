@@ -91,6 +91,8 @@ function getPickerItems(
           const avaliableDeviceNames = runners.map(v => v.name).join(", ");
           console.error(`No runners available based on user config. config: ${configuredDevicesNames}, available: ${avaliableDeviceNames}`);
         }
+      } else {
+        platformRunners = runners;
       }
 
       platformRunners.forEach(device => {
