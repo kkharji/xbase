@@ -85,17 +85,29 @@ issue
 
 ## 🛠 Requirements
 
-- [neovim] v0.7.0 or nightly
-- [lspconfig]
-- [rust] 1.60.0 or up (see [rust getting started])
-- [telescope.nvim]
-- [plenary.nvim]
+### Shared
+
+- <kbd>[rust] ^1.60</kbd> <sub>compile project locally</sub>
+
+### Neovim
+
+- <kbd>[neovim] ^0.7</kbd> <sub>Neovim Editor.</sub>
+- <kbd>[lspconfig] *</kbd> <sub>LSP integration.</sub>
+- <kbd>[telescope.nvim]  ^0.1</kbd> <sub>better picker UI experience <kbd>optional</kbd></sub>
+- <kbd>[dressing.nvim]  *</kbd> <sub>support for other neovim ecosystem pickers  <kbd>optional</kbd></sub>
+
+### Vscode
+
+<kbd>TODO</kbd>
+
+
 
 ## 🦾 Installation
 
 To install [XBase] on your system you need run `make install`. This will run `cargo build
 --release` and resulting binrary to `~/.local/share/xbase/`.
 
+### Neovim
 
 #### With [packer]
 ```lua
@@ -134,7 +146,13 @@ lua require'xbase'.setup()
 > **NOTE:** You need to setup sourcekit-lsp (see [sourcekit-setup]) and consider adding more
 > file to root patterns
 
+### Vscode
+
+<kbd>TODO</kbd>
+
 ## 🎮 Usage
+
+### Neovim
 
 TLDR:
 - [Install XBase](#-installation)
@@ -158,8 +176,13 @@ using `vim.g.xbase_watch_build_status` you can easily setup statusline indicator
 require("xbase.statusline").feline() -- append to feline setup function
 ```
 
+### Vscode
+
+<kbd>TODO</kbd>
 
 ## ⚙️ Defaults
+
+### Neovim
 ```lua
 -- NOTE: Defaults
 {
@@ -216,6 +239,9 @@ require("xbase.statusline").feline() -- append to feline setup function
 }
 ```
 
+### Vscode
+
+<kbd>TODO</kbd>
 
 ## 🩺 Debugging
 
@@ -255,6 +281,7 @@ killall xbase xbase-sourcekit-helper
 [lspconfig]: https://github.com/neovim/nvim-lspconfig
 [sourcekit-setup]: https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#sourcekit
 [apple]: https://github.com/apple
+[dressing.nvim]: https://github.com/stevearc/dressing.nvim
 
 [👁  Overview]: #-motivation
 [🌝 Motivation]: #-motivation
