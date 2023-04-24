@@ -1,19 +1,5 @@
 local M = {}
 
-function M.is_watching(settings, command, device, watchlist)
-  local root = vim.loop.cwd()
-  local key = ("%s:%s:"):format(root, command)
-
-  if command == "Run" then
-    key = key .. (device ~= nil and device.name or "Bin") .. ":"
-  end
-
-  key = key .. "-configuration " .. settings.configuration
-  key = key .. " -target " .. settings.target
-
-  return vim.tbl_contains(watchlist, key)
-end
-
 function M.project_name(root)
   local parts = vim.split(root, "/")
   return parts[#parts]:gsub("^%l", string.upper)

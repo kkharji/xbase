@@ -1,5 +1,10 @@
 local M = {}
 
+---@class XBaseSettings
+---@field target string target to build
+---@field configuration string | nil configuration to build with (default debug)
+---@field schema string | nil schema to build with
+
 M.TaskKind = {
   is_build = function(kind)
     return kind == "Build"
