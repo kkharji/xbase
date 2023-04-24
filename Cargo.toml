@@ -24,7 +24,7 @@ serde_repr            = { version = "0.1.8" }
 strum                 = { version = "0.24.0",  features = ["derive"] }
 
 # Async Runtime Feature
-tokio                 = { version = "1.20.1", features = ["full"] }
+tokio                 = { version = "1.26.0", features = ["full"] }
 tokio-util            = { version = "0.7.3", features = ["codec"] }
 tokio-serde           = { version = "0.8.0", features = ["json"] }
 futures               = { version = "0.3.21" }
