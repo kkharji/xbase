@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./.github/media/logo.png" alt="drawing" style="width:400px;"/>
+<img src="./.github/media/logo.png" alt="Logo" />
 </P>
 
 An XCode replacement-ish *development environment* that aims to be your reliable XCode alternative to develop exciting new [apple] software products 🚀.
