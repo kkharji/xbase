@@ -14,6 +14,8 @@ M.Command = {
 
 local Run, Build, Watch = M.Command.Run, M.Command.Build, M.Command.Watch
 
+M.action_prompt = "XBase Actions"
+
 ---Supported Actions
 ---@type { value: XBaseCommand }[]
 M.action_entries = (function()

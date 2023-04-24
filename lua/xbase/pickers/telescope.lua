@@ -44,7 +44,7 @@ do
     opts = themes.get_dropdown(opts or {})
     opts.root = opts.root or vim.loop.cwd()
     picker(opts, {
-      prompt_title = opts.name,
+      prompt_title = "XBase " .. opts.name,
       sorter = sorter {},
       finder = finder {
         results = xbase.generate_entries(opts.root, name),
@@ -120,7 +120,7 @@ do
     opts.root = opts.root or vim.loop.cwd()
     picker(opts, {
       sorter = sorter {},
-      prompt_title = "Pick Xbase Action Category",
+      prompt_title = xbase.action_prompt,
       finder = actions_finder,
       attach_mappings = function(_, _)
         a.select_default:replace(action(opts))

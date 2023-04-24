@@ -49,7 +49,7 @@ M.actions = function(opts)
   opts.root = opts.root or vim.loop.cwd()
 
   vim.ui.select(util.action_entries, {
-    prompt = "Pick XBase Action Category",
+    prompt = xbase.action_prompt,
     format_item = function(item)
       return item.value
     end,
