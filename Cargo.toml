@@ -57,7 +57,7 @@ signal-hook           = { version = "0.3.14"  }
 signal-hook-tokio     = { version = "0.3.1", features = ["futures-v0_3"] }
 
 # types generators
-typescript-type-def = { version = "0.5.5",  features = ["json_value"] }
+typescript-type-def = { version = "0.5.6",  features = ["json_value"] }
 
 
 [workspace]
