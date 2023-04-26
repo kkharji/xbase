@@ -14,7 +14,7 @@ tracing-appender      = { version = "0.2.1"  }
 tracing-subscriber    = { version = "0.3.15",  features = ["env-filter"]  }
 
 # Error Handling
-anyhow                = { version = "^1.0.58" }
+anyhow                = { version = "^1.0.70" }
 thiserror             = { version = "1.0.31" }
 
 # Serialization Feature
