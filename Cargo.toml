@@ -48,7 +48,7 @@ shell-words           = { version  = "1.1.0" }
 xcodeproj             = { version = "0.3.*" }
 
 # Unix Api
-libc                  = { version = "0.2.126" }
+libc                  = { version = "0.2.142" }
 libproc               = { version = "0.13.0"  }
 paste                 = { version = "1.0.7"   }
 which                 = { version = "4.2.5"   }
