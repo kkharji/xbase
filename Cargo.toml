@@ -50,7 +50,7 @@ xcodeproj             = { version = "0.3.*" }
 # Unix Api
 libc                  = { version = "0.2.126" }
 libproc               = { version = "0.13.0"  }
-paste                 = { version = "1.0.7"   }
+paste                 = { version = "1.0.12"   }
 which                 = { version = "4.2.5"   }
 os_pipe               = { version = "1.0.1"   }
 signal-hook           = { version = "0.3.14"  }
