@@ -11,7 +11,7 @@ default-run = "xbase"
 tracing               = { version = "0.1.32" }
 tracing-attributes    = { version = "0.1.22" }
 tracing-appender      = { version = "0.2.1"  }
-tracing-subscriber    = { version = "0.3.15",  features = ["env-filter"]  }
+tracing-subscriber    = { version = "0.3.17",  features = ["env-filter"]  }
 
 # Error Handling
 anyhow                = { version = "^1.0.70" }
