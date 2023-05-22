@@ -117,7 +117,8 @@ use {
     requires = {
       "neovim/nvim-lspconfig",
       -- "nvim-telescope/telescope.nvim", -- optional
-      -- "nvim-lua/plenary.nvim", -- optional/requirement of telescope.nvim
+      -- "jose-elias-alvarez/null-ls.nvim", -- optional
+      -- "nvim-lua/plenary.nvim", -- optional/requirement of telescope.nvim and null-ls
       -- "stevearc/dressing.nvim", -- optional (in case you don't use telescope but something else)
     },
     config = function()
@@ -129,7 +130,8 @@ use {
 #### With [vim-plug]
 ```vim
 " Plug 'nvim-telescope/telescope.nvim' " optional
-" Plug 'nvim-lua/plenary.nvim' " optional/requirement of telescope
+" Plug 'jose-elias-alvarez/null-ls.nvim' " optional
+" Plug 'nvim-lua/plenary.nvim' " optional/requirement of telescope and null-ls
 " Plug 'stevearc/dressing.nvim' " optional/in case you don't use telescope but use something else
 Plug 'neovim/nvim-lspconfig'
 Plug 'xbase-lab/xbase', { 'do': 'make install' }
@@ -139,6 +141,7 @@ lua require'xbase'.setup()
 #### With [dein]
 ```vim
 " call dein#add('nvim-telescope/telescope.nvim') " optional
+" call dein#add('jose-elias-alvarez/null-ls.nvim') " optional
 " call dein#add('nvim-lua/plenary.nvim') " optional/requirement of telescope
 " call dein#add('stevearc/dressing.nvim') " optional/in case you don't use telescope but use something else
 call dein#add('neovim/nvim-lspconfig')
@@ -239,6 +242,11 @@ require("xbase.statusline").feline() -- append to feline setup function
     --- vertical toggle log buffer
     toggle_vsplit_log_buffer = "<leader>lv",
   },
+  --- Code actions
+  code_actions = {
+    --- Whether xbase code actions should be disabled.
+    enable = true
+  },
 }
 ```
 
@@ -273,6 +281,7 @@ killall xbase xbase-sourcekit-helper
 [rust]: https://www.rust-lang.org
 [tuist]: https://github.com/tuist/tuist
 [dein]: https://github.com/Shougo/dein.vim
+[null-ls]: https://github.com/jose-elias-alvarez/null-ls.nvim
 [packer]: https://github.com/wbthomason/packer.nvim
 [vim-plug]: https://github.com/junegunn/vim-plug
 [rust getting started]: https://www.rust-lang.org/tools/install

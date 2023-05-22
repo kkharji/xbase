@@ -28,6 +28,56 @@ local setup_lsp = function(opts)
   }))
 end
 
+local function try_attach_code_actions()
+	local has_null_ls = pcall(require, "null-ls")
+	if not (has_null_ls and config.values.code_actions.enable) then
+		return
+	end
+	local null_ls = require("null-ls")
+
+	-- Deregister actions first because actions are duplicated when resourcing null-ls
+	null_ls.deregister("xbase-treesitter-actions")
+	null_ls.register({
+		name = "xbase-treesitter-actions",
+		method = { require("null-ls").methods.CODE_ACTION },
+		filetypes = { "swift" },
+		generator = {
+			fn = function()
+				local swift_actions = require("xbase.treesitter")
+				return {
+					-- Adds the .padding modifier to a view
+					{
+						title = "Modify padding",
+						action = function()
+							swift_actions.add_modifier("padding", ".top", 4)
+						end,
+					},
+					-- Adds the .font modifier to a view
+					{
+						title = "Modify font",
+						action = function()
+							swift_actions.add_modifier("font", ".headline")
+						end,
+					},
+					{
+						title = "Extract variable to struct field",
+						action = function()
+							swift_actions.extract_variable_to_struct()
+						end,
+					},
+					{
+						title = "Extract to new view",
+						action = function()
+							swift_actions.extract_component()
+						end,
+					},
+				}
+			end,
+		},
+	})
+end
+
+
 local function try_attach(root, opts)
   local file_patterns = { "*.m", "*.swift", "*.c", "*.yml" }
 
@@ -43,6 +93,7 @@ local function try_attach(root, opts)
     end
     try_attach_mappings()
   end
+  try_attach_code_actions()
 end
 
 return {

@@ -58,6 +58,9 @@ local defaults = {
     --- vertical toggle log buffer
     toggle_vsplit_log_buffer = "<leader>lv",
   },
+  code_actions = {
+    enable = true,
+  }
 }
 
 --- Enhanced version of builtin type function that include list type.
