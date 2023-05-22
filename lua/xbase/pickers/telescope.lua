@@ -57,16 +57,22 @@ do
   ---XBase watch picker
   ---@param opts table
   M.watch = function(opts)
+    opts = opts or {}
+    opts.name = "watch"
     find(C.Watch, opts)
   end
 
   ---XBase build picker
   M.build = function(opts)
+    opts = opts or {}
+    opts.name = "build"
     find(C.Build, opts)
   end
 
   ---XBase run picker
   M.run = function(opts)
+    opts = opts or {}
+    opts.name = "run"
     find(C.Run, opts)
   end
 end
