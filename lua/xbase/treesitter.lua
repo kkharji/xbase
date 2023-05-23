@@ -1,4 +1,4 @@
-local have_treesitter = pcall(require, "null-ls")
+local have_treesitter = pcall(require, "nvim-treesitter")
 if not have_treesitter then
     return nil
 end
@@ -51,6 +51,7 @@ end
 
 local create_modifier = function(modifier, arg1, arg2)
 	arg1 = arg1 or ""
+    print(modifier, arg1, arg2)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local call_expression = get_entire_call_expression()
 	local range = { call_expression:range() }

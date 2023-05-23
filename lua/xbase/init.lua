@@ -28,49 +28,39 @@ local setup_lsp = function(opts)
   }))
 end
 
-local function try_attach_code_actions()
-	local has_null_ls = pcall(require, "null-ls")
-	if not (has_null_ls and config.values.code_actions.enable) then
-		return
-	end
-	local null_ls = require("null-ls")
+local function try_attach_code_actions(opts)
+    if not config.values.code_actions.enable then
+        return
+    end
     local swift_actions = require("xbase.treesitter")
     if swift_actions == nil then
         return
     end
-
-	-- Deregister actions first because actions are duplicated when resourcing null-ls
-	null_ls.deregister("xbase-treesitter-actions")
-	null_ls.register({
-		name = "xbase-treesitter-actions",
-		method = { require("null-ls").methods.CODE_ACTION },
-		filetypes = { "swift" },
-		generator = {
-			fn = function()
-				return {
-					-- Adds the .padding modifier to a view
-					{
-						title = "Modify padding",
-						action = swift_actions.add_modifier("padding", ".top", 4)
-						,
-					},
-					-- Adds the .font modifier to a view
-					{
-						title = "Modify font",
-						action = swift_actions.add_modifier("font", ".headline")
-					},
-					{
-						title = "Extract variable to struct field",
-						action = swift_actions.extract_variable_to_struct
-					},
-					{
-						title = "Extract to new view",
-						action = swift_actions.extract_component
-					},
-				}
-			end,
-		},
-	})
+    local attach_xbase_code_actions = require("xbase.null_ls")
+    if attach_xbase_code_actions == nil then
+        return
+    end
+    attach_xbase_code_actions({
+        -- Adds the .padding modifier to a view
+        {
+            title = "Modify padding",
+            action = swift_actions.add_modifier("padding", ".top", 4)
+            ,
+        },
+        -- Adds the .font modifier to a view
+        {
+            title = "Modify font",
+            action = swift_actions.add_modifier("font", ".headline")
+        },
+        {
+            title = "Extract variable to struct field",
+            action = swift_actions.extract_variable_to_struct
+        },
+        {
+            title = "Extract to new view",
+            action = swift_actions.extract_component
+        },
+    })
 end
 
 
