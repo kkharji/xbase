@@ -34,6 +34,10 @@ local function try_attach_code_actions()
 		return
 	end
 	local null_ls = require("null-ls")
+    local swift_actions = require("xbase.treesitter")
+    if swift_actions == nil then
+        return
+    end
 
 	-- Deregister actions first because actions are duplicated when resourcing null-ls
 	null_ls.deregister("xbase-treesitter-actions")
@@ -43,33 +47,25 @@ local function try_attach_code_actions()
 		filetypes = { "swift" },
 		generator = {
 			fn = function()
-				local swift_actions = require("xbase.treesitter")
 				return {
 					-- Adds the .padding modifier to a view
 					{
 						title = "Modify padding",
-						action = function()
-							swift_actions.add_modifier("padding", ".top", 4)
-						end,
+						action = swift_actions.add_modifier("padding", ".top", 4)
+						,
 					},
 					-- Adds the .font modifier to a view
 					{
 						title = "Modify font",
-						action = function()
-							swift_actions.add_modifier("font", ".headline")
-						end,
+						action = swift_actions.add_modifier("font", ".headline")
 					},
 					{
 						title = "Extract variable to struct field",
-						action = function()
-							swift_actions.extract_variable_to_struct()
-						end,
+						action = swift_actions.extract_variable_to_struct
 					},
 					{
 						title = "Extract to new view",
-						action = function()
-							swift_actions.extract_component()
-						end,
+						action = swift_actions.extract_component
 					},
 				}
 			end,

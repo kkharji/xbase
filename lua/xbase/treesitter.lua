@@ -1,3 +1,8 @@
+local have_treesitter = pcall(require, "null-ls")
+if not have_treesitter then
+    return nil
+end
+
 local ts_utils = require("nvim-treesitter.ts_utils")
 local get_node_text = function(node)
 	return vim.treesitter.get_node_text(node, vim.api.nvim_get_current_buf())
@@ -44,7 +49,7 @@ actions.wrap_in_vstack = function()
 	vim.api.nvim_win_set_cursor(winr, { range[1] + 1, range[2] })
 end
 
-actions.add_modifier = function(modifier, arg1, arg2)
+local create_modifier = function(modifier, arg1, arg2)
 	arg1 = arg1 or ""
 	local bufnr = vim.api.nvim_get_current_buf()
 	local call_expression = get_entire_call_expression()
@@ -59,6 +64,12 @@ actions.add_modifier = function(modifier, arg1, arg2)
 	vim.api.nvim_buf_set_lines(bufnr, range[3] + 1, range[3] + 1, false, { indentation .. padding_location })
 	local winr = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_cursor(winr, { range[3] + 2, padding_location:len() + range[2] - 2 })
+end
+
+actions.add_modifier = function(modifier, arg1, arg2)
+    return function()
+        create_modifier(modifier, arg1, arg2)
+    end
 end
 
 local get_bufnr = function()
