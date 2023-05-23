@@ -9,7 +9,6 @@ local get_node_text = function(node)
 end
 local get_winr = vim.api.nvim_get_current_win
 local get_current_node = ts_utils.get_node_at_cursor
-local actions = {}
 
 local property_declaration_query = vim.treesitter.query.parse("swift", "(property_declaration) @prop")
 
@@ -31,7 +30,7 @@ local get_entire_call_expression = function()
 	return call_expression
 end
 
-actions.wrap_in_vstack = function()
+local wrap_in_vstack = function()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local call_expression = get_entire_call_expression()
 	local range = { call_expression:range() }
@@ -67,7 +66,7 @@ local create_modifier = function(modifier, arg1, arg2)
 	vim.api.nvim_win_set_cursor(winr, { range[3] + 2, padding_location:len() + range[2] - 2 })
 end
 
-actions.add_modifier = function(modifier, arg1, arg2)
+local add_modifier = function(modifier, arg1, arg2)
     return function()
         create_modifier(modifier, arg1, arg2)
     end
@@ -86,7 +85,7 @@ local get_enclosing_struct = function(node)
 end
 
 -- Extracts the variable under the cursor to the body of the strucut. Will add types to strings and positive integers
-actions.extract_component = function()
+local extract_component = function()
 	local call_expression = get_entire_call_expression()
 	local enclosing_struct = get_enclosing_struct(call_expression)
 	local range = { enclosing_struct:range() }
@@ -112,7 +111,7 @@ actions.extract_component = function()
 end
 
 -- Extracts a variable to the struct's fields
-actions.extract_variable_to_struct = function()
+local extract_variable_to_struct = function()
 	local value_argument_node = get_current_node()
 	while value_argument_node ~= nil and value_argument_node:field("value")[1] == nil do
 		value_argument_node = value_argument_node:parent()
@@ -162,4 +161,13 @@ actions.extract_variable_to_struct = function()
 	vim.api.nvim_win_set_cursor(get_winr(), { line_after_last_property + 1, var_declaration:len() })
 end
 
+local actions = {
+    extract_component = function()
+        return extract_component
+    end,
+    extract_variable_to_struct = function()
+        return extract_variable_to_struct
+    end,
+    add_modifier = add_modifier
+}
 return actions

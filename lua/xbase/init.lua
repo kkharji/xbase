@@ -40,29 +40,33 @@ local function try_attach_code_actions(opts)
     if attach_xbase_code_actions == nil then
         return
     end
-    attach_xbase_code_actions({
-        -- Adds the .padding modifier to a view
-        {
-            title = "Modify padding",
-            action = swift_actions.add_modifier("padding", ".top", 4)
-            ,
-        },
-        -- Adds the .font modifier to a view
-        {
-            title = "Modify font",
-            action = swift_actions.add_modifier("font", ".headline")
-        },
-        {
-            title = "Extract variable to struct field",
-            action = swift_actions.extract_variable_to_struct
-        },
-        {
-            title = "Extract to new view",
-            action = swift_actions.extract_component
-        },
-    })
+    local code_actions = {}
+    if opts.code_actions.use_builtin_actions then
+        util.insert_all(code_actions, {
+            -- Adds the .padding modifier to a view
+            {
+                title = "Modify padding",
+                action = swift_actions.add_modifier("padding", ".top", 4)
+                ,
+            },
+            -- Adds the .font modifier to a view
+            {
+                title = "Modify font",
+                action = swift_actions.add_modifier("font", ".headline")
+            },
+            {
+                title = "Extract variable to struct field",
+                action = swift_actions.extract_variable_to_struct()
+            },
+            {
+                title = "Extract to new view",
+                action = swift_actions.extract_component()
+            },
+        });
+    end
+    util.insert_all(code_actions, opts.code_actions.custom_actions)
+    attach_xbase_code_actions(code_actions)
 end
-
 
 local function try_attach(root, opts)
   local file_patterns = { "*.m", "*.swift", "*.c", "*.yml" }
@@ -79,7 +83,7 @@ local function try_attach(root, opts)
     end
     try_attach_mappings()
   end
-  try_attach_code_actions()
+  try_attach_code_actions(opts)
 end
 
 return {
