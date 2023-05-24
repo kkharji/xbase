@@ -10,7 +10,7 @@ end
 local get_winr = vim.api.nvim_get_current_win
 local get_current_node = ts_utils.get_node_at_cursor
 
-local property_declaration_query = vim.treesitter.query.parse("swift", "(property_declaration) @prop")
+local property_declaration_query = vim.treesitter.query.parse_query("swift", "(property_declaration) @prop")
 
 local find_next_call_expression = function(node)
 	node = node:parent()
