@@ -1,6 +1,6 @@
 local have_treesitter = pcall(require, "nvim-treesitter")
 if not have_treesitter then
-    return nil
+	return nil
 end
 
 local ts_utils = require("nvim-treesitter.ts_utils")
@@ -10,7 +10,9 @@ end
 local get_winr = vim.api.nvim_get_current_win
 local get_current_node = ts_utils.get_node_at_cursor
 
-local property_declaration_query = vim.treesitter.query.parse_query("swift", "(property_declaration) @prop")
+local query_parser = vim.fn.has("nvim-0.9") == 1 and vim.treesitter.query.parse or vim.treesitter.query.parse_query
+
+local property_declaration_query = query_parser("swift", "(property_declaration) @prop")
 
 local find_next_call_expression = function(node)
 	node = node:parent()
@@ -50,7 +52,7 @@ end
 
 local create_modifier = function(modifier, arg1, arg2)
 	arg1 = arg1 or ""
-    print(modifier, arg1, arg2)
+	print(modifier, arg1, arg2)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local call_expression = get_entire_call_expression()
 	local range = { call_expression:range() }
@@ -67,9 +69,9 @@ local create_modifier = function(modifier, arg1, arg2)
 end
 
 local add_modifier = function(modifier, arg1, arg2)
-    return function()
-        create_modifier(modifier, arg1, arg2)
-    end
+	return function()
+		create_modifier(modifier, arg1, arg2)
+	end
 end
 
 local get_bufnr = function()
@@ -162,12 +164,12 @@ local extract_variable_to_struct = function()
 end
 
 local actions = {
-    extract_component = function()
-        return extract_component
-    end,
-    extract_variable_to_struct = function()
-        return extract_variable_to_struct
-    end,
-    add_modifier = add_modifier
+	extract_component = function()
+		return extract_component
+	end,
+	extract_variable_to_struct = function()
+		return extract_variable_to_struct
+	end,
+	add_modifier = add_modifier,
 }
 return actions
