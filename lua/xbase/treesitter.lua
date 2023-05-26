@@ -175,5 +175,8 @@ local actions = {
 		return extract_variable_to_struct
 	end,
 	add_modifier = add_modifier,
+	wrap_in_vstack = function()
+		return wrap_in_vstack
+	end,
 }
 return actions
