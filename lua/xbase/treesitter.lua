@@ -12,7 +12,11 @@ local get_current_node = ts_utils.get_node_at_cursor
 
 local query_parser = vim.fn.has("nvim-0.9") == 1 and vim.treesitter.query.parse or vim.treesitter.query.parse_query
 
-local property_declaration_query = query_parser("swift", "(property_declaration) @prop")
+local have_swift_parser, property_declaration_query = pcall(query_parser, "swift", "(property_declaration) @prop")
+
+if not have_swift_parser then
+	return
+end
 
 local find_next_call_expression = function(node)
 	node = node:parent()
