@@ -49,6 +49,11 @@ local function try_attach_code_actions(opts)
                 action = swift_actions.add_modifier("padding", ".top", 4)
                 ,
             },
+            {
+                title = "Embed in Vstack",
+                action = swift_actions.wrap_in_vstack()
+                ,
+            },
             -- Adds the .font modifier to a view
             {
                 title = "Modify font",
@@ -83,7 +88,6 @@ local function try_attach(root, opts)
     end
     try_attach_mappings()
   end
-  try_attach_code_actions(opts)
 end
 
 return {
@@ -92,6 +96,7 @@ return {
       opts = opts or {}
       config.set(opts)
       try_attach(vim.loop.cwd(), config.values)
+      try_attach_code_actions(config.values)
       autocmd({ "DirChanged" }, {
         pattern = "*",
         callback = function()
