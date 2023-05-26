@@ -54,6 +54,9 @@ As a long-time vim user who has previously developed a several lua/nvim plugins,
     Auto-generate xcodeproj, when it doesn't exists, generator config files a updated or new files/directories added or removed.
 * **Swift Package Support**\
     Auto-generate when `.build` folder doesn't exists, Package.swift file is updated or new files or directories are added or removed.
+* **Swift Code Action Support**\
+    Do XCode code actions such as embedding in another component and extracting
+    variables.
 
 ## 💆 Generators
 
@@ -95,6 +98,7 @@ issue
 - <kbd>[lspconfig] *</kbd> <sub>LSP integration.</sub>
 - <kbd>[telescope.nvim]  ^0.1</kbd> <sub>better picker UI experience <kbd>optional</kbd></sub>
 - <kbd>[dressing.nvim]  *</kbd> <sub>support for other neovim ecosystem pickers  <kbd>optional</kbd></sub>
+- <kbd>[nvim-treesitter]  *</kbd> <sub>extra parsing support for treesitter</sub>
 
 ### Vscode
 
@@ -119,6 +123,7 @@ use {
       -- "nvim-telescope/telescope.nvim", -- optional
       -- "jose-elias-alvarez/null-ls.nvim", -- optional
       -- "nvim-lua/plenary.nvim", -- optional/requirement of telescope.nvim and null-ls
+      -- "nvim-treesitter/nvim-treesitter", -- optional/requirement for code actions and extra null-ls functionality 
       -- "stevearc/dressing.nvim", -- optional (in case you don't use telescope but something else)
     },
     config = function()
@@ -133,6 +138,7 @@ use {
 " Plug 'jose-elias-alvarez/null-ls.nvim' " optional
 " Plug 'nvim-lua/plenary.nvim' " optional/requirement of telescope and null-ls
 " Plug 'stevearc/dressing.nvim' " optional/in case you don't use telescope but use something else
+" Plug 'nvim-treesitter/nvim-treesitter', " optional/requirement for code actions and extra null-ls functionality 
 Plug 'neovim/nvim-lspconfig'
 Plug 'xbase-lab/xbase', { 'do': 'make install' }
 lua require'xbase'.setup()
@@ -144,6 +150,7 @@ lua require'xbase'.setup()
 " call dein#add('jose-elias-alvarez/null-ls.nvim') " optional
 " call dein#add('nvim-lua/plenary.nvim') " optional/requirement of telescope
 " call dein#add('stevearc/dressing.nvim') " optional/in case you don't use telescope but use something else
+" call dein#add('nvim-treesitter/nvim-treesitter') " optional/requirement for code actions and extra null-ls functionality 
 call dein#add('neovim/nvim-lspconfig')
 call dein#add('xbase-lab/xbase', { 'build': 'make install' })
 lua require'xbase'.setup()
@@ -151,6 +158,9 @@ lua require'xbase'.setup()
 
 > **NOTE:** You need to setup sourcekit-lsp (see [sourcekit-setup]) and consider adding more
 > file to root patterns
+
+If you would also like to have code actions, make sure to install the swift
+grammar for treesitter.
 
 ### Vscode
 
