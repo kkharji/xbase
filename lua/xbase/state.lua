@@ -37,7 +37,7 @@ M.devices = function(platform)
       return vim.tbl_contains(device_filter, mem.name)
     end, available_devices)
 
-    assert_devices(devices)
+    assert_devices(available_devices, devices, device_filter)
   end
 
   if #devices == 0 then
