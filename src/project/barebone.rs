@@ -109,7 +109,8 @@ impl ProjectCompile for BareboneProject {
             broadcast.warn("No compile command was generated!");
         }
 
-        let json = serde_json::to_vec_pretty(&xccommands)?;
+        let json = serde_json::to_string_pretty(&xccommands)?
+            .replace("-use-frontend-parseable-output", "");
         tokio::fs::write(root.join(".compile"), &json).await?;
 
         Ok(())
