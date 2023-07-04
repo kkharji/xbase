@@ -10,8 +10,14 @@ local defaults = {
   --- Log level. Set to ERROR to ignore everything
   log_level = vim.log.levels.DEBUG,
   --- Options to be passed to lspconfig.nvim's sourcekit setup function.
-  --- Usually empty map is sufficient, However, it is strongly recommended to use on_attach key to setup custom mappings
-  sourcekit = {}, -- Set it to nil to skip lspconfig's sourcekit setup
+  --- Setting this to {} is sufficient, However, it is strongly recommended to use on_attach key to setup custom mappings.
+  --- Opts if set to {} will be:
+  --- {
+  --- cmd = { "sourcekit-lsp", "--log-level", "error" },
+  --- filetypes = { "swift" },
+  --- root_dir = pattern("Package.swift", ".git", "project.yml", "Project.swift"),
+  --- }
+  sourcekit = nil, -- Disabled by default
   --- Statusline provider configurations
   statusline = {
     watching = { icon = "", color = "#1abc9c" },
