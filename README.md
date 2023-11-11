@@ -2,7 +2,7 @@
 <img src="./.github/media/logo.png" alt="Logo" />
 </P>
 
-An XCode replacement-ish *development environment* that aims to be your reliable XCode alternative to develop exciting new [apple] software products 🚀.
+An Xcode replacement-ish *development environment* that aims to be your reliable Xcode alternative to develop exciting new [apple] software products 🚀.
 
 ## Table of Content
 
@@ -21,7 +21,7 @@ An XCode replacement-ish *development environment* that aims to be your reliable
 
 [XBase] enables you to build, watch, and run xcode products as well as swift packages from within your favorite editor. It supports running products on iOS, watchOS and tvOS simulators, along with real-time logging, and some lsp features such as auto-completion and code navigation. ([🌟 Features](#-features)).
 
-Furthermore, [XBase] has built-in support for a variety of XCode project generators, which allow you to avoid launching XCode or manually editing '*.xcodeproj' anytime you add or remove files. We strongly advise you to use one ... at least till [XBase] supports adding/removing files and folders, along with other requirements. ([💆 Generators](#-generators))
+Furthermore, [XBase] has built-in support for a variety of Xcode project generators, which allow you to avoid launching Xcode or manually editing '*.xcodeproj' anytime you add or remove files. We strongly advise you to use one ... at least till [XBase] supports adding/removing files and folders, along with other requirements. ([💆 Generators](#-generators))
 
 Please be aware that [XBase] is still **WIP**, so don't hesitate to report bugs, ask questions or suggest new exciting features.
 
@@ -50,7 +50,7 @@ As a long-time vim user who has previously developed a several lua/nvim plugins,
     Global variable to update statusline with build/run commands, see [Statusline](#statusline)
 * **Zero Footprint**\
     Light resource usage. I've been using [XBase] for a while; it typically uses 0.1 percent RAM and 0 percent CPU.
-* **Multi XCodeProj Generator Support**\
+* **Multi XcodeProj Generator Support**\
     Auto-generate xcodeproj, when it doesn't exists, generator config files a updated or new files/directories added or removed.
 * **Swift Package Support**\
     Auto-generate when `.build` folder doesn't exists, Package.swift file is updated or new files or directories are added or removed.
@@ -59,7 +59,7 @@ As a long-time vim user who has previously developed a several lua/nvim plugins,
 
 [XBase] primarily supports two project generators: [XcodeGen] and [Tuist].
 
-[XCodeGen] is **recommended** if you are just starting started with `xcodeproj generators`
+[XcodeGen] is **recommended** if you are just starting started with `xcodeproj generators`
 since it is considerably simpler with a yml-based configuration language. Having said that,
 [Tuist] is more powerful and packed with features, of which `xcodeproj generation` is but one.
 
@@ -73,7 +73,7 @@ since it is considerably simpler with a yml-based configuration language. Having
 
 ### Limitations
 
-#### [XCodeGen]
+#### [XcodeGen]
 
 - No support for custom named yml config files, only `project.yml`.
 
