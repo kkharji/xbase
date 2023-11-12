@@ -51,7 +51,7 @@ xcodeproj             = { version = "0.3.*" }
 libc                  = { version = "0.2.126" }
 libproc               = { version = "0.13.0"  }
 paste                 = { version = "1.0.7"   }
-which                 = { version = "4.2.5"   }
+which                 = { version = "4.4.0"   }
 os_pipe               = { version = "1.0.1"   }
 signal-hook           = { version = "0.3.14"  }
 signal-hook-tokio     = { version = "0.3.1", features = ["futures-v0_3"] }
