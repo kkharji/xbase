@@ -28,6 +28,51 @@ local setup_lsp = function(opts)
   }))
 end
 
+local function try_attach_code_actions(opts)
+    if not config.values.code_actions.enable then
+        return
+    end
+    local swift_actions = require("xbase.treesitter")
+    if swift_actions == nil then
+        return
+    end
+    local attach_xbase_code_actions = require("xbase.null_ls")
+    if attach_xbase_code_actions == nil then
+        return
+    end
+    local code_actions = {}
+    if opts.code_actions.use_builtin_actions then
+        util.insert_all(code_actions, {
+            -- Adds the .padding modifier to a view
+            {
+                title = "Modify padding",
+                action = swift_actions.add_modifier("padding", ".top", 4)
+                ,
+            },
+            {
+                title = "Embed in Vstack",
+                action = swift_actions.wrap_in_vstack()
+                ,
+            },
+            -- Adds the .font modifier to a view
+            {
+                title = "Modify font",
+                action = swift_actions.add_modifier("font", ".headline")
+            },
+            {
+                title = "Extract variable to struct field",
+                action = swift_actions.extract_variable_to_struct()
+            },
+            {
+                title = "Extract to new view",
+                action = swift_actions.extract_component()
+            },
+        });
+    end
+    util.insert_all(code_actions, opts.code_actions.custom_actions)
+    attach_xbase_code_actions(code_actions)
+end
+
 local function try_attach(root, opts)
   local file_patterns = { "*.m", "*.swift", "*.c", "*.yml" }
 
@@ -51,6 +96,7 @@ return {
       opts = opts or {}
       config.set(opts)
       try_attach(vim.loop.cwd(), config.values)
+      try_attach_code_actions(config.values)
       autocmd({ "DirChanged" }, {
         pattern = "*",
         callback = function()

@@ -25,5 +25,14 @@ function M.bind(m, bufnr)
     require("xbase.logger").toggle(true, true)
   end, bufnr)
 end
+--
+--- Inserts all of the items in the second table into the first table
+M.insert_all = function(base_table, new_items)
+    for _, item in pairs(new_items) do
+        table.insert(base_table, item)
+    end
+end
+
+
 
 return M

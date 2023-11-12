@@ -64,6 +64,14 @@ local defaults = {
     --- vertical toggle log buffer
     toggle_vsplit_log_buffer = "<leader>lv",
   },
+  code_actions = {
+    --- Whether xbase code actions should be disabled.
+    enable = true,
+    --- A list of code actions in { title = "Title", action = function() end } format that the user can define 
+    custom_actions = {},
+    --- Whether to use the default actions that xbase comes with.
+    use_builtin_actions = true,
+  }
 }
 
 --- Enhanced version of builtin type function that include list type.
@@ -82,7 +90,7 @@ end
 ---@param key string
 ---@return boolean: true if it should be if key skipped
 local should_skip_type_checking = function(key)
-  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates", "sourcekit", "simctl" } do
+  for _, v in ipairs { "mappings", "blacklist", "fenced", "templates", "sourcekit", "simctl", "code_actions"} do
     for _, k in ipairs(vim.split(key, "%.")) do
       if k:find(v) then
         return true
