@@ -18,7 +18,7 @@ function M.setup()
   })
 
   util.bind(cfg.mappings, M.bufnr)
-  vim.keymap.set("n", "q", "close", { buffer = M.bufnr })
+  vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = M.bufnr })
 
   return M.bufnr
 end
