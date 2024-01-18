@@ -121,7 +121,7 @@ use {
       -- "stevearc/dressing.nvim", -- optional (in case you don't use telescope but something else)
     },
     config = function()
-      require'xbase'.setup({})  -- see default configuration bellow
+      require'xbase'.setup({})  -- see default configuration below
     end
 }
 ```
