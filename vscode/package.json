@@ -108,6 +108,12 @@
             "default": [],
             "type": "list",
             "order": 3
+          },
+          "xbase.simctl.xrOS": {
+            "markdownDescription": "visionOS simulators to include. run `xcrun simctl list` to get a full list of available simulators. If the list is empty then all available simulators will be included",
+            "default": [],
+            "type": "list",
+            "order": 3
           }
         }
       }

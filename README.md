@@ -19,7 +19,7 @@ An Xcode replacement-ish *development environment* that aims to be your reliable
 
 ## 👁 Overview
 
-[XBase] enables you to build, watch, and run xcode products as well as swift packages from within your favorite editor. It supports running products on iOS, watchOS and tvOS simulators, along with real-time logging, and some lsp features such as auto-completion and code navigation. ([🌟 Features](#-features)).
+[XBase] enables you to build, watch, and run xcode products as well as swift packages from within your favorite editor. It supports running products on iOS, watchOS, tvOS, and visionOS simulators, along with real-time logging, and some lsp features such as auto-completion and code navigation. ([🌟 Features](#-features)).
 
 Furthermore, [XBase] has built-in support for a variety of Xcode project generators, which allow you to avoid launching Xcode or manually editing '*.xcodeproj' anytime you add or remove files. We strongly advise you to use one ... at least till [XBase] supports adding/removing files and folders, along with other requirements. ([💆 Generators](#-generators))
 
@@ -215,6 +215,7 @@ require("xbase.statusline").feline() -- append to feline setup function
     },
     watchOS = {}, -- all available devices
     tvOS = {}, -- all available devices
+    visionOS = {} -- all available devices
   },
   --- Log buffer configurations
   log_buffer = {

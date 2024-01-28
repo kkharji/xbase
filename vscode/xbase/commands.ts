@@ -77,6 +77,8 @@ function getPickerItems(
         case "watchOS":
           platformDevices = devices.watchOS;
           break;
+	case "xrOS":
+	  platformDevices = devices.xrOS;
         default:
           platformDevices = devices.tvOS;
           break;

@@ -35,6 +35,7 @@ local defaults = {
     },
     watchOS = {}, -- all available devices
     tvOS = {}, -- all available devices
+    xrOS = {} -- all available devices
   },
   --- Log buffer configurations
   log_buffer = {

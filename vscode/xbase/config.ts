@@ -15,11 +15,12 @@ export default {
     };
   },
 
-  get devices(): { iOS: string[], watchOS: string[], tvOS: string[] } {
+  get devices(): { iOS: string[], watchOS: string[], tvOS: string[], xrOS: string[] } {
     return getConfig("simctl", "devices", {
       iOS: getConfig("simctl", "iOS", []),
       watchOS: getConfig("simctl", "watchOS", []),
-      tvOS: getConfig("simctl", "tvOS", [])
+      tvOS: getConfig("simctl", "tvOS", []),
+      xrOS: getConfig("simctl", "xrOS", [])
     });
   }
 };
