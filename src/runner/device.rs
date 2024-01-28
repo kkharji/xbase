@@ -49,13 +49,14 @@ impl From<simctl::Device> for Device {
 
 impl Device {
     /// Get special build arguments to run on current device.
-    // -sdk driverkit -sdk iphoneos -sdk macosx -sdk appletvos -sdk watchos
+    // -sdk driverkit -sdk iphoneos -sdk macosx -sdk appletvos -sdk watchos -sdk xros
     pub fn special_build_args(&self) -> Vec<String> {
         match self.platform {
             PBXTargetPlatform::IOS => vec!["-sdk".into(), "iphonesimulator".into()],
             PBXTargetPlatform::WatchOS => vec!["-sdk".into(), "watchsimulator".into()],
             PBXTargetPlatform::TvOS => vec!["-sdk".into(), "appletvsimulator".into()],
             PBXTargetPlatform::MacOS => vec!["-sdk".into(), "macosx".into()],
+            PBXTargetPlatform::XrOS => vec!["-sdk".into(), "xrsimulator".into()],
             PBXTargetPlatform::Unknown => vec![],
         }
     }
@@ -74,6 +75,7 @@ impl Default for Runners {
             PBXTargetPlatform::IOS,
             PBXTargetPlatform::WatchOS,
             PBXTargetPlatform::TvOS,
+            PBXTargetPlatform::XrOS,
         ]
         .into_iter()
         .map(|p| {
